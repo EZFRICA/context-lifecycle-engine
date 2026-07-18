@@ -87,6 +87,35 @@ def synthetic_history() -> list[Message]:
     return sorted(messages, key=lambda m: m.ts)
 
 
+def adversarial_history() -> list[Message]:
+    """The base history plus a competing 'sales review' ritual and one
+    BRIDGE episode engineered to sit closer to the sales cluster (so it
+    re-clusters out-of-cluster) while still clearing the trigger
+    threshold against the recap centroid — a real false trigger.
+
+    Measured with the P1 embedder: bridge≈0.86 vs sales, ≈0.75 vs recap
+    (fires), sales≈0.58 vs recap (stays a separate cluster).
+    """
+    messages = list(synthetic_history())
+
+    def say(day: float, minute: int, text: str, thread: str) -> None:
+        messages.append(
+            Message(
+                user_id="u1",
+                ts=T0 + timedelta(days=day, minutes=minute),
+                text=text,
+                thread_id=thread,
+            )
+        )
+
+    for i, day in enumerate([2, 9, 23]):
+        say(day, 100, "review the sales numbers spreadsheet for finance", f"sales-{i}")
+        say(day, 104, "thanks", f"sales-{i}")
+    say(16, 100, "review the weekly recap numbers for the finance team", "bridge")
+    say(16, 104, "thanks", "bridge")
+    return sorted(messages, key=lambda m: m.ts)
+
+
 def main() -> None:
     config = DetectorConfig()
     messages = synthetic_history()
@@ -153,6 +182,14 @@ def main() -> None:
         f"wrote {candidate_path.name}: cluster {cluster_id}, signal {signal.kind} "
         f"x{signal.occurrences}"
     )
+
+    # Adversarial variant (P1 arbitration): same candidate, harder window.
+    adversarial = adversarial_history()
+    adversarial_path = EXAMPLES / "prompt_history_adversarial.jsonl"
+    adversarial_path.write_text(
+        "\n".join(json.dumps(m.model_dump(mode="json")) for m in adversarial) + "\n"
+    )
+    print(f"wrote {adversarial_path.name}: {len(adversarial)} messages (bridge included)")
 
 
 if __name__ == "__main__":

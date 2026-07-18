@@ -44,6 +44,10 @@ class ReplayOutcome(BaseModel, frozen=True):
 
     pre_evidence: PreEvidence
     in_cluster_openers: tuple[str, ...]
+    # Closure mix of the in-cluster episodes — the closure_distribution
+    # measurement (P1 arbitration): how the cluster's episodes ended is
+    # article-9 material and the sanity check on the abandoned-exclusion.
+    closure_counts: dict[str, int]
 
 
 def replay_validate(
@@ -62,7 +66,9 @@ def replay_validate(
     when the window has nothing to validate against."""
     started = time.monotonic()
     try:
-        return _replay(trigger, messages, window_label, existing_triggers, embedder, config)
+        outcome = _replay(trigger, messages, window_label, existing_triggers, embedder, config)
+        oplog.emit("closure_distribution", actor=actor, **outcome.closure_counts)
+        return outcome
     except ReplayError:
         oplog.emit(
             "build",
@@ -141,8 +147,14 @@ def _replay(
         false_trigger_rate=(captured_out / len(out_of_cluster)) if out_of_cluster else 0.0,
         historical_cost=statistics.fmean(countable),
         window=window_label,
+        semantic_trigger_tested=True,
+        period_tested=False,  # see module docstring: v2 scheduler model
     )
     return ReplayOutcome(
         pre_evidence=pre_evidence,
         in_cluster_openers=tuple(episode.opener for episode in in_cluster),
+        closure_counts={
+            label: sum(1 for closure in closures if closure == label)
+            for label in ("success", "reformulated", "abandoned")
+        },
     )

@@ -94,6 +94,19 @@ def test_build_determinism(payload: str) -> None:
     assert _build(payload).hash == _build(payload).hash
 
 
+def test_probe_set_is_hash_covered_and_deterministically_selected() -> None:
+    # P1 arbitration: probe_set participates in the image identity, and
+    # selection is the first PROBE_SET_SIZE in-cluster openers,
+    # chronological — no sampling, no wall clock.
+    store = InMemoryStore()
+    image = _build("recap format v1", store)
+    tampered = image.model_copy(update={"probe_set": image.probe_set + ("extra probe",)})
+    assert tampered.hash != image.hash
+    assert image.probe_set == tuple(
+        ["write the weekly recap of my project"] * len(image.probe_set)
+    )
+
+
 def test_image_is_stored_and_tag_target_accepts_it() -> None:
     from cle.oplog import OpLog as _OpLog
     from cle.store.commits import assert_tag_target
@@ -132,8 +145,10 @@ def test_successful_build_logs_exactly_one_line_with_pre_evidence() -> None:
         actor="human:test",
     )
     lines = [json.loads(line) for line in sink.getvalue().splitlines()]
-    assert len(lines) == 1
-    record = lines[0]
+    # Two ops, one line each: the closure-mix measurement, then the build.
+    assert [line["op"] for line in lines] == ["closure_distribution", "build"]
+    assert {"success", "reformulated", "abandoned"} <= set(lines[0])
+    record = lines[1]
     assert record["op"] == "build"
     assert record["outcome"] == "succeeded"
     assert record["actor"] == "human:test"
@@ -143,5 +158,7 @@ def test_successful_build_logs_exactly_one_line_with_pre_evidence() -> None:
         "false_trigger_rate",
         "historical_cost",
         "window",
+        "semantic_trigger_tested",
+        "period_tested",
     }
     assert "latency_ms" in record

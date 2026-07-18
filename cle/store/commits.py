@@ -65,6 +65,12 @@ class PreEvidence(BaseModel, frozen=True):
     # The replay window as requested (e.g. "30d"); the replay report ties
     # it to absolute bounds at run time.
     window: str
+    # Scope flags (P1 arbitration): what this replay actually proved.
+    # P1 tests the semantic trigger only; a period rides along untested.
+    # Reading pre_evidence without reading its scope is how replay claims
+    # get silently overstated — hence in-band, not in a docstring.
+    semantic_trigger_tested: bool = True
+    period_tested: bool = False
 
 
 class Evidence(BaseModel, frozen=True):
