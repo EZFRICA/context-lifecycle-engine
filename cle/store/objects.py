@@ -12,7 +12,7 @@ Contract (cle-core-contracts):
 
 import hashlib
 import json
-from typing import Any, Protocol
+from typing import Any, ClassVar, Protocol
 
 from pydantic import BaseModel
 
@@ -43,7 +43,28 @@ def _canonical_json_bytes(obj: Any) -> bytes:
     )
 
 
-class Block(BaseModel, frozen=True):
+class Storable(BaseModel, frozen=True):
+    """Base for every model the store addresses by content.
+
+    Each storable kind stamps a `cle_kind` domain marker into its canonical
+    encoding. CLE need: invariant 1 (two hashes) becomes structural — a
+    source spec and an image with identical inner content still live at
+    different addresses — and the tag-target guard can tell what a hash
+    points at by inspecting the stored record.
+    """
+
+    _cle_kind: ClassVar[str]
+
+    def canonical_bytes(self) -> bytes:
+        """The exact encoding a backend stores — hashing it yields self.hash."""
+        return _canonical_json_bytes({"cle_kind": self._cle_kind, **self.model_dump(mode="json")})
+
+    @property
+    def hash(self) -> str:
+        return content_hash(self.canonical_bytes())
+
+
+class Block(Storable, frozen=True):
     """A content-addressed component a candidate's #refs resolve to.
 
     CLE need (BLUEPRINT §3, stage 1): the resolve stage looks refs up by exact
@@ -52,16 +73,10 @@ class Block(BaseModel, frozen=True):
     memory block, ...) so assembly can order and label components.
     """
 
+    _cle_kind: ClassVar[str] = "block"
+
     kind: str
     payload: str
-
-    def canonical_bytes(self) -> bytes:
-        """The exact encoding a backend stores — hashing it yields self.hash."""
-        return _canonical_json_bytes(self.model_dump(mode="json"))
-
-    @property
-    def hash(self) -> str:
-        return content_hash(self)
 
 
 class _ReadableBackend(Protocol):
