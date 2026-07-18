@@ -30,7 +30,7 @@ description: Data models, hashing rules, log line format, and invariant tests fo
 ## Log line format (one per operation, JSON, single line)
 ```json
 {"op":"build|run|tag|revalidate|topology_write",
- "ts":"iso8601","actor":"human:<id>|engine:shadow|engine:live",
+ "ts":"iso8601","actor":"human:<id>|engine:shadow|engine:live|engine:revalidator|system:<component>",
  "image":"<hash8>","from":"<state?>","to":"<state?>",
  "evidence":{...}|"pre_evidence":{...}|"persistence":{...},
  "latency_ms":n}

@@ -1,0 +1,4 @@
+ref: blocks/style_guide
+kind: prompt_fragment
+payload: |
+  House style: short sentences, active voice, no adjectives without data.

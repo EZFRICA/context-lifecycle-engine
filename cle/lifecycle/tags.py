@@ -60,6 +60,10 @@ def move_state_tag(
     started = time.monotonic()
     if to_state not in STATE_RANK:
         raise TagMoveError(f"unknown state {to_state!r}; ladder is {sorted(STATE_RANK)}")
+    if from_state is not None and from_state not in STATE_RANK:
+        # A typo'd from_state would silently rank as 0 and flip the move's
+        # direction — fail loudly instead.
+        raise TagMoveError(f"unknown from_state {from_state!r}")
     assert_tag_target(backend, image_hash, oplog)
 
     upward = from_state is None or STATE_RANK[to_state] > STATE_RANK.get(from_state, 0)
@@ -94,6 +98,13 @@ def tag_version(
     """Pin an immutable version ref (moving it later raises in the
     backend). Semver rule: major = trigger changed, minor = component ref
     swapped, patch = lifecycle thresholds only."""
+    started = time.monotonic()
     assert_tag_target(backend, image_hash, oplog)
     backend.move_ref(f"agents/{agent}/v{semver}", image_hash)
-    oplog.emit("tag", actor=actor, image=image_hash, to_state=f"v{semver}")
+    oplog.emit(
+        "tag",
+        actor=actor,
+        image=image_hash,
+        to_state=f"v{semver}",
+        latency_ms=round((time.monotonic() - started) * 1000, 3),
+    )

@@ -65,8 +65,12 @@ def write_topology(
     prediction-driven drift the CLE exists to refuse.
     """
     started = time.monotonic()
-    if not cause or not any(k in cause for k in ("evidence", "pre_evidence", "persistence")):
-        raise ValueError("topology change requires an evidence-bearing cause")
+    # Decision (documented): downward moves may carry a bare human reason
+    # — evidence justifies gains; losses need accountability, not proof.
+    if not cause or not any(
+        k in cause for k in ("evidence", "pre_evidence", "persistence", "reason")
+    ):
+        raise ValueError("topology change requires an evidence-bearing cause (or a reason)")
 
     version_number, latest = latest_version(backend)
     agents = dict(latest["agents"]) if latest else {}
@@ -102,7 +106,12 @@ def write_topology(
             {"version": record["version"], "agents": agents}, sort_keys=True, width=100
         )
     )
-    diff_size = 1 if previous_entry != agents[agent] else 0
+    # diff_size compares the durable half of the entry (state/image/cause);
+    # `since` is a timestamp and would make every write look like a change.
+    def _durable(entry: dict | None) -> dict | None:
+        return {k: v for k, v in entry.items() if k != "since"} if entry else None
+
+    diff_size = 1 if _durable(previous_entry) != _durable(agents[agent]) else 0
     oplog.emit(
         "topology_write",
         actor=actor,
@@ -111,7 +120,11 @@ def write_topology(
         diff_size=diff_size,
         version=record["version"],
         latency_ms=round((time.monotonic() - started) * 1000, 3),
-        **{k: v for k, v in cause.items() if k in ("evidence", "pre_evidence", "persistence")},
+        **{
+            k: v
+            for k, v in cause.items()
+            if k in ("evidence", "pre_evidence", "persistence", "reason")
+        },
     )
     return f"topology/v{record['version']}"
 
