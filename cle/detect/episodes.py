@@ -55,6 +55,14 @@ class DetectorConfig(BaseModel, frozen=True):
     # Cold start (replay-validation skill): observe silently below these.
     min_history: timedelta = timedelta(days=14)
     min_episodes: int = 20
+    # Clustering: minimum cosine similarity between an opener embedding
+    # and a centroid to join the cluster rather than found a new one.
+    cluster_similarity_threshold: float = 0.6
+    # Signals (replay-validation skill): >=3 occurrences for either
+    # signal; a period is "stable" when the coefficient of variation of
+    # the inter-arrival times stays within this tolerance.
+    min_signal_occurrences: int = 3
+    recurrence_tolerance: float = 0.25
 
 
 class Message(BaseModel, frozen=True):

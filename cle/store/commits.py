@@ -16,6 +16,7 @@ Contract (cle-core-contracts, BLUEPRINT §4-§5):
 """
 
 import json
+from datetime import timedelta
 from typing import ClassVar
 
 from pydantic import BaseModel, Field
@@ -23,6 +24,29 @@ from pydantic import BaseModel, Field
 from cle.oplog import OpLog
 from cle.store.backends import StoreBackend
 from cle.store.objects import Storable, fetch_verified
+
+
+class PeriodSpec(BaseModel, frozen=True):
+    """Temporal half of a trigger, for recurrence-born agents.
+
+    CLE need (BLUEPRINT §4): a recurrence agent fires on schedule, so its
+    trigger must record the observed period and how much jitter the lived
+    history showed.
+    """
+
+    interval: timedelta
+    tolerance: float = Field(ge=0.0)
+
+
+class TriggerSpec(BaseModel, frozen=True):
+    """ENTRYPOINT of an image — immutable, in-image (BLUEPRINT §4).
+
+    centroid is produced by detect/ and tested by replay; period is the
+    optional temporal condition for recurrence agents.
+    """
+
+    centroid: tuple[float, ...]
+    period: PeriodSpec | None = None
 
 
 class PreEvidence(BaseModel, frozen=True):
@@ -78,6 +102,27 @@ class SourceSpec(Storable, frozen=True):
     _cle_kind: ClassVar[str] = "source_spec"
 
     yaml_raw: str
+
+
+class Image(Storable, frozen=True):
+    """The built artifact — the only thing lifecycle tags may point at.
+
+    Contract fields per cle-core-contracts / BLUEPRINT §4; `hash` (the
+    Storable property) covers ALL fields via the canonical encoding.
+    `probe_set` carries §9 decision 3: the probes drawn from the cluster's
+    replay window at build time, frozen in-image so the re-validator can
+    replay the exact same set against a drifted model (invariant 6).
+    """
+
+    _cle_kind: ClassVar[str] = "image"
+
+    source_hash: str
+    resolved_refs: dict[str, str]
+    assembled_prompt: str
+    trigger: TriggerSpec
+    model_fingerprint: str
+    pre_evidence: PreEvidence
+    probe_set: tuple[str, ...]
 
 
 class TagTargetError(Exception):
