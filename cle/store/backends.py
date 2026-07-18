@@ -12,7 +12,9 @@ Contract (cle-core-contracts):
   or property test may import it.
 """
 
+import json
 import re
+from pathlib import Path
 from typing import Protocol, runtime_checkable
 
 from cle.store.objects import content_hash
@@ -79,3 +81,54 @@ class InMemoryStore:
         """Copy of all state — for the staged-failure-writes-nothing
         byte-compare (BLUEPRINT §8 test floor); not part of the Protocol."""
         return dict(self._objects), dict(self._refs)
+
+
+class FileStore:
+    """Directory-backed store: objects/<hash> files plus refs.json.
+
+    CLE need: the lifecycle spans CLI invocations and days — evidence
+    accumulates against artifacts that must outlive a process. Same
+    Protocol as InMemoryStore; tests use tmp_path, never a server.
+    (P2 decision, documented: this is the persistence the CLI runs on;
+    WeaviateStore remains the deferred remote backend.)
+    """
+
+    def __init__(self, root: Path | str) -> None:
+        self._root = Path(root)
+        self._objects_dir = self._root / "objects"
+        self._objects_dir.mkdir(parents=True, exist_ok=True)
+        self._refs_path = self._root / "refs.json"
+
+    def _read_refs(self) -> dict[str, str]:
+        if not self._refs_path.exists():
+            return {}
+        return json.loads(self._refs_path.read_text())
+
+    def _write_refs(self, refs: dict[str, str]) -> None:
+        self._refs_path.write_text(json.dumps(refs, indent=1, sort_keys=True))
+
+    def put(self, object_hash: str, data: bytes) -> None:
+        if content_hash(data) != object_hash:
+            raise ValueError(f"content does not hash to requested address {object_hash[:8]}")
+        (self._objects_dir / object_hash).write_bytes(data)
+
+    def get(self, object_hash: str) -> bytes:
+        path = self._objects_dir / object_hash
+        if not path.exists():
+            raise KeyError(object_hash)
+        return path.read_bytes()
+
+    def move_ref(self, name: str, object_hash: str) -> None:
+        refs = self._read_refs()
+        assert_ref_movable(name, refs)
+        refs[name] = object_hash
+        self._write_refs(refs)
+
+    def list_refs(self, prefix: str) -> list[tuple[str, str]]:
+        return sorted(
+            (name, target) for name, target in self._read_refs().items() if name.startswith(prefix)
+        )
+
+    def snapshot(self) -> tuple[dict[str, bytes], dict[str, str]]:
+        objects = {p.name: p.read_bytes() for p in self._objects_dir.iterdir()}
+        return objects, self._read_refs()
