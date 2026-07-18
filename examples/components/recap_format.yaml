@@ -1,0 +1,6 @@
+ref: blocks/recap_format
+kind: prompt_fragment
+payload: |
+  You write the weekly project recap. Structure: shipped / in flight /
+  blocked / next week. Lead with outcomes, keep each bullet to one line,
+  and always include deployment status and open blockers.

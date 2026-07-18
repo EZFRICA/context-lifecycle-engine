@@ -15,6 +15,9 @@ dev = [
     "hypothesis>=6.100",
 ]
 
+[project.scripts]
+cle = "cle.cli.main:app"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

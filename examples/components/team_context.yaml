@@ -1,0 +1,6 @@
+ref: blocks/team_context
+kind: memory_block
+payload: |
+  Audience: the platform team and their manager. Tone: direct, no
+  ceremony. The team ships weekly on Thursdays; staging is called
+  "sandbox" internally.

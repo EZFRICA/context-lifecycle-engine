@@ -1,0 +1,58 @@
+{"user_id": "u1", "ts": "2026-05-25T09:00:00Z", "text": "write the weekly recap of my project for the team", "thread_id": "recap-w0"}
+{"user_id": "u1", "ts": "2026-05-25T09:04:00Z", "text": "add the deployment status and the open blockers", "thread_id": "recap-w0"}
+{"user_id": "u1", "ts": "2026-05-25T09:09:00Z", "text": "tighten the summary section", "thread_id": "recap-w0"}
+{"user_id": "u1", "ts": "2026-05-25T09:12:00Z", "text": "thanks", "thread_id": "recap-w0"}
+{"user_id": "u1", "ts": "2026-05-26T09:30:00Z", "text": "debug the kubernetes ingress timeout on staging", "thread_id": "noise-a"}
+{"user_id": "u1", "ts": "2026-05-26T09:34:00Z", "text": "thanks", "thread_id": "noise-a"}
+{"user_id": "u1", "ts": "2026-05-27T09:30:00Z", "text": "draft a polite reply to the vendor invoice email", "thread_id": "noise-b"}
+{"user_id": "u1", "ts": "2026-05-27T09:34:00Z", "text": "thanks", "thread_id": "noise-b"}
+{"user_id": "u1", "ts": "2026-05-28T09:30:00Z", "text": "rename the feature flag service safely", "thread_id": "noise-l"}
+{"user_id": "u1", "ts": "2026-05-28T09:34:00Z", "text": "thanks", "thread_id": "noise-l"}
+{"user_id": "u1", "ts": "2026-05-30T09:30:00Z", "text": "explain the difference between tokio tasks and threads", "thread_id": "noise-c"}
+{"user_id": "u1", "ts": "2026-05-30T09:34:00Z", "text": "thanks", "thread_id": "noise-c"}
+{"user_id": "u1", "ts": "2026-06-01T09:00:00Z", "text": "write the weekly recap of my project for the team", "thread_id": "recap-w1"}
+{"user_id": "u1", "ts": "2026-06-01T09:04:00Z", "text": "add the deployment status and the open blockers", "thread_id": "recap-w1"}
+{"user_id": "u1", "ts": "2026-06-01T09:09:00Z", "text": "tighten the summary section", "thread_id": "recap-w1"}
+{"user_id": "u1", "ts": "2026-06-01T09:12:00Z", "text": "thanks", "thread_id": "recap-w1"}
+{"user_id": "u1", "ts": "2026-06-02T09:30:00Z", "text": "compare grafana and datadog pricing tiers", "thread_id": "noise-m"}
+{"user_id": "u1", "ts": "2026-06-02T09:34:00Z", "text": "thanks", "thread_id": "noise-m"}
+{"user_id": "u1", "ts": "2026-06-03T09:30:00Z", "text": "summarize this research paper on retrieval ranking", "thread_id": "noise-d"}
+{"user_id": "u1", "ts": "2026-06-03T09:34:00Z", "text": "thanks", "thread_id": "noise-d"}
+{"user_id": "u1", "ts": "2026-06-04T09:30:00Z", "text": "summarize monthly metrics for the data team", "thread_id": "noise-r"}
+{"user_id": "u1", "ts": "2026-06-04T09:34:00Z", "text": "thanks", "thread_id": "noise-r"}
+{"user_id": "u1", "ts": "2026-06-05T09:30:00Z", "text": "fix the flaky integration test in the payments repo", "thread_id": "noise-e"}
+{"user_id": "u1", "ts": "2026-06-05T09:34:00Z", "text": "thanks", "thread_id": "noise-e"}
+{"user_id": "u1", "ts": "2026-06-07T09:30:00Z", "text": "write a dockerfile for the ml scoring job", "thread_id": "noise-n"}
+{"user_id": "u1", "ts": "2026-06-07T09:34:00Z", "text": "thanks", "thread_id": "noise-n"}
+{"user_id": "u1", "ts": "2026-06-08T09:00:00Z", "text": "write the weekly recap of my project for the team", "thread_id": "recap-w2"}
+{"user_id": "u1", "ts": "2026-06-08T09:04:00Z", "text": "add the deployment status and the open blockers", "thread_id": "recap-w2"}
+{"user_id": "u1", "ts": "2026-06-08T09:09:00Z", "text": "tighten the summary section", "thread_id": "recap-w2"}
+{"user_id": "u1", "ts": "2026-06-08T09:12:00Z", "text": "thanks", "thread_id": "recap-w2"}
+{"user_id": "u1", "ts": "2026-06-10T09:30:00Z", "text": "plan a three day hiking trip near lyon", "thread_id": "noise-f"}
+{"user_id": "u1", "ts": "2026-06-10T09:34:00Z", "text": "thanks", "thread_id": "noise-f"}
+{"user_id": "u1", "ts": "2026-06-12T09:30:00Z", "text": "review my sql migration for the orders table", "thread_id": "noise-g"}
+{"user_id": "u1", "ts": "2026-06-12T09:34:00Z", "text": "thanks", "thread_id": "noise-g"}
+{"user_id": "u1", "ts": "2026-06-14T09:30:00Z", "text": "how do i rotate the gcp service account keys", "thread_id": "noise-o"}
+{"user_id": "u1", "ts": "2026-06-14T09:34:00Z", "text": "thanks", "thread_id": "noise-o"}
+{"user_id": "u1", "ts": "2026-06-15T09:00:00Z", "text": "write the weekly recap of my project for the team", "thread_id": "recap-w3"}
+{"user_id": "u1", "ts": "2026-06-15T09:04:00Z", "text": "add the deployment status and the open blockers", "thread_id": "recap-w3"}
+{"user_id": "u1", "ts": "2026-06-15T09:09:00Z", "text": "tighten the summary section", "thread_id": "recap-w3"}
+{"user_id": "u1", "ts": "2026-06-15T09:12:00Z", "text": "thanks", "thread_id": "recap-w3"}
+{"user_id": "u1", "ts": "2026-06-17T09:30:00Z", "text": "convert this bash script to python", "thread_id": "noise-h"}
+{"user_id": "u1", "ts": "2026-06-17T09:34:00Z", "text": "thanks", "thread_id": "noise-h"}
+{"user_id": "u1", "ts": "2026-06-18T09:30:00Z", "text": "write meeting notes for the project sync", "thread_id": "noise-s"}
+{"user_id": "u1", "ts": "2026-06-18T09:34:00Z", "text": "thanks", "thread_id": "noise-s"}
+{"user_id": "u1", "ts": "2026-06-19T09:30:00Z", "text": "what changed in the new postgres release", "thread_id": "noise-i"}
+{"user_id": "u1", "ts": "2026-06-19T09:34:00Z", "text": "thanks", "thread_id": "noise-i"}
+{"user_id": "u1", "ts": "2026-06-21T09:30:00Z", "text": "suggest onboarding exercises for a junior dev", "thread_id": "noise-p"}
+{"user_id": "u1", "ts": "2026-06-21T09:34:00Z", "text": "thanks", "thread_id": "noise-p"}
+{"user_id": "u1", "ts": "2026-06-22T09:00:00Z", "text": "write the weekly recap of my project for the team", "thread_id": "recap-w4"}
+{"user_id": "u1", "ts": "2026-06-22T09:04:00Z", "text": "add the deployment status and the open blockers", "thread_id": "recap-w4"}
+{"user_id": "u1", "ts": "2026-06-22T09:09:00Z", "text": "tighten the summary section", "thread_id": "recap-w4"}
+{"user_id": "u1", "ts": "2026-06-22T09:12:00Z", "text": "thanks", "thread_id": "recap-w4"}
+{"user_id": "u1", "ts": "2026-06-24T09:30:00Z", "text": "outline a talk about incident postmortems", "thread_id": "noise-j"}
+{"user_id": "u1", "ts": "2026-06-24T09:34:00Z", "text": "thanks", "thread_id": "noise-j"}
+{"user_id": "u1", "ts": "2026-06-26T09:30:00Z", "text": "regex to extract iso dates from logs", "thread_id": "noise-k"}
+{"user_id": "u1", "ts": "2026-06-26T09:34:00Z", "text": "thanks", "thread_id": "noise-k"}
+{"user_id": "u1", "ts": "2026-06-27T09:30:00Z", "text": "draft the q3 roadmap one pager", "thread_id": "noise-q"}
+{"user_id": "u1", "ts": "2026-06-27T09:34:00Z", "text": "thanks", "thread_id": "noise-q"}
