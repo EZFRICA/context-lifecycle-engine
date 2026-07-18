@@ -129,6 +129,11 @@ class Image(Storable, frozen=True):
     model_fingerprint: str
     pre_evidence: PreEvidence
     probe_set: tuple[str, ...]
+    # P3 decision (documented): per-probe output hashes frozen at build so
+    # the re-validator can LOCALIZE drift (Persistence.probe_deltas names
+    # which probes moved), not just detect it. model_fingerprint is the
+    # content_hash over the ordered outputs; these are its terms.
+    probe_output_hashes: tuple[str, ...]
 
 
 class TagTargetError(Exception):

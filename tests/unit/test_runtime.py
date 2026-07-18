@@ -54,8 +54,8 @@ def _build_image(store, tmp_path, payload: str = "recap format"):
     )
 
     class Fingerprinter:
-        def fingerprint(self, probes):
-            return content_hash({"model": "stub", "probes": list(probes)})
+        def outputs(self, probes):
+            return tuple(content_hash({"model": "stub", "probe": p}) for p in probes)
 
     return build_image(
         source=SourceSpec(yaml_raw=yaml_raw),

@@ -44,8 +44,8 @@ class StubFingerprinter:
     def __init__(self, model_id: str = "stub-model-1") -> None:
         self.model_id = model_id
 
-    def fingerprint(self, probes) -> str:
-        return content_hash({"model": self.model_id, "probes": list(probes)})
+    def outputs(self, probes) -> tuple[str, ...]:
+        return tuple(content_hash({"model": self.model_id, "probe": p}) for p in probes)
 
 
 def _parse_window(label: str) -> timedelta:

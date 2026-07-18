@@ -26,10 +26,10 @@ class StubFingerprinter:
     def __init__(self, model_id: str = "stub-model-1") -> None:
         self.model_id = model_id
 
-    def fingerprint(self, probes):
+    def outputs(self, probes):
         from cle.store.objects import content_hash
 
-        return content_hash({"model": self.model_id, "probes": list(probes)})
+        return tuple(content_hash({"model": self.model_id, "probe": p}) for p in probes)
 
 
 def _history() -> list[Message]:

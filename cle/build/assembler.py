@@ -25,15 +25,21 @@ PROBE_SET_SIZE = 12
 
 
 class ModelFingerprinter(Protocol):
-    """Produces the substrate identity an image was proven against.
+    """Produces the substrate's answer to each probe.
 
-    A live implementation hashes model outputs over the probe set (or the
-    API version when exposed); P1's stub hashes deterministically so
-    builds are reproducible offline. Same Protocol either way — the
-    re-validator only ever compares fingerprints.
+    A live implementation returns model outputs per probe; the stub is
+    deterministic so builds are reproducible offline. The fingerprint is
+    derived (content_hash over the ordered per-probe output hashes) so
+    the re-validator can localize drift probe by probe (invariant 6).
     """
 
-    def fingerprint(self, probes: Sequence[str]) -> str: ...
+    def outputs(self, probes: Sequence[str]) -> tuple[str, ...]: ...
+
+
+def fingerprint_from_outputs(output_hashes: Sequence[str]) -> str:
+    from cle.store.objects import content_hash
+
+    return content_hash(list(output_hashes))
 
 
 class AssemblyError(Exception):
@@ -85,12 +91,18 @@ def assemble(
         fragments.append(Block(kind=record["kind"], payload=record["payload"]).payload)
 
     probes = replay_outcome.in_cluster_openers[:PROBE_SET_SIZE]
+    from cle.store.objects import content_hash
+
+    probe_output_hashes = tuple(
+        content_hash(output) for output in fingerprinter.outputs(probes)
+    )
     return Image(
         source_hash=source.hash,
         resolved_refs=resolved_refs,
         assembled_prompt="\n\n".join(fragments),
         trigger=trigger,
-        model_fingerprint=fingerprinter.fingerprint(probes),
+        model_fingerprint=fingerprint_from_outputs(probe_output_hashes),
         pre_evidence=replay_outcome.pre_evidence,
         probe_set=probes,
+        probe_output_hashes=probe_output_hashes,
     )
