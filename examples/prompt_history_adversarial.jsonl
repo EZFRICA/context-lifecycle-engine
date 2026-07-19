@@ -106,7 +106,7 @@
 {"user_id": "u1", "ts": "2026-06-24T15:04:00Z", "text": "thanks", "thread_id": "noise-30"}
 {"user_id": "u1", "ts": "2026-06-27T15:00:00Z", "text": "outline a talk about incident postmortems", "thread_id": "noise-33"}
 {"user_id": "u1", "ts": "2026-06-27T15:04:00Z", "text": "thanks", "thread_id": "noise-33"}
-{"user_id": "u1", "ts": "2026-06-28T20:00:00Z", "text": "check the latency of my home wifi router this evening", "thread_id": "trap-3"}
+{"user_id": "u1", "ts": "2026-06-28T20:00:00Z", "text": "debug the plot holes in my short story draft", "thread_id": "trap-3"}
 {"user_id": "u1", "ts": "2026-06-28T20:04:00Z", "text": "thanks", "thread_id": "trap-3"}
 {"user_id": "u1", "ts": "2026-06-30T15:00:00Z", "text": "review my sql migration for the orders table", "thread_id": "noise-36"}
 {"user_id": "u1", "ts": "2026-06-30T15:04:00Z", "text": "thanks", "thread_id": "noise-36"}

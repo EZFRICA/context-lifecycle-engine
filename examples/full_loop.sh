@@ -85,8 +85,8 @@ echo "--- v1 image ${V1:0:8} (model-a) vs v2 image ${V2:0:8} (model-b) — disti
 
 step "11. topology history + learned diff"
 $CLE log topology.yaml
-echo "--- delta v1 -> v3 (the three agents appearing) ---"
-$CLE diff topology/v1 topology/v3
+echo "--- delta v1 -> v4 (the three detected agents appearing atop status_report) ---"
+$CLE diff topology/v1 topology/v4
 
 step "12. full test suite"
 $PY -m pytest -q | tail -1

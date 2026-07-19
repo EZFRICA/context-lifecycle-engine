@@ -200,7 +200,7 @@ def adversarial_history() -> list[Message]:
         (14, "draft the monthly report for the board of directors"),    # near recap / report
         (21, "review the standup comedy setlist for open mic night"),   # near standup_digest
         (29, "diagnose why my houseplant leaves are turning yellow"),   # near incident / diagnose
-        (34, "check the latency of my home wifi router this evening"),  # near incident / latency
+        (34, "debug the plot holes in my short story draft"),           # near incident / debug
     ]
     for i, (day, text) in enumerate(traps):
         start = T0 + timedelta(days=day, hours=11)
