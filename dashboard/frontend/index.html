@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CLE · Live Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="app.js" defer></script>
+  <script src="vendor/alpine.min.js" defer></script>
+</head>
+<body x-data="cleDashboard()" x-init="init()">
+
+  <!-- top bar -->
+  <div class="topbar">
+    <div class="brand">CLE <small>· context lifecycle engine — live</small></div>
+    <div class="spacer"></div>
+    <label class="kv">pace
+      <input class="pace mono" type="number" min="500" step="500" x-model="demo.pace" />ms
+    </label>
+    <button class="btn violet" @click="startDemo()" :disabled="demo.running">▶ demo</button>
+    <button class="btn coral" x-show="demo.running" @click="abortDemo()">abort</button>
+    <div class="conn"><span class="dot" :class="{ live: connected }"></span>
+      <span x-text="connected ? 'streaming' : 'offline'"></span></div>
+  </div>
+
+  <!-- demo banner -->
+  <div class="demo-banner" x-show="demo.running || demo.title" x-transition>
+    <span class="step" x-text="'step ' + demo.step + '/' + demo.total"></span>
+    <span x-text="demo.title"></span>
+  </div>
+
+  <!-- CONTROL PANEL -->
+  <div class="control-panel" style="display:flex; gap:12px; margin: 15px 24px; padding: 12px; background:var(--panel); border:1px solid var(--border); border-radius:8px; align-items:center;">
+    <div class="eyebrow" style="margin-bottom:0; font-weight:bold; color:var(--violet)">Simulation Control Center</div>
+    <div style="width:1px; height:20px; background:var(--border); margin:0 8px;"></div>
+    <button class="btn teal" @click="initSystem()" :disabled="demo.running">1. Init (Fixtures + Candidate)</button>
+    <button class="btn violet" @click="runSolicitations()" :disabled="demo.running">2. Run test (full_loop.sh)</button>
+    <button class="btn coral" @click="reinitSystem()" :disabled="demo.running">3. Clean / Reinit State</button>
+  </div>
+
+  <!-- PULSE -->
+  <div class="pulse">
+    <div class="eyebrow">Pulse · live oplog</div>
+    <template x-for="l in pulse" :key="l.id">
+      <div>
+        <div class="pulse-band" x-show="l.band" x-text="l.msg"></div>
+        <div class="pulse-line" x-show="!l.band">
+          <span class="op mono" :style="`color:${accentHex(l.accent)}`" x-text="l.op"></span>
+          <span class="msg" x-text="l.msg"></span>
+          <span class="ts" x-text="l.ts"></span>
+        </div>
+      </div>
+    </template>
+    <div class="faint mono" x-show="pulse.length === 0">waiting for events…</div>
+  </div>
+
+  <!-- ZONES -->
+  <div class="zones">
+
+    <!-- BIRTHS -->
+    <section class="zone" :class="{ }">
+      <div class="eyebrow"><span>Births · the proposal menu</span>
+        <span class="faint" x-text="candidates.length + ' candidate(s)'"></span></div>
+      <div class="panel" :class="{ flash: flash.births }" x-show="candidates.length === 0">
+        <div class="muted mono">No candidates awaiting a decision.</div>
+        <div class="caption">Candidates are detected from usage, never predicted.</div>
+      </div>
+      <template x-for="c in candidates" :key="c.agent">
+        <div class="panel card flash-target clickable" :class="{ flash: flash.births }"
+             :style="`border-left-color: var(--s-candidate)`"
+             @click="openAgent(c.agent, c.state, c.image.hash)">
+          <div><span class="dots"><i style="background:#e8705a"></i><i style="background:#e8a33d"></i><i style="background:#3dbf9b"></i></span>
+            <span class="chip" data-state="candidate">candidate</span></div>
+          <h3 x-text="c.agent"></h3>
+          <div class="hash" x-text="'image ' + c.image.short + ' · src ' + c.image.source_short"></div>
+          <div class="row">
+            <span class="badge pre" x-text="'capture ' + fmtPct(c.image.pre_evidence.capture_rate)"></span>
+            <span class="badge pre" x-text="'false-trigger ' + fmtPct(c.image.pre_evidence.false_trigger_rate)"></span>
+            <span class="badge pre" x-text="'cost ' + c.image.pre_evidence.historical_cost.toFixed(1) + ' it/ep'"></span>
+          </div>
+          <div class="caption">pre_evidence · trigger only — not answer quality · window <span x-text="c.image.pre_evidence.window"></span></div>
+          <div class="row" style="margin-top:10px">
+            <button class="btn amber" @click.stop="approve(c.agent)">Approve → trial</button>
+            <button class="btn coral" @click.stop="decline(c.agent)">Decline</button>
+          </div>
+          <div class="caption">Approve is the human gate (Force Override) — logged as human:dashboard.</div>
+        </div>
+      </template>
+    </section>
+
+    <!-- LIVES -->
+    <section class="zone">
+      <div class="eyebrow"><span>Lives · images &amp; containers</span>
+        <span class="faint" x-text="images.length + ' agent(s)'"></span></div>
+
+      <template x-for="im in images" :key="im.agent">
+        <div class="panel card clickable" :class="{ flash: flash.lives }"
+             :style="`border-left-color: var(--s-${im.state})`"
+             @click="openAgent(im.agent, im.state, im.image.hash)">
+          <div class="row" style="justify-content:space-between">
+            <h3 x-text="im.agent"></h3>
+            <span class="chip" :data-state="im.state" x-text="im.state"></span>
+          </div>
+          <div class="hash" x-text="'image ' + im.image.short + ' · fp ' + im.image.fingerprint_short + (im.versions.length ? ' · ' + im.versions.join(',') : '')"></div>
+          <div class="row">
+            <span class="badge pre" x-text="'capture ' + fmtPct(im.image.pre_evidence.capture_rate)"></span>
+            <span class="badge pre" x-text="'false ' + fmtPct(im.image.pre_evidence.false_trigger_rate)"></span>
+          </div>
+        </div>
+      </template>
+
+      <!-- containers -->
+      <div class="panel" :class="{ flash: flash.lives }">
+        <div class="eyebrow">Containers · per-workspace metrics (the human's window)</div>
+        <div class="ps-grid">
+          <template x-for="w in ps" :key="w.workspace">
+            <div class="ps-cell">
+              <div class="row" style="justify-content:space-between">
+                <b class="mono" x-text="w.workspace"></b>
+                <span class="hash" x-text="w.image_short"></span></div>
+              <div class="metric"><span>solicitations</span><b x-text="w.metrics.solicitations"></b></div>
+              <div class="metric"><span>iterations</span><b x-text="w.metrics.iterations"></b></div>
+              <div class="metric"><span>closures</span><b class="mono" x-text="JSON.stringify(w.metrics.closures)"></b></div>
+            </div>
+          </template>
+          <div class="muted mono" x-show="ps.length === 0">no containers</div>
+        </div>
+        <div class="caption">synthetic demo closures · metrics are never fed back to an agent</div>
+      </div>
+
+      <!-- switch costs -->
+      <div class="panel" x-show="switches.length" :class="{ flash: flash.lives }">
+        <div class="eyebrow">Context-switch cost</div>
+        <template x-for="s in switches" :key="s.id">
+          <div class="row" style="justify-content:space-between">
+            <span class="hash" x-text="s.from + ' → ' + s.image"></span>
+            <span class="badge cost" x-text="`Δ ${s.blocks} blk · ${s.tokens} tok`"></span>
+          </div>
+        </template>
+      </div>
+
+      <!-- drift -->
+      <div class="panel card drift" x-show="drift" :class="{ pulse2: drift && drift.pulse }">
+        <div class="eyebrow" style="color:var(--coral)">Proof expired · persistence</div>
+        <div class="mono" x-show="drift">image <span x-text="drift?.image"></span> — <b x-text="drift?.deltas"></b> probes drifted</div>
+        <div class="hash" x-show="drift" x-text="'fingerprint ' + drift?.at + ' → ' + drift?.now"></div>
+        <div class="caption">substrate changed → auto-demote to trial. proof is never final.</div>
+      </div>
+    </section>
+
+    <!-- TOPOLOGY -->
+    <section class="zone">
+      <div class="eyebrow"><span>Topology · learned</span>
+        <span class="faint" x-text="'v' + topology.version"></span></div>
+
+      <div class="panel" :class="{ flash: flash.topology }">
+        <div class="ladder">
+          <template x-for="state in ['pinned','ephemeral','trial','candidate','archived']" :key="state">
+            <div class="rung">
+              <span class="lbl" :style="`color: var(--s-${state})`" x-text="state"></span>
+              <div class="occ">
+                <template x-for="n in agentsInState(state)" :key="n.agent">
+                  <span class="chip" :data-state="state" x-text="n.agent"></span>
+                </template>
+                <span class="faint" x-show="agentsInState(state).length === 0">·</span>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- shadow strip -->
+      <div class="panel">
+        <div class="eyebrow">Shadow engine · human vs would</div>
+        <template x-for="p in shadowPairs" :key="p.id">
+          <div class="shadow-row" :class="{ diverge: !p.agree }">
+            <span class="hash" x-text="p.image"></span>
+            <span class="verdict human" x-text="'human: ' + p.human"></span>
+            <span class="arrow">·</span>
+            <span class="verdict engine" x-text="'would: ' + p.would"></span>
+            <span x-show="p.agree" class="agree">✓ agree</span>
+            <span x-show="!p.agree">⚠ diverge</span>
+          </div>
+        </template>
+        <div class="muted mono" x-show="shadowPairs.length === 0">no shadow judgments yet</div>
+        <div class="caption">the engine only logs; humans move tags (shadow mode)</div>
+      </div>
+
+      <!-- diff -->
+      <div class="panel">
+        <div class="eyebrow">Topology diff</div>
+        <div class="row">
+          <select x-model.number="diffA"><template x-for="v in versions" :key="v"><option :value="v" x-text="'v'+v"></option></template></select>
+          <span class="arrow">→</span>
+          <select x-model.number="diffB"><template x-for="v in versions" :key="v"><option :value="v" x-text="'v'+v"></option></template></select>
+          <button class="btn teal" @click="loadDiff()">diff</button>
+        </div>
+        <template x-if="diff">
+          <div style="margin-top:8px">
+            <template x-for="(ch, idx) in diff.changes" :key="idx">
+              <div class="diff-line" :class="ch.kind">
+                <span class="sign" x-text="ch.kind === 'added' ? '+' : ch.kind === 'removed' ? '−' : '~'"></span>
+                <span x-text="ch.agent"></span>
+                <span class="faint" x-text="ch.kind === 'added' ? ('→ ' + ch.to_state) : ch.kind === 'removed' ? ('was ' + ch.from_state) : (ch.from_state + ' → ' + ch.to_state)"></span>
+                <span class="badge" :class="{ pre: ch.cause_kind==='pre_evidence', evi: ch.cause_kind==='evidence', per: ch.cause_kind==='persistence' }" x-show="ch.cause_kind && ch.cause_kind !== '?'" x-text="ch.cause_kind"></span>
+              </div>
+            </template>
+            <div class="muted mono" x-show="diff.changes.length === 0">(no delta)</div>
+          </div>
+        </template>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- AGENT DETAIL MODAL -->
+  <div class="modal-overlay" x-show="modal.open" x-cloak x-transition.opacity
+       @click="closeModal()" @keydown.escape.window="closeModal()">
+    <div class="modal-panel" @click.stop>
+      <div class="modal-head">
+        <h2><span x-text="modal.agent"></span>
+          <span class="chip" :data-state="modal.state" x-text="modal.state" style="margin-left:8px"></span>
+        </h2>
+        <button class="modal-x" @click="closeModal()">✕</button>
+      </div>
+
+      <div class="muted mono" x-show="modal.loading">loading…</div>
+      <div class="caption" x-show="modal.data && modal.data.error" style="color:var(--coral)"
+           x-text="modal.data && modal.data.error"></div>
+
+      <template x-if="modal.data && !modal.data.error">
+        <div>
+          <!-- identity -->
+          <div class="modal-section">
+            <div class="eyebrow">Identity</div>
+            <div class="kvgrid">
+              <span class="k">image hash</span><span class="v" x-text="modal.data.hash"></span>
+              <span class="k">source hash</span><span class="v" x-text="modal.data.source_hash"></span>
+              <span class="k">model fingerprint</span><span class="v" x-text="modal.data.model_fingerprint"></span>
+              <span class="k">trigger dims</span><span class="v" x-text="modal.data.trigger_dims"></span>
+              <span class="k">trigger period</span><span class="v" x-text="fmtPeriod(modal.data.trigger_period_seconds)"></span>
+            </div>
+          </div>
+
+          <!-- pre_evidence -->
+          <div class="modal-section">
+            <div class="eyebrow">Pre-evidence · replay (trigger only — not answer quality)</div>
+            <div class="row">
+              <span class="badge pre" x-text="'capture ' + fmtPct(modal.data.pre_evidence.capture_rate)"></span>
+              <span class="badge pre" x-text="'false-trigger ' + fmtPct(modal.data.pre_evidence.false_trigger_rate)"></span>
+              <span class="badge pre" x-text="'cost ' + modal.data.pre_evidence.historical_cost.toFixed(2) + ' it/ep'"></span>
+              <span class="badge pre" x-text="'window ' + modal.data.pre_evidence.window"></span>
+            </div>
+            <div class="caption">
+              semantic trigger tested: <span x-text="modal.data.pre_evidence.semantic_trigger_tested"></span> ·
+              period tested: <span x-text="modal.data.pre_evidence.period_tested"></span>
+            </div>
+          </div>
+
+          <!-- components -->
+          <div class="modal-section">
+            <div class="eyebrow">Resolved components</div>
+            <div class="reflist">
+              <template x-for="(hash, ref) in modal.data.resolved_refs" :key="ref">
+                <div class="refrow"><span class="name" x-text="ref"></span>
+                  <span class="hash" x-text="hash.slice(0,8) + '…'"></span></div>
+              </template>
+              <div class="muted mono" x-show="Object.keys(modal.data.resolved_refs).length === 0">(none)</div>
+            </div>
+          </div>
+
+          <!-- assembled prompt -->
+          <div class="modal-section">
+            <div class="eyebrow">Assembled system prompt</div>
+            <div class="prompt-box" x-text="modal.data.assembled_prompt || '(empty)'"></div>
+          </div>
+
+          <!-- probe set -->
+          <div class="modal-section">
+            <div class="eyebrow">Frozen probe set · <span x-text="modal.data.probe_count"></span></div>
+            <div class="probe-box">
+              <ol>
+                <template x-for="(p, i) in modal.data.probe_set" :key="i"><li x-text="p"></li></template>
+              </ol>
+            </div>
+            <div class="caption">the substrate is fingerprinted over these probes; drift here expires proof</div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+</body>
+</html>
