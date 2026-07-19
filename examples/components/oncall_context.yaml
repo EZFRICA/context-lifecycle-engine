@@ -1,0 +1,6 @@
+ref: blocks/oncall_context
+kind: memory_block
+payload: |
+  Stack: checkout service on Cloud Run, Postgres orders DB, API gateway in
+  front. On-call escalates to the platform team after 15 minutes. The last
+  three incidents were all connection-pool exhaustion under deploy.

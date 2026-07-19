@@ -11,6 +11,7 @@ visible topology.yaml is written next to the state dir root.
 import getpass
 import json
 import re
+import os
 import sys
 from datetime import timedelta
 from pathlib import Path
@@ -76,7 +77,8 @@ def _oplog(state_dir: Path):
 
 
 def _actor() -> str:
-    return f"human:{getpass.getuser()}"
+    # CLE_ACTOR overrides; otherwise the OS user — never a hardcoded name.
+    return f"human:{os.getenv('CLE_ACTOR') or getpass.getuser()}"
 
 
 def _resolve_image_hash(backend: FileStore, agent_or_image: str) -> tuple[str, str | None]:
@@ -114,6 +116,11 @@ def build(
     replay_window: str = typer.Option("30d", help="Replay window, e.g. 30d or 48h."),
     history: Path = typer.Option(Path("examples/prompt_history.jsonl")),
     components: Path = typer.Option(Path("examples/components")),
+    model_id: str = typer.Option(
+        "current",
+        help="Substrate for the fingerprint: 'current' = configured live model; "
+        "a real model name = build on THAT model; 'stub-*' = deterministic offline.",
+    ),
     state_dir: Path = STATE_DIR_OPTION,
 ) -> None:
     """Three-stage build; on success the candidate is born (tag + topology)."""
@@ -127,14 +134,33 @@ def build(
     window_end = all_messages[-1].ts
     window_messages = [m for m in all_messages if m.ts >= window_end - _parse_window(replay_window)]
 
+    from cle.build.fingerprinter import LiveModelFingerprinter
     store = _store(state_dir)
     _seed_components(store, components)
     oplog, sink = _oplog(state_dir)
     try:
+        if model_id.startswith("stub-") or model_id.startswith("drifted-"):
+            fingerprinter = StubFingerprinter(model_id)  # deterministic, offline
+        elif model_id in ("current", "live"):
+            fingerprinter = LiveModelFingerprinter()  # configured model, temp 0
+        else:
+            fingerprinter = LiveModelFingerprinter(model_override=model_id)  # named real model
+        # Replay against the topology AUGMENTED with the candidate (BLUEPRINT
+        # §3.2): existing agents' triggers compete, so capture_rate reflects
+        # what this candidate would ACTUALLY intercept, not what it could in a
+        # vacuum. A rebuild of the same agent excludes its own prior trigger.
+        existing_triggers = []
+        for other, entry in current_agents(store).items():
+            if other == agent_name:
+                continue
+            try:
+                existing_triggers.append(load_image(store, entry["image"], oplog).trigger)
+            except Exception:
+                pass
         image = build_image(
             source=source, backend=store, messages=window_messages,
-            window_label=replay_window, existing_triggers=[],
-            embedder=HashedTokenEmbedder(), fingerprinter=StubFingerprinter(),
+            window_label=replay_window, existing_triggers=existing_triggers,
+            embedder=HashedTokenEmbedder(), fingerprinter=fingerprinter,
             config=DetectorConfig(), oplog=oplog, actor=_actor(),
         )
         # Birth: the candidate tag and its topology entry, both carrying
@@ -300,6 +326,20 @@ def log(
 
 
 @app.command()
+def dashboard(
+    port: int = typer.Option(8000, help="Port to run the dashboard server on."),
+    state_dir: Path = STATE_DIR_OPTION,
+) -> None:
+    """Launch the Web Dashboard and API server."""
+    import uvicorn
+    import os
+    # Expose state_dir via environment variable so dashboard backend knows where to find it
+    os.environ["CLE_STATE_DIR"] = str(state_dir.resolve())
+    typer.echo(f"Initializing FastAPI dashboard server against state dir: {state_dir}")
+    uvicorn.run("dashboard.backend.app:app", host="127.0.0.1", port=port, log_level="info")
+
+
+@app.command()
 def diff(
     version_a: str = typer.Argument(..., help="e.g. topology/v1"),
     version_b: str = typer.Argument(...),
@@ -312,7 +352,11 @@ def diff(
 @app.command()
 def revalidate(
     agent_or_image: str = typer.Argument(...),
-    model_id: str = typer.Option("stub-model-1", help="Simulated served model."),
+    model_id: str = typer.Option(
+        "current",
+        help="'current' = configured live model; a real model name = probe THAT model "
+        "(real drift); 'stub-*'/'drifted-*' = deterministic simulated drift.",
+    ),
     state_dir: Path = STATE_DIR_OPTION,
 ) -> None:
     """Replay the frozen probe set; drift auto-demotes to trial."""
@@ -320,9 +364,21 @@ def revalidate(
     image_hash, agent = _resolve_image_hash(store, agent_or_image)
     oplog, sink = _oplog(state_dir)
     try:
+        from cle.build.fingerprinter import LiveModelFingerprinter
+
+        if model_id.startswith("drifted-") or model_id.startswith("stub-"):
+            # Deterministic simulated drift (offline, reproducible).
+            fingerprinter = StubFingerprinter(model_id)
+        elif model_id in ("current", "live"):
+            # Probe the SAME configured model — proof holds unless it moved.
+            fingerprinter = LiveModelFingerprinter()
+        else:
+            # Probe a DIFFERENT real model to enact a genuine substrate drift.
+            fingerprinter = LiveModelFingerprinter(model_override=model_id)
+
         persistence = run_revalidation(
             backend=store, image_hash=image_hash,
-            fingerprinter=StubFingerprinter(model_id), oplog=oplog, actor="engine:revalidator",
+            fingerprinter=fingerprinter, oplog=oplog, actor="engine:revalidator",
         )
         if not persistence.probe_deltas:
             typer.echo("proof holds: fingerprint unchanged")
@@ -331,10 +387,10 @@ def revalidate(
         typer.echo(f"DRIFT: {len(persistence.probe_deltas)}/{probe_total} probes moved")
         if agent is not None:
             entry = current_agents(store)[agent]
-            if entry["state"] == "active":
+            if entry["state"] in ("ephemeral", "pinned"):
                 move_state_tag(
                     backend=store, agent=agent, image_hash=image_hash,
-                    from_state="active", to_state="trial",
+                    from_state=entry["state"], to_state="trial",
                     reason=f"fingerprint drift under {model_id}",
                     oplog=oplog, actor="engine:revalidator",
                 )
@@ -344,9 +400,56 @@ def revalidate(
                     cause={"persistence": persistence.model_dump()},
                     oplog=oplog, actor="engine:revalidator",
                 )
-                typer.echo(f"{agent}: active -> trial (auto-demoted)")
+                typer.echo(f"{agent}: {entry['state']} -> trial (auto-demoted)")
     finally:
         sink.close()
+
+
+@app.command()
+def decline(
+    agent: str = typer.Argument(..., help="Candidate agent to refuse."),
+    reason: str | None = typer.Option(None, help="Optional human reason (logged)."),
+    state_dir: Path = STATE_DIR_OPTION,
+) -> None:
+    """Refuse a candidate — the human 'Decline' on the proposal menu.
+
+    Writes no tag and moves nothing; it records the refusal as one op line
+    so the divergence between what the system proposed and what the human
+    accepted is auditable (the article-9 data). This is a write path, so
+    like every write it goes through the CLI and is logged.
+    """
+    store = _store(state_dir)
+    agents = current_agents(store)
+    entry = agents.get(agent)
+    if entry is None:
+        typer.echo(f"unknown agent {agent!r}", err=True)
+        raise typer.Exit(code=1)
+    oplog, sink = _oplog(state_dir)
+    try:
+        oplog.emit(
+            "candidate_declined",
+            actor=_actor(),
+            image=entry["image"],
+            agent=agent,
+            from_state=entry["state"],
+            **({"reason": reason} if reason else {}),
+        )
+        typer.echo(f"declined {agent} (was {entry['state']})")
+    finally:
+        sink.close()
+
+
+@app.command()
+def clean(
+    state_dir: Path = STATE_DIR_OPTION,
+) -> None:
+    """Reset the CLE state directory (deletes all persistent state)."""
+    import shutil
+    if state_dir.exists():
+        shutil.rmtree(state_dir)
+        typer.echo(f"CLE state directory {state_dir} has been reset.")
+    else:
+        typer.echo(f"CLE state directory {state_dir} does not exist.")
 
 
 if __name__ == "__main__":
