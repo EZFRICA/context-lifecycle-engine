@@ -16,14 +16,21 @@ from cle.oplog import OpLog
 from cle.store.commits import TriggerSpec
 
 
+RECAP_OPENER = "write the weekly recap of my project for the team"
+
+
 def _trigger_from_clean_history() -> TriggerSpec:
     # The candidate is detected on the CLEAN history (as the demo does);
-    # the adversarial window is what replay then has to survive.
+    # the adversarial window is what replay then has to survive. The bridge
+    # is engineered against the RECAP cluster specifically, so target that
+    # one by its opener (the history now has several ritual clusters).
     config = DetectorConfig()
     episodes = segment(synthetic_history(), config)
     clusterer = IntentClusterer(HashedTokenEmbedder(), config)
     assignments = [clusterer.assign(e) for e in episodes]
-    recap_cluster = max(set(assignments), key=assignments.count)
+    recap_cluster = next(
+        cid for e, cid in zip(episodes, assignments) if e.opener == RECAP_OPENER
+    )
     return TriggerSpec(centroid=clusterer.centroids[recap_cluster])
 
 
