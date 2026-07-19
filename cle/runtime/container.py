@@ -149,22 +149,39 @@ def solicit(
     prompt: str,
     oplog: OpLog,
 ) -> str:
-    """One solicitation of the containerized agent (P2 stub substrate:
-    deterministic response, iteration count derived from the prompt).
-    Metrics go through the volume ONLY — the container record is not
-    touched, and nothing here returns metrics to the caller."""
-    load_image(backend, container.image_hash, oplog)  # integrity check before use
-    # Deterministic stand-in for a model call: cost scales with prompt
-    # size so different workspaces genuinely diverge.
-    iterations = 1 + (len(prompt.split()) % 3)
+    """One solicitation of the containerized agent against the REAL configured
+    model; iteration count is derived from the live response length. Falls
+    back to a deterministic stand-in when no model is reachable (offline/CI),
+    so metrics stay meaningful without a key. Metrics go through the volume
+    ONLY — the container record is not touched, and nothing here returns
+    metrics to the caller."""
+    image = load_image(backend, container.image_hash, oplog)  # integrity check before use
+
+    # Assemble the agent's system prompt + the user prompt for the real call.
+    full_prompt = f"{image.assembled_prompt}\n\nUser request: {prompt}"
+
+    from cle.build.fingerprinter import response_text as _extract_text
+    from cle.llm_provider import get_main_llm
+
+    try:
+        response = get_main_llm().invoke(full_prompt)
+        response_text = _extract_text(response.content)  # text only, no volatile metadata
+        # Iterations scale with the live response length.
+        iterations = max(1, min(5, 1 + (len(response_text.split()) // 30)))
+    except Exception as error:
+        # Offline / no key: deterministic stand-in so different workspaces
+        # still diverge (cost scales with prompt size).
+        response_text = f"[offline stand-in: {error.__class__.__name__}]"
+        iterations = 1 + (len(prompt.split()) % 3)
+
     volume = MetricsVolume(state_root, container.metrics_volume_id)
     volume.record(container_id(container), {"kind": "solicitation", "prompt_tokens": len(prompt.split())})
     volume.record(container_id(container), {"kind": "iterations", "count": iterations})
     volume.record(
         container_id(container),
-        {"kind": "closure", "tag": "success" if iterations < 3 else "reformulated"},
+        {"kind": "closure", "tag": "success" if iterations < 4 else "reformulated"},
     )
-    return f"[{container_id(container)}] handled '{prompt[:32]}' in {iterations} iteration(s)"
+    return f"[{container_id(container)}] Response: {response_text[:80]}... (iterations: {iterations})"
 
 
 def run_prompts(

@@ -107,6 +107,32 @@ def test_probe_set_is_hash_covered_and_deterministically_selected() -> None:
     )
 
 
+def test_image_hash_covers_probe_output_hashes() -> None:
+    """Finding 3: mutating probe_output_hashes changes the image hash.
+
+    Both probe_set AND probe_output_hashes participate in the canonical
+    encoding (via Storable.canonical_bytes → cle_kind + model_dump), so
+    the image address is a commitment to the exact probe outputs frozen
+    at build time. The re-validator relies on this: if probe outputs
+    could change without moving the image hash, drift detection would be
+    comparing against an unstable reference.
+    """
+    store = InMemoryStore()
+    image = _build("recap format v1", store)
+    assert len(image.probe_output_hashes) > 0, "image must carry at least one probe output hash"
+
+    # Mutate one probe output hash → image hash must change.
+    mutated_hashes = ("0" * 64,) + image.probe_output_hashes[1:]
+    tampered = image.model_copy(update={"probe_output_hashes": mutated_hashes})
+    assert tampered.hash != image.hash
+
+    # Add an extra probe output hash → image hash must change.
+    extended = image.model_copy(
+        update={"probe_output_hashes": image.probe_output_hashes + ("extra",)}
+    )
+    assert extended.hash != image.hash
+
+
 def test_image_is_stored_and_tag_target_accepts_it() -> None:
     from cle.oplog import OpLog as _OpLog
     from cle.store.commits import assert_tag_target
