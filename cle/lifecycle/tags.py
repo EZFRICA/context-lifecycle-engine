@@ -6,8 +6,12 @@ Contract (cle-core-contracts, invariants 1, 4, 5):
   gate. Decision (documented, P3): pre-trial moves (birth->candidate,
   candidate->trial, archived->trial resurrection) carry PreEvidence —
   the only proof that can exist before an agent has lived; every move
-  into `active` carries lived Evidence, no exception. Downward moves
-  need no proof, only a logged reason.
+  into `ephemeral` or `pinned` carries lived Evidence, no exception.
+  Downward moves need no proof, only a logged reason.
+- Seven states per the published state machine:
+  archived(0) -> candidate(1) -> trial(2) -> ephemeral(3) -> pinned(4).
+  `ephemeral` = promoted on lived evidence; `pinned` = stable over ≥S
+  solicitations / W days (engine rule, defaults 10/30, config).
 - Every tag op logs one JSON line; version refs are write-once
   (backend-enforced ImmutableRefError).
 """
@@ -18,9 +22,9 @@ from cle.oplog import OpLog
 from cle.store.backends import StoreBackend
 from cle.store.commits import Evidence, PreEvidence, assert_tag_target
 
-# Part-7 ladder. archived sits below candidate: resurrection re-earns
-# trial, never re-enters active directly.
-STATE_RANK = {"archived": 0, "candidate": 1, "trial": 2, "active": 3}
+# Part-7 seven-state ladder. archived sits below candidate: resurrection
+# re-earns trial, never re-enters ephemeral directly.
+STATE_RANK = {"archived": 0, "candidate": 1, "trial": 2, "ephemeral": 3, "pinned": 4}
 
 
 def require_evidence(evidence: Evidence) -> Evidence:
@@ -67,10 +71,10 @@ def move_state_tag(
     assert_tag_target(backend, image_hash, oplog)
 
     upward = from_state is None or STATE_RANK[to_state] > STATE_RANK.get(from_state, 0)
-    if to_state == "active":
+    if to_state in ("ephemeral", "pinned"):
         # THE promotion gate — lived evidence only, whatever the path.
         if evidence is None:
-            raise TagMoveError("promotion to active requires Evidence")
+            raise TagMoveError(f"promotion to {to_state} requires Evidence")
         require_evidence(evidence)
     elif upward:
         if pre_evidence is None and evidence is None:

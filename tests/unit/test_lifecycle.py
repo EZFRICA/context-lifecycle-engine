@@ -51,29 +51,40 @@ def test_tag_ladder_proof_requirements(tmp_path) -> None:
         backend=store, agent="recap", image_hash=image.hash, from_state="candidate",
         to_state="trial", pre_evidence=_pre(), oplog=oplog, actor="human:t",
     )
-    # Promotion without Evidence: refused, even with glowing pre_evidence.
+    # Promotion to ephemeral without Evidence: refused, even with glowing pre_evidence.
     with pytest.raises(TagMoveError):
         move_state_tag(
             backend=store, agent="recap", image_hash=image.hash, from_state="trial",
-            to_state="active", pre_evidence=_pre(), oplog=oplog, actor="human:t",
+            to_state="ephemeral", pre_evidence=_pre(), oplog=oplog, actor="human:t",
         )
     move_state_tag(
         backend=store, agent="recap", image_hash=image.hash, from_state="trial",
-        to_state="active", evidence=_evidence(), oplog=oplog, actor="human:t",
+        to_state="ephemeral", evidence=_evidence(), oplog=oplog, actor="human:t",
+    )
+    # Promotion to pinned also requires Evidence.
+    with pytest.raises(TagMoveError):
+        move_state_tag(
+            backend=store, agent="recap", image_hash=image.hash, from_state="ephemeral",
+            to_state="pinned", pre_evidence=_pre(), oplog=oplog, actor="human:t",
+        )
+    move_state_tag(
+        backend=store, agent="recap", image_hash=image.hash, from_state="ephemeral",
+        to_state="pinned", evidence=_evidence(0.4, 12), oplog=oplog, actor="human:t",
     )
     # Downward needs a reason.
     with pytest.raises(TagMoveError):
         move_state_tag(
-            backend=store, agent="recap", image_hash=image.hash, from_state="active",
+            backend=store, agent="recap", image_hash=image.hash, from_state="pinned",
             to_state="trial", oplog=oplog, actor="human:t",
         )
     move_state_tag(
-        backend=store, agent="recap", image_hash=image.hash, from_state="active",
+        backend=store, agent="recap", image_hash=image.hash, from_state="pinned",
         to_state="trial", reason="fingerprint drift", oplog=oplog, actor="human:t",
     )
     ops = [json.loads(line) for line in sink.getvalue().splitlines() if '"op": "tag"' in line]
-    assert [o.get("to") for o in ops] == ["candidate", "trial", "active", "trial"]
-    assert ops[2]["evidence"]["cost_ratio"] == 0.5  # promotion carries evidence
+    assert [o.get("to") for o in ops] == ["candidate", "trial", "ephemeral", "pinned", "trial"]
+    assert ops[2]["evidence"]["cost_ratio"] == 0.5  # ephemeral promotion carries evidence
+    assert ops[3]["evidence"]["cost_ratio"] == 0.4  # pin carries evidence
 
 
 def test_version_tags_are_immutable(tmp_path) -> None:
@@ -94,19 +105,33 @@ def test_shadow_engine_decides_but_never_writes(tmp_path) -> None:
     sink = io.StringIO()
     before = store.snapshot()
 
+    # trial with good evidence → would: ephemeral (promote threshold 0.7)
     would = shadow_decide(
         state="trial", evidence=_evidence(0.5, 4), thresholds=EngineThresholds(),
         image_hash=image.hash, oplog=OpLog(sink),
     )
-    assert would == "active"
+    assert would == "ephemeral"
+    # ephemeral with enough solicitations and stable cost → would: pinned
     assert shadow_decide(
-        state="active", evidence=_evidence(1.5, 3), thresholds=EngineThresholds(),
+        state="ephemeral", evidence=_evidence(0.8, 12), thresholds=EngineThresholds(),
+        image_hash=image.hash, oplog=OpLog(sink),
+    ) == "pinned"
+    # ephemeral with cost regression → would: trial (demotion)
+    assert shadow_decide(
+        state="ephemeral", evidence=_evidence(1.5, 3), thresholds=EngineThresholds(),
         image_hash=image.hash, oplog=OpLog(sink),
     ) == "trial"
+    # pinned with cost regression → would: ephemeral (demotion)
+    assert shadow_decide(
+        state="pinned", evidence=_evidence(1.5, 3), thresholds=EngineThresholds(),
+        image_hash=image.hash, oplog=OpLog(sink),
+    ) == "ephemeral"
+    # trial with bad results → would: archived
     assert shadow_decide(
         state="trial", evidence=_evidence(1.5, 6), thresholds=EngineThresholds(),
         image_hash=image.hash, oplog=OpLog(sink),
     ) == "archived"
+    # trial with borderline → would: hold
     assert shadow_decide(
         state="trial", evidence=_evidence(0.9, 2), thresholds=EngineThresholds(),
         image_hash=image.hash, oplog=OpLog(sink),
@@ -115,6 +140,23 @@ def test_shadow_engine_decides_but_never_writes(tmp_path) -> None:
     assert store.snapshot() == before  # shadow means SHADOW
     records = [json.loads(line) for line in sink.getvalue().splitlines()]
     assert all(r["actor"] == "engine:shadow" and "would" in r for r in records)
+
+
+def test_shadow_engine_silence_demotion(tmp_path) -> None:
+    """Silence demotion: > 2× period without solicitation → demote."""
+    store = InMemoryStore()
+    image = _image_in(store, tmp_path)
+    sink = io.StringIO()
+
+    would = shadow_decide(
+        state="ephemeral", evidence=_evidence(0.5, 4), thresholds=EngineThresholds(),
+        image_hash=image.hash, oplog=OpLog(sink),
+        days_since_last_solicitation=15.0, trigger_period_days=7.0,
+    )
+    assert would == "trial"
+    record = json.loads(sink.getvalue().splitlines()[-1])
+    assert record["would"] == "demote_silence"
+    assert record["silence_days"] == 15.0
 
 
 # --- topology --------------------------------------------------------------
@@ -136,14 +178,14 @@ def test_topology_chain_diff_and_log(tmp_path) -> None:
         cause={"pre_evidence": _pre().model_dump()}, oplog=oplog, actor="human:t",
     )
     ref2 = write_topology(
-        backend=store, path=topo, agent="recap", state="active", image_hash=image.hash,
+        backend=store, path=topo, agent="recap", state="ephemeral", image_hash=image.hash,
         cause={"evidence": _evidence().model_dump()}, oplog=oplog, actor="human:t",
     )
     assert (ref1, ref2) == ("topology/v1", "topology/v2")
-    assert current_agents(store)["recap"]["state"] == "active"
+    assert current_agents(store)["recap"]["state"] == "ephemeral"
     assert topo.exists() and "recap" in topo.read_text()
     delta = render_diff(store, "topology/v1", "topology/v2")
-    assert "~ recap: trial@" in delta and "-> active@" in delta
+    assert "~ recap: trial@" in delta and "-> ephemeral@" in delta
     assert "evidence(" in render_log(store)
 
 
