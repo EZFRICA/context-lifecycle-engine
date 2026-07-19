@@ -6,4 +6,8 @@ __pycache__/
 .DS_Store
 dist/
 *.egg-info/
+.claude/
 .cle/
+.env
+.env.*
+!.env.example
