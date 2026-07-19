@@ -24,14 +24,16 @@ the detector is failing to discover the specific patterns the author intended.
 import io
 import json
 import statistics
-import sys
 from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "examples"))
-
-from make_holdout import holdout_history
+# Consume the COMMITTED holdout data artifact, not the generator. This keeps
+# the detector blind to how the history was produced (the point of a holdout)
+# and avoids importing from examples/ (which a static analyzer can't resolve).
+HOLDOUT_JSONL = (
+    Path(__file__).resolve().parent.parent.parent / "examples" / "prompt_history_holdout.jsonl"
+)
 
 from cle.build.replay import replay_validate
 from cle.detect.clusters import HashedTokenEmbedder, IntentClusterer, returned_to_cluster
@@ -117,9 +119,13 @@ def test_holdout_discovery_structural_sanity() -> None:
     Does NOT assert: exact capture_rate, false_trigger_rate, or historical_cost.
     """
     config = DetectorConfig()
-    # holdout_history() is cle-free and returns plain prompt-history dicts; the
-    # conversion to the Message schema happens HERE, on the detector's side.
-    messages = [Message.model_validate(record) for record in holdout_history()]
+    # Read the committed holdout as plain prompt-history records; the conversion
+    # to the Message schema happens HERE, on the detector's side.
+    messages = [
+        Message.model_validate(json.loads(line))
+        for line in HOLDOUT_JSONL.read_text().splitlines()
+        if line.strip()
+    ]
 
     # ── 1. No crash ───────────────────────────────────────────────────────
     detected, episodes, sink, gate_cleared = _run_detection(messages, config)
