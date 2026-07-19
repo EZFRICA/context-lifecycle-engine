@@ -11,3 +11,4 @@ dist/
 .env
 .env.*
 !.env.example
+docs/RESUME.md
