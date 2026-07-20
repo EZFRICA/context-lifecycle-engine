@@ -51,9 +51,12 @@ uv pip install -e ".[dev]"
 ## Configuration
 
 `cle build`, `cle run`, and `cle revalidate` call the LLM configured in `.env`
-(Gemini by default) on their **live path**. The test suite and the reproducible
-parts of the demo use a deterministic `StubFingerprinter`, so **no key is
-required to run the tests** or to understand the numbers.
+(`gemini-3.1-flash-lite` by default) on their **live path** — that is the
+default locally, so the system runs on a real substrate. The **test suite** uses
+deterministic stub fingerprinters internally, and **CI** forces stub substrates
+(`CLE_MODEL_A/B=stub-model-*`), so **no key is required to run the tests** or to
+reproduce the replay numbers. Any command's substrate can be pinned with
+`--model-id` (`current` / a real model name / `stub-*`).
 
 ```bash
 cp .env.example .env   # then fill in GEMINI_API_KEY
@@ -72,13 +75,18 @@ actually drifted — not that the sampler rolled differently.
 ## Quick start
 
 ```bash
-# 1. Generate synthetic history; the DETECTOR writes the candidate agent yaml.
+# 1. Generate synthetic history; the DETECTOR writes one agent yaml per real
+#    pattern (weekly_recap, standup_digest, incident_triage) + a hand-authored
+#    status_report incumbent.
 uv run python examples/make_fixture.py
 
 # 2. Three-stage build (resolve -> replay-validate -> assemble); prints the
 #    capture / false-trigger / historical-cost numbers and the two hashes.
+#    capture_rate is measured against the CURRENT topology: build status_report
+#    first and weekly_recap drops to 0.60 because the incumbent already owns
+#    two of its episodes.
 uv run cle build examples/weekly_recap_agent.yaml \
-  --replay-window 35d --history examples/prompt_history_adversarial.jsonl
+  --replay-window 40d --history examples/prompt_history_adversarial.jsonl
 
 # 3. Instantiate the agent in two workspaces and solicit it.
 uv run cle run weekly_recap --workspace alpha --prompts 2
@@ -106,12 +114,17 @@ uv run cle revalidate weekly_recap --model-id drifted-model-2
 bash examples/full_loop.sh
 ```
 
-It cleans state, regenerates fixtures, builds with replay (a deliberately
-adversarial window yields a **non-trivial** `false_trigger_rate ≈ 0.043`), runs
-two workspaces, shows a container **switch** with its `diff_blocks` / `diff_tokens`
-cost, promotes and pins the agent while the shadow engine logs what it *would*
-do, diffs two topology versions, and finally drifts the model to trigger an
-auto-demotion. Ends with the full test suite.
+It runs on **real models by default**; force an offline, deterministic run with
+`CLE_MODEL_A=stub-model-a CLE_MODEL_B=stub-model-b bash examples/full_loop.sh`
+(this is what CI does). The 12 steps: regenerate fixtures, build four agents
+(`weekly_recap` lands at capture **0.60** — the `status_report` incumbent owns
+two of its episodes), replay against a deliberately adversarial window
+(`false_trigger_rate ≈ 0.081` — one bridge fires, four near-miss traps are
+rejected), run two workspaces, show a real container **switch** cost
+(`Δ 4 blocks · 127 tokens`), promote to `pinned` while the shadow engine logs
+what it *would* do (including a genuine **divergence**), demote on regression,
+fire an **integrity violation**, expire proof under a drifted substrate, and
+rebuild a **v2 born from that drift**. Ends with the full test suite.
 
 ### Live dashboard
 
@@ -119,9 +132,14 @@ auto-demotion. Ends with the full test suite.
 uv run cle dashboard --port 8000   # http://localhost:8000
 ```
 
-A single-page dashboard over the persistent `.cle/` state: agent cards, running
-workspaces with live metrics, the topology, and a tail of the op-log stream. It
-reads `/api/state` and triggers `run` / `tag` / `revalidate` through the CLI.
+A single page (HTML + Alpine, no build step) over the persistent `.cle/` state,
+served by FastAPI from `dashboard/`. Four zones — **Pulse** (live oplog over
+SSE), **Births** (candidate cards with the human Approve/Decline gate),
+**Lives** (lifecycle chips, per-container metrics, switch-cost badges, the drift
+card), **Topology** (state ladder, shadow strip, version diff). Click an agent
+for a detail modal. It streams `GET /events` and reads `GET /state/*`; the
+**only** write path is Approve/Decline, routed through the `cle` CLI and logged
+as `human:dashboard`. See `dashboard/README.md`.
 
 ---
 
@@ -131,14 +149,15 @@ The CLI operates on a persistent state directory (`--state-dir`, default `.cle/`
 
 | Command | What it does |
 |---|---|
-| `cle build <src.yaml>` | Resolve → replay-validate → assemble; births the candidate (tag + topology). `--replay-window`, `--history`, `--components`. |
+| `cle build <src.yaml>` | Resolve → replay-validate → assemble; births the candidate (tag + topology). Replays against the current topology, so incumbents compete. `--replay-window`, `--history`, `--components`, `--model-id`. |
 | `cle run <agent> --workspace <ws>` | Instantiate (or switch) the workspace's container and solicit it. `--prompts N`. |
 | `cle ps` | Containers and their per-container metrics (solicitations, iterations, closures). |
 | `cle tag <agent> <state>` | Move a state tag (`--cost-ratio`, `--occurrences`, `--closures`, `--reason`); the shadow engine judges the same evidence. |
 | `cle log [topology.yaml]` | Op-log tail, or topology history with provenance and numbers. |
 | `cle diff <vA> <vB>` | Learned-topology delta between two versions (e.g. `topology/v1 topology/v5`). |
-| `cle revalidate <agent>` | Replay the frozen probe set; on drift, auto-demote to `trial`. `--model-id`. |
-| `cle dashboard` | Launch the web dashboard. `--port`. |
+| `cle revalidate <agent>` | Replay the frozen probe set; on drift, auto-demote to `trial`. `--model-id` (`current`, a real model name, or `stub-*`). |
+| `cle decline <agent>` | Refuse a candidate — logs the refusal, moves no tag. `--reason`. |
+| `cle dashboard` | Launch the FastAPI dashboard (`dashboard/`). `--port`. |
 | `cle clean` | Reset the `.cle/` state directory. |
 
 ---
@@ -197,13 +216,17 @@ cle/
   store/        objects (content_hash, Block) · commits (SourceSpec, Image,
                 evidence types) · backends (Protocol, InMemory, File)
   detect/       episodes · clusters · signals
-  build/        resolver · replay · assembler
+  build/        resolver · replay · assembler · fingerprinter (live substrate)
   runtime/      container · mounts · metrics_volume
   lifecycle/    tags · engine (shadow) · topology · revalidator
   cli/          main.py (typer)
-  ui/           web dashboard
-examples/       make_fixture.py · full_loop.sh · fixtures & components
-docs/           BLUEPRINT.md (the contract) · METRICS.md (what the numbers mean)
+  llm_provider  Gemini / Ollama routing (temperature 0 for fingerprints)
+dashboard/      backend/ (FastAPI + SSE) · frontend/ (HTML + Alpine)
+examples/       make_fixture.py (ground truth + adversarial) ·
+                make_holdout.py (independent discovery) · full_loop.sh ·
+                histories, agents & component blocks
+docs/           BLUEPRINT.md (the contract) · METRICS.md (per-number
+                provenance) · CAPABILITIES.md (what the system does)
 tests/          property/ + unit/ — hypothesis for the invariants
 ```
 
@@ -213,10 +236,26 @@ tests/          property/ + unit/ — hypothesis for the invariants
 uv run pytest -q
 ```
 
-Property + unit tests enforce every invariant — two-hash inequality, staged-
-failure-writes-nothing, the Goodhart reflection test, `PreEvidence`/`Evidence`
-type separation, build determinism, and probe-set hash coverage. **No test
-requires Weaviate or a network call.**
+**100 tests** (property + unit) enforce every invariant — two-hash inequality,
+staged-failure-writes-nothing, the Goodhart reflection test,
+`PreEvidence`/`Evidence` type separation, build determinism, and probe-set hash
+coverage. **No test requires Weaviate, an API key, or a network call.**
+
+### Three data sources, three roles
+
+Evaluating a detector on data you generated with that detector's own geometry is
+a consistency check, not a discovery test. So the fixtures are split by role:
+
+| Source | Role |
+|---|---|
+| **ground truth** (`make_fixture.py`) | planted patterns — the system **recovers** what we know is there |
+| **adversarial** (`adversarial_history()`) | one bridge that fires + near-miss traps — the system **does not fire** on what isn't there |
+| **holdout** (`make_holdout.py`) | a history written **independently** of the detector (imports nothing from `cle`, never touches the embedder, cosine threshold or centroids) — the system **discovers** unplanted patterns |
+
+The holdout test asserts only structural sanity and **reports** its numbers
+without asserting them: on the current holdout the detector discovers 2 of the 3
+authored patterns — the third is missed because a noise episode pollutes its
+cluster. That result is documented as-is, not tuned away.
 
 ---
 
@@ -225,6 +264,12 @@ requires Weaviate or a network call.**
 P1–P3 of the v1 blueprint are implemented: two-hash store, three-stage build with
 replay validation, the minimal detector, the container runtime with switch-cost
 logging, the seven-state lifecycle with a shadow engine, the topology writer, and
-the re-validator — plus a live-LLM integration and a web dashboard. See
-`docs/METRICS.md` for exactly what each number the demo prints does and does not
-prove, and `docs/BLUEPRINT.md` for the governing contract.
+the re-validator — plus a live Gemini substrate and the FastAPI dashboard.
+
+Known limits, stated plainly: replay validates the **trigger only**, never answer
+quality, and never the temporal period (`period_tested` is always false);
+silence-based demotion is a shadow rule whose data the runtime does not yet
+track; the lifecycle engine runs in **shadow mode** (humans move tags). See
+`docs/METRICS.md` for what each number does and does **not** prove,
+`docs/CAPABILITIES.md` for the capability-to-test map, and `docs/BLUEPRINT.md`
+for the governing contract.
