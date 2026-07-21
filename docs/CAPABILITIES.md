@@ -5,7 +5,7 @@ capability is demonstrated. The system has two cardinal pillars — **detection*
 (agents emerge from usage) and **lifecycle** (they earn or lose standing on
 lived evidence) — over a content-addressed store, a runtime, and a live
 dashboard. Everything below is exercised by `examples/full_loop.sh` and pinned
-by the 100-test suite unless noted.
+by the 187-test suite unless noted.
 
 ---
 
@@ -127,7 +127,7 @@ back to an agent.
 
 ---
 
-## Test coverage — 100 tests, 17 files (`uv run pytest`)
+## Test coverage — 187 tests (+1 opt-in integration), 22 files (`uv run pytest`)
 
 Every capability above is guarded by property and unit tests. No test needs a
 real model, an API key, or the network (stub fingerprinters internally); CI runs
@@ -176,3 +176,12 @@ via the CLI, on top of the stub-based `test_revalidate_holds_then_drifts`.
 
 See `docs/METRICS.md` for the per-number provenance and `docs/BLUEPRINT.md` for
 the governing contract.
+
+### GDG enriched run additions
+Tool-aware triggering (declared/resolved, never executed; two-stage gating:
+resolve fails fast on missing library tool or unmounted trigger
+requirement; replay capture requires centroid AND mount), SqliteStore
+(persistent, inspectable, default-suite eligible), and the
+four-contradiction taxonomy with its guards (grey-zone total partition,
+no-tool-never-world_state, severe-divergence adversarial override) — see
+docs/METRICS.md for the table and stated limits.

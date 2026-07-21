@@ -1,7 +1,7 @@
 # CLE Metrics Inventory — Article 9 Skeleton
 
 Every number `examples/full_loop.sh` produces, with its provenance, honest
-scope, and the **test that pins it**. The suite has **100 tests across 17 files**
+scope, and the **test that pins it**. The suite has **187 tests (+1 opt-in integration) across 22 files**
 (`uv run pytest`); each metric below names the test(s) that guard its
 behaviour.
 
@@ -261,3 +261,25 @@ capture 1.0, false-trigger 0.0, cost 3.0 — reported, not asserted.)
    check (the adversarial bridge). A holdout source
    (`examples/make_holdout.py`) adds process-independent discovery. Real metrics
    need multi-user, multi-workspace deployment data.
+
+## GDG enriched run — four-contradiction taxonomy (new)
+
+Divergence inside a cluster is classified before synthesis
+(`cle/detect/stability.py`; op line `cluster_stability`):
+
+| Type | Rule | Reaction | Verified by |
+|---|---|---|---|
+| intra_cluster | opposing directives, gap <= 7d, same/no tool_result | UNSTABLE — no candidate | `test_contradictions.py` |
+| grey_zone | gap in 7–21d (TOTAL partition — no uncovered interval) | UNSTABLE by default (calibratable band) | parametrized 3/12/30d |
+| temporal | gap >= 21d | evolution; candidate from the post-flip segment | venue_policy fixture test |
+| world_state | tool_result present BOTH sides and different, moderate divergence | environmental — NOT instability; candidate still born | make-or-break test |
+
+Guards: no tool_result ⇒ never world_state (no external world in frame);
+SEVERE divergence (<0.10) is never excused by a world change (adversarial
+test) — the residual moderate-band mask is a documented, calibratable
+limitation. Capability gating: capture = centroid match AND tool mount;
+unmounted-tool episodes stay in the denominator. Tools are declarations
+only — nothing is executed; `tool_result` is frozen decor, never asserted
+correct. Backends: SqliteStore joins InMemory/File behind the same
+Protocol (conformance parametrized ×3); Weaviate stays opt-in
+(`integration` marker, skipped by default).
