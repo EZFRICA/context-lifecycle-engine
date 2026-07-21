@@ -30,6 +30,35 @@ class Signal(BaseModel, frozen=True):
     period: PeriodSpec | None = None
 
 
+def detect_signal_gated(
+    episodes: Sequence[Episode],
+    user_baseline: float | None,
+    config: DetectorConfig,
+    embedder,
+    oplog,
+    *,
+    actor: str,
+    cluster_label: str = "?",
+) -> Signal | None:
+    """Stability-gated signal detection (the GDG-run entry point).
+
+    Runs cluster-stability analysis FIRST: an unstable cluster (genuine
+    intra-cluster contradiction, or grey-zone divergence) yields NO
+    candidate — "don't automate yet". Temporal evolution restricts signal
+    detection to the post-flip segment (recency wins). world_state
+    divergence is environmental and gates nothing.
+    """
+    from cle.detect.stability import analyze_cluster_stability
+
+    report = analyze_cluster_stability(
+        episodes, embedder, config, oplog, actor=actor, cluster_label=cluster_label
+    )
+    if report.unstable:
+        return None
+    window = list(episodes)[report.stable_from_index:]
+    return detect_signal(window, user_baseline, config)
+
+
 def detect_signal(
     episodes: Sequence[Episode], user_baseline: float | None, config: DetectorConfig
 ) -> Signal | None:

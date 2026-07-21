@@ -63,6 +63,18 @@ class DetectorConfig(BaseModel, frozen=True):
     # the inter-arrival times stays within this tolerance.
     min_signal_occurrences: int = 3
     recurrence_tolerance: float = 0.25
+    # Cluster-stability taxonomy (GDG run). Directives more dissimilar
+    # than this are a divergent pair; below the SEVERE bar the divergence
+    # is a near-total intent flip that even a world change cannot excuse
+    # (approved adjustment 3).
+    directive_divergence_threshold: float = 0.35
+    severe_divergence_threshold: float = 0.10
+    # Time partition — TOTAL by construction (approved adjustment 1):
+    # <= instability_window -> intra_cluster; >= temporal_evolution_gap ->
+    # temporal; the middle band -> grey_zone, unstable by default. The
+    # band width is a calibration parameter for real data.
+    instability_window: timedelta = timedelta(days=7)
+    temporal_evolution_gap: timedelta = timedelta(days=21)
 
 
 class Message(BaseModel, frozen=True):
