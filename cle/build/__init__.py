@@ -9,7 +9,7 @@ each stage logs its own failure."""
 import time
 from typing import Sequence
 
-from cle.build.assembler import ModelFingerprinter, assemble, parse_trigger
+from cle.build.assembler import ModelFingerprinter, assemble, parse_mounted_tools, parse_trigger
 from cle.build.replay import replay_validate
 from cle.build.resolver import resolve
 from cle.detect.clusters import Embedder
@@ -42,6 +42,7 @@ def build_image(
 
     resolved_refs = resolve(source, backend, oplog, actor)
     trigger = parse_trigger(source)
+    mounted_tools = frozenset(parse_mounted_tools(source))
     replay_outcome = replay_validate(
         trigger=trigger,
         messages=messages,
@@ -51,6 +52,7 @@ def build_image(
         config=config,
         oplog=oplog,
         actor=actor,
+        mounted_tools=mounted_tools,
     )
     image = assemble(
         source=source,

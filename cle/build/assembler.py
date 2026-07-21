@@ -47,6 +47,18 @@ class AssemblyError(Exception):
     resolved components cannot be compiled."""
 
 
+def parse_mounted_tools(source: SourceSpec) -> tuple[str, ...]:
+    """The tool NAMES a candidate mounts (stage-1 already verified they
+    resolve). Order preserved, deduplicated — part of the image identity."""
+    parsed = yaml.safe_load(source.yaml_raw)
+    names = parsed.get("tools", []) or [] if isinstance(parsed, dict) else []
+    seen: list[str] = []
+    for name in names:
+        if name not in seen:
+            seen.append(name)
+    return tuple(seen)
+
+
 def parse_trigger(source: SourceSpec) -> TriggerSpec:
     """Read the trigger the detector wrote into the candidate source.
 
@@ -88,6 +100,10 @@ def assemble(
         record = json.loads(payload)
         if record.get("cle_kind") != "block":
             raise AssemblyError(f"component {ref} is not a block")
+        if record.get("kind") == "tool":
+            # Tools are capability DECLARATIONS, never prompt text — they
+            # ride on the image as mounted_tools, not in assembled_prompt.
+            continue
         fragments.append(Block(kind=record["kind"], payload=record["payload"]).payload)
 
     probes = replay_outcome.in_cluster_openers[:PROBE_SET_SIZE]
@@ -104,5 +120,6 @@ def assemble(
         model_fingerprint=fingerprint_from_outputs(probe_output_hashes),
         pre_evidence=replay_outcome.pre_evidence,
         probe_set=probes,
+        mounted_tools=parse_mounted_tools(source),
         probe_output_hashes=probe_output_hashes,
     )

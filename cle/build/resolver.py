@@ -12,6 +12,7 @@ forms cover both authorship paths):
 Both resolve to a content hash whose object must exist and verify.
 """
 
+import json
 import re
 import time
 
@@ -72,6 +73,34 @@ def _resolve_refs(source: SourceSpec, backend: StoreBackend, oplog: OpLog) -> di
 
     if not isinstance(parsed, dict) or not isinstance(parsed.get("components"), list):
         raise ResolutionError("source must be a mapping with a `components` list")
+
+    # ── capability gating, stage 1 (CLE need: a candidate can match an
+    # intent semantically yet lack the capability the task requires — it
+    # must fail HERE, fast, before anything is consumed, not silently
+    # episode-by-episode at replay).
+    declared_tools = parsed.get("tools", []) or []
+    if not isinstance(declared_tools, list) or any(not isinstance(t, str) for t in declared_tools):
+        raise ResolutionError("`tools` must be a list of tool names")
+    for tool_name in declared_tools:
+        target = _look_up(f"#tools/{tool_name}", backend)
+        if target is None:
+            raise ResolutionError(
+                f"unresolved tool {tool_name}", missing_refs=(f"#tools/{tool_name}",)
+            )
+        record = json.loads(fetch_verified(backend, target, oplog))
+        if record.get("kind") != "tool":
+            raise ResolutionError(f"unresolved tool {tool_name}: ref is not a tool declaration")
+    # Mount coverage: every capability the trigger says the cluster needs
+    # must be declared. The detector writes trigger.requires_tools from the
+    # cluster's observed requires_tool decor.
+    trigger_raw = parsed.get("trigger") or {}
+    required = trigger_raw.get("requires_tools", []) if isinstance(trigger_raw, dict) else []
+    unmounted = sorted(set(required) - set(declared_tools))
+    if unmounted:
+        raise ResolutionError(
+            f"tool required by trigger not mounted: {', '.join(unmounted)}",
+            missing_refs=tuple(f"#tools/{t}" for t in unmounted),
+        )
 
     component_refs = parsed["components"]
     malformed = [ref for ref in component_refs if not isinstance(ref, str) or not ref.startswith("#")]

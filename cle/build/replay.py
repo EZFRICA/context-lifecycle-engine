@@ -60,13 +60,16 @@ def replay_validate(
     config: DetectorConfig,
     oplog: OpLog,
     actor: str,
+    mounted_tools: frozenset[str] = frozenset(),
 ) -> ReplayOutcome:
     """Replay the window against topology ∪ {candidate}; report the trigger's
     retrospective behavior. Raises ReplayError (logged, nothing written)
     when the window has nothing to validate against."""
     started = time.monotonic()
     try:
-        outcome = _replay(trigger, messages, window_label, existing_triggers, embedder, config)
+        outcome = _replay(
+            trigger, messages, window_label, existing_triggers, embedder, config, mounted_tools
+        )
         oplog.emit("closure_distribution", actor=actor, **outcome.closure_counts)
         return outcome
     except ReplayError:
@@ -87,6 +90,7 @@ def _replay(
     existing_triggers: Sequence[TriggerSpec],
     embedder: Embedder,
     config: DetectorConfig,
+    mounted_tools: frozenset[str],
 ) -> ReplayOutcome:
     episodes = segment(list(messages), config)
     if not episodes:
@@ -109,6 +113,12 @@ def _replay(
     # beats every existing trigger — ties go to the incumbent, so a
     # candidate can never silently annex already-routed traffic.
     def candidate_fires(episode: Episode) -> bool:
+        # Capability gating (approved design): an episode that REQUIRED a
+        # tool is only captured if the candidate mounts it. Such episodes
+        # stay in the denominator — capture drops honestly rather than
+        # hiding the capability gap.
+        if episode.required_tool is not None and episode.required_tool not in mounted_tools:
+            return False
         opener_embedding = embedder.embed(episode.opener)
         candidate_similarity = cosine(opener_embedding, trigger.centroid)
         if candidate_similarity < config.cluster_similarity_threshold:

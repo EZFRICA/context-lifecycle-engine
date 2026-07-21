@@ -129,6 +129,11 @@ class Image(Storable, frozen=True):
     model_fingerprint: str
     pre_evidence: PreEvidence
     probe_set: tuple[str, ...]
+    # Capabilities this image mounts (tool NAMES). CLE need: replay-time
+    # capture requires centroid match AND capability; the image must carry
+    # what it can do. Hash-covered like every field. Empty for tool-less
+    # agents.
+    mounted_tools: tuple[str, ...] = ()
     # P3 decision (documented): per-probe output hashes frozen at build so
     # the re-validator can LOCALIZE drift (Persistence.probe_deltas names
     # which probes moved), not just detect it. model_fingerprint is the

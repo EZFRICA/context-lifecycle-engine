@@ -72,6 +72,16 @@ class Message(BaseModel, frozen=True):
     ts: datetime
     text: str
     thread_id: str | None = None
+    # Capability decor (CLE need: a candidate can match an intent yet lack
+    # the capability the task requires — capability-aware triggering needs
+    # the episode to declare it). Optional; absent in tool-less domains.
+    requires_tool: str | None = None
+    # FROZEN environmental result (e.g. "no_slot"). The system may READ it
+    # to classify divergence (world-state vs user contradiction); no code
+    # path ever executes a tool or asserts this value correct — tool
+    # output is answer-quality territory, which replay never validates
+    # (invariant 5).
+    tool_result: str | None = None
 
 
 class Episode(BaseModel, frozen=True):
@@ -99,6 +109,16 @@ class Episode(BaseModel, frozen=True):
         # Cost unit of v1: how many prompts the intent took (BLUEPRINT §3's
         # historical_cost is the mean of this over a cluster).
         return len(self.messages)
+
+    @property
+    def required_tool(self) -> str | None:
+        # The capability this episode's task needed (first declared).
+        return next((m.requires_tool for m in self.messages if m.requires_tool), None)
+
+    @property
+    def tool_results(self) -> tuple[str, ...]:
+        # Frozen environmental decor, in order — readable, never asserted.
+        return tuple(m.tool_result for m in self.messages if m.tool_result)
 
 
 def silence_threshold(gaps: Sequence[timedelta], config: DetectorConfig) -> timedelta:
