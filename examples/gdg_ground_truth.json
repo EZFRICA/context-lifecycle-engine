@@ -1,0 +1,63 @@
+{
+ "labeled_threads": {
+  "events-10": "world_state",
+  "events-11": "world_state",
+  "events-30": "world_state",
+  "events-31": "world_state",
+  "news-5": "intra_cluster",
+  "news-8": "intra_cluster",
+  "news-22": "intra_cluster",
+  "news-25": "intra_cluster",
+  "plan-2": "temporal",
+  "plan-4": "temporal",
+  "plan-6": "temporal",
+  "plan-33": "temporal",
+  "plan-36": "temporal",
+  "plan-39": "temporal",
+  "plan-42": "temporal",
+  "agenda-m-7": "routing",
+  "agenda-w-7": "routing",
+  "agenda-m-14": "routing",
+  "agenda-w-14": "routing",
+  "agenda-m-21": "routing",
+  "agenda-w-21": "routing",
+  "agenda-m-28": "routing",
+  "agenda-w-28": "routing",
+  "agenda-m-35": "routing",
+  "agenda-w-35": "routing"
+ },
+ "domains": {
+  "events": {
+   "tool": "calendar_api",
+   "opener": "schedule the monthly gdg meetup in the main room"
+  },
+  "speakers": {
+   "tool": "outreach_email",
+   "opener": "write a speaker invite email for the next gdg session"
+  },
+  "sponsors": {
+   "tool": "sponsor_crm",
+   "opener": "update the sponsor pipeline notes after today's call"
+  },
+  "community": {
+   "tool": null,
+   "opener": null
+  }
+ },
+ "patterns": {
+  "newsletter": {
+   "opener": "write the weekly gdg newsletter digest for members",
+   "expected": "unstable_no_candidate"
+  },
+  "venue_policy": {
+   "opener": "sort out venue reservations before next month's community event",
+   "expected": "candidate_from_recent"
+  },
+  "routing_pair": {
+   "openers": [
+    "prepare the agenda for the gdg meetup night",
+    "draft the workshop agenda for the coding session"
+   ]
+  }
+ }
+}
