@@ -34,3 +34,4 @@ packages = ["cle"]
 pythonpath = [".", "examples"]
 testpaths = ["tests"]
 addopts = "-q --strict-markers"
+markers = ["integration: opt-in tests needing external services (skipped by default)"]
