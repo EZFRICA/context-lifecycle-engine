@@ -14,6 +14,7 @@ Contract (cle-core-contracts):
 
 import json
 import re
+import sqlite3
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
@@ -132,3 +133,62 @@ class FileStore:
     def snapshot(self) -> tuple[dict[str, bytes], dict[str, str]]:
         objects = {p.name: p.read_bytes() for p in self._objects_dir.iterdir()}
         return objects, self._read_refs()
+
+
+class SqliteStore:
+    """SQLite-backed store — determinism beyond InMemory, one inspectable file.
+
+    CLE need: the lifecycle persists across processes and must be
+    INSPECTABLE (the GDG use case and full_loop run on it); stdlib
+    sqlite3, zero network, deterministic — eligible for the default test
+    suite. Weaviate remains the deferred remote/vector backend behind the
+    integration marker. Same Protocol, same shared ref rule.
+    """
+
+    def __init__(self, path: Path | str) -> None:
+        self._path = Path(path)
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        self._db = sqlite3.connect(str(self._path))
+        self._db.execute("CREATE TABLE IF NOT EXISTS objects (hash TEXT PRIMARY KEY, data BLOB)")
+        self._db.execute("CREATE TABLE IF NOT EXISTS refs (name TEXT PRIMARY KEY, target TEXT)")
+        self._db.commit()
+
+    def put(self, object_hash: str, data: bytes) -> None:
+        if content_hash(data) != object_hash:
+            raise ValueError(f"content does not hash to requested address {object_hash[:8]}")
+        self._db.execute(
+            "INSERT OR REPLACE INTO objects (hash, data) VALUES (?, ?)", (object_hash, data)
+        )
+        self._db.commit()
+
+    def get(self, object_hash: str) -> bytes:
+        row = self._db.execute(
+            "SELECT data FROM objects WHERE hash = ?", (object_hash,)
+        ).fetchone()
+        if row is None:
+            raise KeyError(object_hash)
+        return bytes(row[0])
+
+    def move_ref(self, name: str, object_hash: str) -> None:
+        refs = dict(self._db.execute("SELECT name, target FROM refs").fetchall())
+        assert_ref_movable(name, refs)
+        self._db.execute(
+            "INSERT OR REPLACE INTO refs (name, target) VALUES (?, ?)", (name, object_hash)
+        )
+        self._db.commit()
+
+    def list_refs(self, prefix: str) -> list[tuple[str, str]]:
+        rows = self._db.execute(
+            "SELECT name, target FROM refs WHERE name LIKE ? ORDER BY name", (prefix + "%",)
+        ).fetchall()
+        return [(name, target) for name, target in rows]
+
+    def snapshot(self) -> tuple[dict[str, bytes], dict[str, str]]:
+        objects = {
+            h: bytes(d) for h, d in self._db.execute("SELECT hash, data FROM objects").fetchall()
+        }
+        refs = dict(self._db.execute("SELECT name, target FROM refs").fetchall())
+        return objects, refs
+
+    def close(self) -> None:
+        self._db.close()
