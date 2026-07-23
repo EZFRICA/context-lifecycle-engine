@@ -62,12 +62,33 @@ def cosine(a: Vector, b: Vector) -> float:
     return sum(x * y for x, y in zip(a, b))
 
 
+# The clustering threshold is a property of the VECTOR SPACE, not a global
+# default: bag-of-tokens puts same-domain text at ~0.2-0.4, a real sentence
+# embedder at ~0.7-0.9, so one number cannot serve both. It therefore travels
+# WITH embedder_id. An embedder absent from this map falls back to the config
+# value (and should be swept before it is trusted).
+CLUSTER_THRESHOLD_BY_EMBEDDER: dict[str, float] = {
+    "stub:hashed64": 0.6,
+    # Swept 0.60-0.95 on the realistic fixtures; 0.775 is the only region where
+    # purity and recall are simultaneously non-trivial. The credible evidence is
+    # the process-independent HOLDOUT (3/3 planted patterns recovered, near-
+    # perfect purity), not the in-sample GDG peak — see docs/METRICS.md.
+    "google:gemini-embedding-2:768": 0.775,
+}
+
+
+def cluster_threshold_for(embedder_id: str | None, default: float) -> float:
+    return CLUSTER_THRESHOLD_BY_EMBEDDER.get(embedder_id or "", default)
+
+
 class IntentClusterer:
     """Incremental clustering of episode openers for one user."""
 
     def __init__(self, embedder: Embedder, config: DetectorConfig) -> None:
         self._embedder = embedder
-        self._threshold = config.cluster_similarity_threshold
+        self._threshold = cluster_threshold_for(
+            getattr(embedder, "embedder_id", None), config.cluster_similarity_threshold
+        )
         self.centroids: list[Vector] = []
         self._member_counts: list[int] = []
 
