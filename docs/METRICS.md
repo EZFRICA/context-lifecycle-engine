@@ -1,7 +1,7 @@
 # CLE Metrics Inventory — Article 9 Skeleton
 
 Every number `examples/full_loop.sh` produces, with its provenance, honest
-scope, and the **test that pins it**. The suite has **212 tests (+1 opt-in integration) across 27 files**
+scope, and the **test that pins it**. The suite has **217 tests (+1 opt-in integration) across 27 files**
 (`uv run pytest`); each metric below names the test(s) that guard its
 behaviour.
 
@@ -307,10 +307,40 @@ capture 1.0, false-trigger 0.0, cost 3.0 — reported, not asserted.)
    (`examples/make_holdout.py`) adds process-independent discovery. Real metrics
    need multi-user, multi-workspace deployment data.
 
-## GDG enriched run — four-contradiction taxonomy (new)
+## GDG enriched run — four-contradiction taxonomy (INERT under a real embedder)
+
+> ## ⚠ THIS TAXONOMY IS INERT WITH THE REAL EMBEDDER
+>
+> Everything in this section describes a mechanism that **detects nothing**
+> once the substrate is a real embedding model. Zero divergent pairs on all
+> seven planted intents; `band_width` 0.0000 everywhere.
+>
+> **Cosine measures topical relatedness, not contradiction.** The planted
+> *opposing* directives score **0.62–0.86** — "keep the digest short" and
+> "make it long and detailed" *are* about the same thing, and a good embedder
+> says so. All sit far above the 0.35 divergence bar, so nothing registers as
+> divergent. **v1 only appeared to detect contradictions through lexical
+> accident**: opposing instructions happen to use different words, so
+> bag-of-tokens overlap was low (0.00–0.47, mostly under 0.35).
+> **No threshold rescues this** — the bar would have to exceed 0.86, which
+> flags every pair. It needs a different operator (signed / entailment), which
+> is its own run.
+>
+> **The `world_state` question is superseded, not answered.** The rule is now
+> *unreachable*: the injected contradiction scores 0.7197 and never registers
+> as divergent, so it never reaches the rule at all. Under v1 it scored 0.1140
+> and *was* absorbed as `world_state` — v1 at least saw divergence and
+> mis-attributed some of it; the real embedder sees none.
+>
+> Guard: `analyze_cluster_stability` now returns the third verdict
+> **`unavailable`** in any space where directive-divergence-by-cosine is
+> unsound, and `detect_signal_gated` treats it as *not measured* (no candidate).
+> A non-measurement must never masquerade as a verdict — the same principle as
+> PreEvidence ≠ Evidence and the `degenerate` resolution flag.
 
 Divergence inside a cluster is classified before synthesis
-(`cle/detect/stability.py`; op line `cluster_stability`):
+(`cle/detect/stability.py`; op line `cluster_stability`) — **valid only for
+`embedder_id=stub:hashed64`**:
 
 | Type | Rule | Reaction | Verified by |
 |---|---|---|---|
@@ -515,7 +545,7 @@ The clustering threshold is embedder-specific and must travel with
 Recovery criterion: an intent counts as recovered only if one cluster holds
 ≥80% of its episodes AND that cluster is ≥80% pure (strict); lax = ≥50%/≥50%.
 
-| figure | v1 @0.6 | real @0.6 (unchanged) | real @0.775 (proposed) |
+| figure | v1 @0.6 | real @0.6 (unchanged) | real @0.775 (APPROVED) |
 |---|---|---|---|
 | detected clusters | 63 | **2** | 40 |
 | intents recovered (strict) | 0/7 | 0/7 | **2/7** |
@@ -579,10 +609,25 @@ operator (entailment/NLI or a signed direction), not a distance threshold.**
 | 0.900 | 91 | 0 | 0.0122 | 1.0000 |
 
 A clean inverted U: below ~0.70 purity collapses (recall ~1.0, purity ~0.0);
-above ~0.85 recall collapses (purity 1.0, recall 0.1–0.3). **Proposal (not
-applied):** `cluster_similarity_threshold` 0.6 → **0.775** for
-`google:gemini-embedding-2:768` — peak strict *and* lax recovery, at the
-false-trigger minimum of the useful band.
+above ~0.85 recall collapses (purity 1.0, recall 0.1–0.3).
+
+**APPROVED and applied:** `cluster_similarity_threshold` 0.6 → **0.775**,
+scoped to `embedder_id=google:gemini-embedding-2:768`. 0.6 remains correct for
+`stub:hashed64`. The threshold is a property of the **vector space**, not a
+global default — bag-of-tokens puts same-domain text at ~0.2–0.4, a real
+embedder at ~0.7–0.9, so one number cannot serve both. It therefore travels
+*with* `embedder_id` (`CLUSTER_THRESHOLD_BY_EMBEDDER` in `cle/detect/clusters.py`).
+
+**On what that 0.775 actually rests — read this before trusting it.** The GDG
+sweep peak is **in-sample**: 0.775 was *chosen* on the same fixture it is then
+scored against, so the 2/7 figure is not independent evidence and must not be
+cited as such. The credible evidence is the **holdout** — process-independent,
+authored without knowledge of the embedder, and *never consulted to pick the
+threshold* — which at 0.775 recovers **3/3 planted patterns** with near-perfect
+purity (`outreach` 8/9, `meetup-prep` 8/8, `venue` 5/5). That is **a single
+independent confirmation point.** One holdout, one threshold, one embedder. It
+justifies adopting 0.775 over 0.6; it does not establish 0.775 as calibrated in
+general, and a second independent source should move it.
 
 ### world_state verdict — the question is superseded
 
@@ -608,6 +653,29 @@ divergence and mis-attributed some of it; the real embedder sees none.
 6. **A new calibration coupling:** the clustering threshold is now embedder-
    specific and must be versioned with `embedder_id`, or centroids and thresholds
    silently disagree.
+
+### Process failures in this run (recorded, with their retries)
+
+Two failures worth keeping, because both were caught by luck rather than by a
+check — and both are now guarded:
+
+1. **The vector generation silently collapsed 190 texts to 2 vectors.**
+   `gemini-embedding-2` treats a list of `contents` as ONE multi-part document,
+   not a batch, so batching by content-list returned a single embedding per
+   call. Nothing raised; it was caught by eyeballing a 34 KB file that should
+   have been ~3 MB. *Retry:* one content per call (190 calls, 62.7 s).
+   *Now guarded:* `test_vector_cache_has_one_distinct_vector_per_text` asserts
+   count-matches-texts and that no two distinct texts share a vector.
+2. **The cache-coverage decision was incomplete.** Two consumers embed two
+   *shapes* of text: clustering/replay embed an individual opener, but the
+   stability classifier embeds `_directive_text(episode)` — the follow-ups
+   **joined** into one string, which is no single message. Covering only message
+   texts would have raised `CacheMissError` at R6. Found at R4-prep, later than
+   the "decide it now" instruction intended. *Retry:* cache 190 → 247 vectors.
+
+A third, smaller note: a probe reaching for phrasing-bank strings the generator
+never drew into the fixture raised `CacheMissError` — the guard working as
+designed (loud, no silent recompute), not a defect.
 
 ### Centroid provenance (invariant added this run)
 

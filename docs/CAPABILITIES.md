@@ -5,7 +5,7 @@ capability is demonstrated. The system has two cardinal pillars — **detection*
 (agents emerge from usage) and **lifecycle** (they earn or lose standing on
 lived evidence) — over a content-addressed store, a runtime, and a live
 dashboard. Everything below is exercised by `examples/full_loop.sh` and pinned
-by the 212-test suite unless noted.
+by the 217-test suite unless noted.
 
 > **Realism-run caveat (read `docs/METRICS.md` HEADLINE FINDING first).** The
 > detection capabilities below describe the mechanism, not its recovery rate on
@@ -21,7 +21,7 @@ by the 212-test suite unless noted.
 > Recalibrated to 0.775 it beats v1 (holdout discovers all 3 planted patterns vs
 > 0), but GDG recovery still tops out at 2/7. And it **breaks the contradiction
 > classifier entirely** — zero divergent pairs, because cosine measures topical
-> relatedness, not contradiction. Threshold change is proposed, NOT applied.
+> relatedness, not contradiction. The 0.775 threshold is APPROVED and scoped to embedder_id (0.6 stays for stub:hashed64); it rests on ONE independent confirmation — the holdout.
 
 ---
 
@@ -143,7 +143,7 @@ back to an agent.
 
 ---
 
-## Test coverage — 212 tests (+1 opt-in integration), 27 files (`uv run pytest`)
+## Test coverage — 217 tests (+1 opt-in integration), 27 files (`uv run pytest`)
 
 Every capability above is guarded by property and unit tests. No test needs a
 real model, an API key, or the network (stub fingerprinters internally); CI runs
@@ -201,6 +201,20 @@ requirement; replay capture requires centroid AND mount), SqliteStore
 four-contradiction taxonomy with its guards (grey-zone total partition,
 no-tool-never-world_state, severe-divergence adversarial override) — see
 docs/METRICS.md for the table and stated limits.
+
+**⚠ The four-contradiction taxonomy is INERT under the real embedder.** It
+detects nothing there — zero divergent pairs on all seven planted intents,
+`band_width` 0.0000. Cosine measures **topical relatedness, not contradiction**:
+the planted *opposing* directives score 0.62–0.86 because they *are* about the
+same thing. v1 only appeared to detect contradictions through lexical accident
+(opposing wording shares few tokens). **No threshold rescues this** — the bar
+would need to exceed 0.86, flagging every pair; it needs a signed/entailment
+operator, which is its own run. The `world_state` question is **superseded, not
+answered**: the rule is unreachable because nothing registers as divergent.
+Guard: the classifier returns a third verdict **`unavailable`** in any space
+where the cosine premise is unsound, and the signal gate treats it as *not
+measured* (no candidate) — a non-measurement must never masquerade as a verdict.
+The taxonomy below is valid only for `embedder_id=stub:hashed64`.
 
 **Resolution honesty (Option B extended).** The `cluster_stability` line
 carries `world_state_attribution` (`ws_would_be_intra`, `ws_share_pct`) so
