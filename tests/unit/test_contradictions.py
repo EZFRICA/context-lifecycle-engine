@@ -158,7 +158,9 @@ def test_world_state_divergence_is_not_a_contradiction() -> None:
     assert report.counts["world_state"] >= 1          # divergence attributed to tool_result
     assert report.counts["intra_cluster"] == 0
     assert not report.unstable                        # cluster stays stable
-    assert lines[-1]["world_state"] >= 1 and lines[-1]["unstable"] is False
+    assert lines[-1]["divergent_pairs"]["world_state"] >= 1 and lines[-1]["unstable"] is False
+    # world_state attribution is permanent: this cluster's exclusion is total
+    assert lines[-1]["world_state_attribution"]["ws_share_pct"] == 100.0
     signal = detect_signal_gated(eps, 3.0, CFG, EMB, OpLog(io.StringIO()), actor="human:t")
     assert signal is not None                         # the candidate is still born
 
@@ -167,8 +169,32 @@ def test_gdg_fixture_events_cluster_stable_and_births(gdg) -> None:
     _, eps = gdg.cluster_of(EV)
     report, _ = _analyze(eps)
     assert not report.unstable and report.counts["world_state"] >= 1
-    signal = detect_signal_gated(eps, 3.0, gdg.config, gdg.embedder, gdg.oplog(), actor="human:t")
-    assert signal is not None
+
+
+# ── resolution diagnostic (Option B extended) ───────────────────────────────
+
+def test_degenerate_cluster_is_flagged_never_blocking(gdg) -> None:
+    # The GDG events cluster: every divergent pair sits at one cosine, so the
+    # measure cannot resolve a verdict. The diagnostic must SAY so — and the
+    # verdict is still computed, never blocked.
+    _, eps = gdg.cluster_of(EV)
+    report, lines = _analyze(eps)
+    assert report.resolution == "degenerate"
+    assert report.band_width < CFG.degenerate_band_width
+    assert lines[-1]["resolution"] == "degenerate"
+    assert "unstable" in lines[-1]  # the verdict is emitted regardless
+    # world_state attribution is carried permanently, not just in the report.
+    assert lines[-1]["world_state_attribution"]["ws_would_be_intra"] == report.ws_would_be_intra
+    assert lines[-1]["world_state_attribution"]["ws_share_pct"] == report.ws_share_pct
+
+
+def test_spread_cluster_resolves() -> None:
+    # A cluster with a genuine spread of divergent cosines is resolvable.
+    eps = _episodes([(d, OP, SHORT if i % 2 == 0 else LONG, None, None)
+                     for i, d in enumerate(range(0, 8, 2))])
+    report, lines = _analyze(eps)
+    assert report.resolution == "resolved"
+    assert lines[-1]["resolution"] == "resolved"
 
 
 def test_adversarial_world_state_severe_flip_is_unstable() -> None:

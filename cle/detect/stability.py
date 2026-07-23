@@ -30,9 +30,37 @@ NOT blindly excuse divergence. If the directives are SEVERELY divergent
 (cosine below severe_divergence_threshold — near-zero shared intent), a
 genuine user contradiction may be masked by a world change; prudence
 resolves the pair to UNSTABLE (missing a real contradiction is costlier
-than over-flagging). Residual, documented limitation: a MODERATE
-preference flip co-occurring with a world change is still excluded as
-world_state — the moderate band is calibratable, not omniscient.
+than over-flagging).
+
+KNOWN LIMITATION — moderate-band contradictions on tool-bearing clusters
+are NOT detected in v1. A MODERATE preference flip (directive cosine
+between severe_divergence_threshold and directive_divergence_threshold)
+co-occurring with a world change is still classified world_state and
+excluded. This is not a threshold we can safely move: on the GDG fixture
+every divergent pair in the tool-bearing `events` cluster sits at exactly
+one cosine (band width 0.0000), so the divergence measure cannot separate
+a mild contradiction from lexically diverse but consistent follow-ups —
+any threshold placed inside that degenerate bin is arbitrary. Closing the
+blind spot needs a finer embedder (a real divergence spread) AND a fixture
+that plants a moderate contradiction in a tool-bearing cluster; see
+docs/METRICS.md (fixture debt). v1 SURFACES the condition instead of
+guessing — see the resolution diagnostic below.
+
+Resolution diagnostic (Option B extended): when a cluster's divergent
+cosines concentrate in a band narrower than config.degenerate_band_width
+(with at least degenerate_min_pairs to be meaningful), the report carries
+resolution="degenerate" and the band width. Such a cluster is neither
+stable nor unstable — it is UNRESOLVABLE at the current measurement
+resolution. The flag is DIAGNOSTIC ONLY: it is logged, it never blocks,
+and `unstable` is still computed. Rationale (same principle as
+PreEvidence != Evidence): a weak measurement must not masquerade as a
+strong verdict.
+
+world_state attribution: the log line carries, permanently, how many
+world_state pairs would have been intra_cluster with an identical
+tool_result (ws_would_be_intra) and what fraction of all divergent pairs
+the world_state exclusion absorbs (ws_share_pct) — so the exclusion's
+reach stays visible rather than hidden inside a single count.
 
 routing (the fourth type) is inter-cluster and lives where it always
 did: false_trigger_rate.
@@ -71,6 +99,17 @@ class StabilityReport(BaseModel, frozen=True):
     # When temporal evolution is present (and nothing unstable), signal
     # detection should run on episodes from this index onward (post-flip).
     stable_from_index: int
+    # Resolution diagnostic — orthogonal to the stable/unstable axis and
+    # never blocking. "degenerate" means the divergent cosines are too
+    # concentrated for the measure to resolve a verdict (band_width < the
+    # configured floor); the verdict above is then unreliable by nature.
+    resolution: Literal["resolved", "degenerate"] = "resolved"
+    band_width: float = 0.0
+    # How far the world_state exclusion reaches (permanent instrumentation):
+    # ws_would_be_intra = world_state pairs that would be intra_cluster with
+    # an identical tool_result; ws_share_pct = world_state / all divergent.
+    ws_would_be_intra: int = 0
+    ws_share_pct: float = 0.0
 
 
 def _directive_text(episode: Episode) -> str:
@@ -156,13 +195,49 @@ def analyze_cluster_stability(
     if not unstable and counts["temporal"]:
         stable_from = min(p.later_index for p in pairs if p.divergence_type == "temporal")
 
+    # world_state attribution (permanent instrumentation): of the pairs the
+    # world_state excuse absorbs, how many are intra_cluster by time alone
+    # (would be UNSTABLE with an identical tool_result), and what share of
+    # ALL divergent pairs the exclusion reaches.
+    window_days = config.instability_window.total_seconds() / 86400.0
+    ws_would_be_intra = sum(
+        1 for p in pairs if p.divergence_type == "world_state" and p.gap_days <= window_days
+    )
+    total_divergent = len(pairs)
+    ws_share_pct = round(100.0 * counts["world_state"] / total_divergent, 1) if total_divergent else 0.0
+
+    # Resolution diagnostic: is the divergence measure even able to resolve
+    # a verdict here? A near-zero span across enough pairs means the cosine
+    # cannot separate contradiction from lexical noise. Diagnostic only —
+    # it never touches `unstable`.
+    cosines = [p.directive_cosine for p in pairs]
+    band_width = round(max(cosines) - min(cosines), 6) if cosines else 0.0
+    degenerate = (
+        total_divergent >= config.degenerate_min_pairs
+        and band_width < config.degenerate_band_width
+    )
+    resolution: Literal["resolved", "degenerate"] = "degenerate" if degenerate else "resolved"
+
     oplog.emit(
         "cluster_stability",
         actor=actor,
         cluster=cluster_label,
         unstable=unstable,
-        **counts,
+        resolution=resolution,
+        band_width=band_width,
+        divergent_pairs=counts,
+        world_state_attribution={
+            "ws_would_be_intra": ws_would_be_intra,
+            "ws_share_pct": ws_share_pct,
+        },
     )
     return StabilityReport(
-        unstable=unstable, pairs=tuple(pairs), counts=counts, stable_from_index=stable_from
+        unstable=unstable,
+        pairs=tuple(pairs),
+        counts=counts,
+        stable_from_index=stable_from,
+        resolution=resolution,
+        band_width=band_width,
+        ws_would_be_intra=ws_would_be_intra,
+        ws_share_pct=ws_share_pct,
     )

@@ -75,6 +75,15 @@ class DetectorConfig(BaseModel, frozen=True):
     # band width is a calibration parameter for real data.
     instability_window: timedelta = timedelta(days=7)
     temporal_evolution_gap: timedelta = timedelta(days=21)
+    # Resolution diagnostic (Option B extended). When a cluster's divergent
+    # cosines concentrate in a band narrower than this, the divergence
+    # measure cannot resolve contradiction from lexical noise: any verdict
+    # placed inside a degenerate bin is arbitrary. Logged as
+    # resolution:degenerate, NEVER blocking (a weak measurement must not
+    # masquerade as a strong verdict — PreEvidence != Evidence). A finer
+    # embedder spreads the band; the gain is then measurable.
+    degenerate_band_width: float = 0.05
+    degenerate_min_pairs: int = 10
 
 
 class Message(BaseModel, frozen=True):
