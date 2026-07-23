@@ -12,3 +12,4 @@ dist/
 .env.*
 !.env.example
 docs/RESUME.md
+temp_run.md

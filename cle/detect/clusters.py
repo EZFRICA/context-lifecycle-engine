@@ -28,6 +28,10 @@ Vector = tuple[float, ...]
 
 
 class Embedder(Protocol):
+    # Provenance of the vector space this embedder produces. Centroids are
+    # only comparable within one embedder_id (see cle/detect/embedders.py).
+    embedder_id: str
+
     def embed(self, text: str) -> Vector: ...
 
 
@@ -35,6 +39,8 @@ class HashedTokenEmbedder:
     """Deterministic, offline, dedicated — decision 2's requirements
     exactly, with fixture-grade quality. Tokens are hashed into a fixed
     number of buckets; shared vocabulary yields cosine proximity."""
+
+    embedder_id = "stub:hashed64"
 
     def __init__(self, dim: int = 64) -> None:
         self._dim = dim

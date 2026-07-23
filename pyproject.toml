@@ -11,6 +11,10 @@ dependencies = [
     "langchain-google-genai>=4.2.7",
     "langchain-ollama>=1.1.0",
     "python-dotenv>=1.2.2",
+    # Real embedding substrate for detection (Embedder Protocol). Used ONLY by
+    # the offline cache generator (examples/make_vectors.py); CI reads the
+    # committed vectors through CachedEmbedder and never imports the SDK.
+    "google-genai>=2.12",
 ]
 
 [project.optional-dependencies]
