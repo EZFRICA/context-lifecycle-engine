@@ -193,6 +193,42 @@ def test_degenerate_band_is_flagged_when_directives_collapse() -> None:
     assert "unstable" in lines[-1]  # verdict still emitted, never blocked
 
 
+# ── R9b: a blind classifier must not return "stable" ───────────────────────
+
+def test_verdict_is_unavailable_in_an_unsound_vector_space() -> None:
+    # Directive-divergence-by-cosine is unsound for a semantic embedder (it
+    # scores OPPOSING directives 0.62-0.86 — they are about the same thing).
+    # The classifier must say "not measured", never a reassuring "stable".
+    from cle.detect.embedders import default_embedder
+
+    eps = _episodes([(d, OP, SHORT if i % 2 == 0 else LONG, None, None)
+                     for i, d in enumerate(range(0, 8, 2))])
+    sink = io.StringIO()
+    report = analyze_cluster_stability(eps, default_embedder(), CFG, OpLog(sink),
+                                       actor="human:t", cluster_label="c")
+    assert report.verdict == "unavailable"
+    assert json.loads(sink.getvalue().splitlines()[-1])["verdict"] == "unavailable"
+
+
+def test_unavailable_births_no_candidate() -> None:
+    # "Not measured" must never be treated as "stable": with no stability
+    # evidence in this space, no candidate may be born on the assumption of it.
+    from cle.detect.embedders import default_embedder
+
+    eps = _episodes([(d, OP, SHORT, None, None) for d in range(0, 8, 2)])
+    signal = detect_signal_gated(eps, 3.0, CFG, default_embedder(),
+                                 OpLog(io.StringIO()), actor="human:t")
+    assert signal is None
+
+
+def test_sound_space_still_returns_a_two_valued_verdict() -> None:
+    stable = _episodes([(d, OP, SHORT, None, None) for d in range(0, 8, 2)])
+    assert _analyze(stable)[0].verdict == "stable"
+    flip = _episodes([(d, OP, SHORT if i % 2 == 0 else LONG, None, None)
+                      for i, d in enumerate(range(0, 8, 2))])
+    assert _analyze(flip)[0].verdict == "unstable"
+
+
 def test_spread_cluster_resolves() -> None:
     # A cluster with a genuine spread of divergent cosines is resolvable.
     eps = _episodes([(d, OP, SHORT if i % 2 == 0 else LONG, None, None)

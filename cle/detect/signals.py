@@ -53,6 +53,12 @@ def detect_signal_gated(
     report = analyze_cluster_stability(
         episodes, embedder, config, oplog, actor=actor, cluster_label=cluster_label
     )
+    if report.verdict == "unavailable":
+        # NOT MEASURED — not "stable". We have no stability evidence in this
+        # vector space, so we must not birth a candidate on the assumption of
+        # it. Conservative by design: treating a blind check as a pass is the
+        # failure mode this verdict exists to prevent.
+        return None
     if report.unstable:
         return None
     window = list(episodes)[report.stable_from_index:]

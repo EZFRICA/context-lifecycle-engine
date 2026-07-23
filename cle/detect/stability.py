@@ -78,6 +78,20 @@ from cle.detect.episodes import DetectorConfig, Episode
 from cle.oplog import OpLog
 
 DivergenceType = Literal["intra_cluster", "grey_zone", "temporal", "world_state"]
+Verdict = Literal["stable", "unstable", "unavailable"]
+
+# Directive-divergence-by-cosine is only defensible in a space where opposing
+# instructions actually land far apart. That is true (by lexical accident) for
+# the bag-of-tokens embedder, and FALSE for a real semantic embedder: it scores
+# the planted OPPOSING directives at 0.62-0.86, because they ARE about the same
+# thing — cosine measures topical relatedness, not contradiction. In any other
+# space the classifier detects nothing, so it must report `unavailable` rather
+# than a reassuring "stable".
+#
+# CLE need: a NON-MEASUREMENT MUST NEVER MASQUERADE AS A VERDICT — the same
+# principle as PreEvidence != Evidence and the `degenerate` resolution flag.
+# Replacing cosine with a signed/entailment operator is its own run.
+DIVERGENCE_SOUND_EMBEDDERS = frozenset({"stub:hashed64"})
 
 # Pair types that count toward instability. temporal is evolution;
 # world_state is environment.
@@ -93,6 +107,10 @@ class DivergentPair(BaseModel, frozen=True):
 
 
 class StabilityReport(BaseModel, frozen=True):
+    # THREE-valued outcome. `unstable` is kept for existing callers but is
+    # meaningless when verdict == "unavailable": consumers MUST branch on
+    # `verdict` and treat "unavailable" as NOT MEASURED, never as stable.
+    verdict: Verdict = "stable"
     unstable: bool
     pairs: tuple[DivergentPair, ...]
     counts: dict[str, int]
@@ -166,6 +184,30 @@ def analyze_cluster_stability(
     world_state pairs). temporal-only divergence keeps the cluster stable
     but moves the synthesis window to the post-flip segment.
     """
+    # Soundness gate: in a space where cosine does not separate opposing
+    # directives, this classifier measures NOTHING. Report that, rather than
+    # returning "stable" and letting a blind check read as reassurance.
+    embedder_id = getattr(embedder, "embedder_id", None)
+    if embedder_id not in DIVERGENCE_SOUND_EMBEDDERS:
+        empty = {t: 0 for t in ("intra_cluster", "grey_zone", "temporal", "world_state")}
+        oplog.emit(
+            "cluster_stability",
+            actor=actor,
+            cluster=cluster_label,
+            verdict="unavailable",
+            unstable=False,
+            reason="directive-divergence-by-cosine is not sound for "
+                   f"embedder_id={embedder_id!r}",
+            resolution="unavailable",
+            band_width=0.0,
+            divergent_pairs=empty,
+            world_state_attribution={"ws_would_be_intra": 0, "ws_share_pct": 0.0},
+        )
+        return StabilityReport(
+            verdict="unavailable", unstable=False, pairs=(), counts=empty,
+            stable_from_index=0, resolution="degenerate", band_width=0.0,
+        )
+
     ordered = sorted(episodes, key=lambda e: e.started_at)
     directives = [embedder.embed(_directive_text(e)) for e in ordered]
 
@@ -222,6 +264,7 @@ def analyze_cluster_stability(
         "cluster_stability",
         actor=actor,
         cluster=cluster_label,
+        verdict="unstable" if unstable else "stable",
         unstable=unstable,
         resolution=resolution,
         band_width=band_width,
@@ -232,6 +275,7 @@ def analyze_cluster_stability(
         },
     )
     return StabilityReport(
+        verdict="unstable" if unstable else "stable",
         unstable=unstable,
         pairs=tuple(pairs),
         counts=counts,
