@@ -5,7 +5,7 @@ capability is demonstrated. The system has two cardinal pillars — **detection*
 (agents emerge from usage) and **lifecycle** (they earn or lose standing on
 lived evidence) — over a content-addressed store, a runtime, and a live
 dashboard. Everything below is exercised by `examples/full_loop.sh` and pinned
-by the 204-test suite unless noted.
+by the 212-test suite unless noted.
 
 > **Realism-run caveat (read `docs/METRICS.md` HEADLINE FINDING first).** The
 > detection capabilities below describe the mechanism, not its recovery rate on
@@ -13,7 +13,15 @@ by the 204-test suite unless noted.
 > varied usage, the v1 bag-of-tokens embedder (cosine 0.6) fragmented every
 > recurring intent into near-singletons and holdout discovery fell to **0**.
 > v1 detection clustered cleanly only because the old fixtures were templated.
-> An embedder upgrade behind the existing `Embedder` Protocol is the next run.
+>
+> **Embedder upgrade run (done).** A real model
+> (`google:gemini-embedding-2:768`, frozen vectors, offline CI) is now available
+> behind the Protocol. It is **not a drop-in**: at the unchanged 0.6 threshold it
+> over-merges everything into 2 clusters and `false_trigger` jumps 0.061 → 0.632.
+> Recalibrated to 0.775 it beats v1 (holdout discovers all 3 planted patterns vs
+> 0), but GDG recovery still tops out at 2/7. And it **breaks the contradiction
+> classifier entirely** — zero divergent pairs, because cosine measures topical
+> relatedness, not contradiction. Threshold change is proposed, NOT applied.
 
 ---
 
@@ -135,7 +143,7 @@ back to an agent.
 
 ---
 
-## Test coverage — 204 tests (+1 opt-in integration), 26 files (`uv run pytest`)
+## Test coverage — 212 tests (+1 opt-in integration), 27 files (`uv run pytest`)
 
 Every capability above is guarded by property and unit tests. No test needs a
 real model, an API key, or the network (stub fingerprinters internally); CI runs

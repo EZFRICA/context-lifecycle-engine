@@ -1,7 +1,7 @@
 # CLE Metrics Inventory — Article 9 Skeleton
 
 Every number `examples/full_loop.sh` produces, with its provenance, honest
-scope, and the **test that pins it**. The suite has **204 tests (+1 opt-in integration) across 26 files**
+scope, and the **test that pins it**. The suite has **212 tests (+1 opt-in integration) across 27 files**
 (`uv run pytest`); each metric below names the test(s) that guard its
 behaviour.
 
@@ -34,9 +34,12 @@ it. This is the most important result of the project so far. It is a finding
 about the DETECTOR, not the data — no threshold was tuned to hide or soften it
 (the realism-run decision: realistic data uncapped, guard on data properties
 grouped by planted intent, recovery **reported not gated**). The embedder
-upgrade (a char-n-gram / small-model swap behind the existing `Embedder`
-Protocol) is the deliberately-separate next run, now measurable as a delta
-against this frozen realistic baseline.
+upgrade was run separately against this frozen baseline — see *Embedder upgrade
+run* at the end. Its short version: a real embedding model does NOT rescue v1.
+It inverts the failure (over-merging instead of over-fragmenting), needs a
+per-embedder threshold (0.775, not 0.6) before it beats v1 at all, and it
+**breaks contradiction detection outright** — cosine measures topical
+relatedness, not contradiction.
 
 The full per-intent re-measurement is in *Realism run — re-measurement* below;
 the anti-templating guard is `tests/unit/test_fixture_realism.py`.
@@ -490,3 +493,130 @@ embedder upgrade (next run) may restore clustering and let the demo be rebuilt
 properly. It is called out here rather than silently left: the realism guard
 covers the GDG and holdout sources; extending it to the adversarial source is
 deferred with the demo rework.
+
+## Embedder upgrade run — a real embedding model behind the Protocol
+
+Substrate: `google:gemini-embedding-2:768` (768-dim, MRL-truncated), frozen to
+`examples/vectors.google-gemini-embedding-2-768.json` — 247 distinct fixture
+texts embedded in 247 calls / 84.2s. CI reads those vectors through
+`CachedEmbedder` (miss = error, never a silent recompute); no key, no network.
+There is deliberately **no `model_version`**: the embed response exposes no
+version signal distinct from the model id, and a placeholder would give false
+assurance about detecting silent provider-side drift.
+
+**Headline: the embedder upgrade is not a drop-in.** It does not "fix" v1 — it
+*inverts the failure mode* (over-fragmenting becomes over-merging), it requires
+a per-embedder threshold, and it **breaks contradiction detection outright**.
+The clustering threshold is embedder-specific and must travel with
+`embedder_id`; 0.6 remains correct for `stub:hashed64`.
+
+### Before / after (GDG ground-truth fixture, 246 episodes)
+
+Recovery criterion: an intent counts as recovered only if one cluster holds
+≥80% of its episodes AND that cluster is ≥80% pure (strict); lax = ≥50%/≥50%.
+
+| figure | v1 @0.6 | real @0.6 (unchanged) | real @0.775 (proposed) |
+|---|---|---|---|
+| detected clusters | 63 | **2** | 40 |
+| intents recovered (strict) | 0/7 | 0/7 | **2/7** |
+| intents recovered (lax) | 1/7 | 0/7 | **4/7** |
+| clusters reaching ≥3 gate | 22 | 2 | — |
+| events capture (ideal centroid) | 0.5000 | 0.8106 | 1.0000 |
+| events false_trigger | 0.0614 | **0.6316** | 0.0044 |
+| events historical_cost | 2.4375 | 2.1322 | — |
+| **holdout discovery** | 0 | 1 *(spurious)* | **3** *(genuine)* |
+
+v1's 0/7 strict is its *best over a full 0.40–1.10 sweep*, not just at 0.6.
+
+### Consumer 1 — clustering / detection: improves, but only recalibrated
+
+At the unchanged 0.6 the real embedder collapses everything into **2 clusters**
+and `false_trigger` explodes to **0.632** (the trigger steals 63% of
+out-of-cluster traffic): 0.6 is bag-of-tokens calibration, where same-domain
+text scores ~0.2–0.4; real sentence embeddings put same-domain text ~0.7–0.9, so
+everything clears the bar. Recalibrated to 0.775 the picture is genuinely better
+than v1 — and the **process-independent holdout recovers all three planted
+patterns** with near-perfect purity (`outreach` 8/9, `meetup-prep` 8/8, `venue`
+5/5), versus 0 under v1. At 0.6 the holdout's single "discovery" is a mega-
+cluster dominated by noise (14/41) — a spurious count, not a discovery.
+
+**Honest ceiling:** even at the optimum, only 2/7 strict (4/7 lax) GDG intents
+are recovered. The upgrade improves detection markedly; it does not solve it.
+
+### Consumer 2 — stability / contradiction: it goes fully blind
+
+| figure | v1 | real |
+|---|---|---|
+| divergent pairs, all 7 intents | many | **0** |
+| events band_width | 0.3381 | 0.0000 |
+| events ws_share_pct | 35.5 | 0.0 |
+| events intra_cluster pairs | 3 | 0 |
+| events / newsletter / … unstable | True | False (all) |
+| venue_policy over-flag | True | False *(wrong reason)* |
+
+This is **not a calibration problem — it is the wrong operator.** Cosine
+measures *topical relatedness, not contradiction.* A real semantic embedder
+correctly scores the planted OPPOSING directives at **0.619–0.864** (mean
+0.66–0.74) — "keep the digest short" and "make it long and detailed" *are*
+about the same thing. All sit far above the 0.35 divergence bar, so nothing is
+divergent. v1 only appeared to detect contradictions by accident: opposing
+instructions use different *words*, so lexical overlap was low (0.00–0.47,
+mostly below 0.35). No threshold rescues this — the bar would have to exceed
+0.86, which flags every pair. **Contradiction detection needs a different
+operator (entailment/NLI or a signed direction), not a distance threshold.**
+
+### Threshold sweep (reported; the configured default is UNCHANGED)
+
+| thr | clusters | recovered (strict) | events_false | events_capture |
+|---|---|---|---|---|
+| 0.600 | 2 | 0 | 0.6316 | 0.8106 |
+| 0.650 | 3 | 0 | 0.0541 | 0.6699 |
+| 0.700 | 13 | 1 | 0.2679 | 0.7051 |
+| 0.750 | 33 | 1 | 0.0488 | 0.4634 |
+| **0.775** | **40** | **2** | **0.0044** | **1.0000** |
+| 0.800 | 51 | 1 | 0.0466 | 0.8000 |
+| 0.850 | 80 | 0 | 0.0247 | 1.0000 |
+| 0.900 | 91 | 0 | 0.0122 | 1.0000 |
+
+A clean inverted U: below ~0.70 purity collapses (recall ~1.0, purity ~0.0);
+above ~0.85 recall collapses (purity 1.0, recall 0.1–0.3). **Proposal (not
+applied):** `cluster_similarity_threshold` 0.6 → **0.775** for
+`google:gemini-embedding-2:768` — peak strict *and* lax recovery, at the
+false-trigger minimum of the useful band.
+
+### world_state verdict — the question is superseded
+
+Injecting the same moderate contradiction into the tool-bearing `events` intent:
+under v1 the pair scores 0.1140 and is classified `world_state` (absorbed — the
+narrow rule-level blindness). Under the real embedder it scores **0.7197 and is
+not classified at all** — it never registers as divergent, so it never reaches
+the world_state rule. The rule is *unreachable*, not fixed. v1 at least saw
+divergence and mis-attributed some of it; the real embedder sees none.
+
+### What got WORSE (the honest list)
+
+1. **Contradiction detection: from partial to none.** Zero divergent pairs on
+   every intent; the whole four-type taxonomy is inert under a semantic embedder.
+2. **false_trigger at the unchanged threshold: 0.061 → 0.632** — a 10× regression.
+3. **Over-merging replaces over-fragmenting:** 63 clusters → 2. Both are failures;
+   the new one is harder to notice because capture *rises* (0.50 → 0.81) while
+   the trigger is in fact stealing most out-of-cluster traffic.
+4. **Holdout discovery at 0.6 is spuriously non-zero** (1 noise-dominated
+   mega-cluster) — a number that looks like progress and is not.
+5. **`venue_policy`'s over-flag "fix" is illusory:** it is no longer flagged
+   unstable only because nothing is flagged at all.
+6. **A new calibration coupling:** the clustering threshold is now embedder-
+   specific and must be versioned with `embedder_id`, or centroids and thresholds
+   silently disagree.
+
+### Centroid provenance (invariant added this run)
+
+`TriggerSpec` records `embedder_id`, and `Image.hash` covers the trigger — so two
+images built on different embedders necessarily have different hashes. A centroid
+is only meaningful inside the vector space that produced it, so an embedder swap
+invalidates centroids exactly as a model swap invalidates a `model_fingerprint`,
+one layer deeper — and this one touches agent **identity**. Cross-space centroid
+comparison raises `SpaceMismatchError`, enforced where routing actually compares
+(replay: candidate vs each incumbent). Pinned by `test_embedder_provenance.py`,
+which also asserts the suite default is `CachedEmbedder` and that no test module
+imports the live embedder.
