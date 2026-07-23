@@ -51,7 +51,7 @@ uv pip install -e ".[dev]"
 ## Configuration
 
 `cle build`, `cle run`, and `cle revalidate` call the LLM configured in `.env`
-(`gemini-3.1-flash-lite` by default) on their **live path** — that is the
+(`gemini-3.5-flash-lite` by default) on their **live path** — that is the
 default locally, so the system runs on a real substrate. The **test suite** uses
 deterministic stub fingerprinters internally, and **CI** forces stub substrates
 (`CLE_MODEL_A/B=stub-model-*`), so **no key is required to run the tests** or to

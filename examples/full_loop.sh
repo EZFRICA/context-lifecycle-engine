@@ -11,8 +11,8 @@ CLE=.venv/bin/cle
 PY=.venv/bin/python
 STATE=.cle
 WIN=(--replay-window 40d --history examples/prompt_history_adversarial.jsonl)
-MODEL_A=(--model-id "${CLE_MODEL_A:-gemini-3.1-flash-lite}")  # substrate v1 is proven on
-MODEL_B=(--model-id "${CLE_MODEL_B:-gemini-flash-latest}")    # a DIFFERENT real model — v2 is born here
+MODEL_A=(--model-id "${CLE_MODEL_A:-gemini-3.5-flash-lite}")  # substrate v1 is proven on
+MODEL_B=(--model-id "${CLE_MODEL_B:-gemini-3.6-flash}")    # a DIFFERENT real model — v2 is born here
 TWELVE=success,success,success,success,success,success,success,success,success,success,success,success
 rm -rf "$STATE"
 step() { printf '\n=== %s ===\n' "$*"; }

@@ -26,7 +26,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 GEMMA_MODEL = os.getenv("GEMMA_MODEL", "gemma-2-27b-it")
 # Real model by default — the CLE runs on a live substrate locally. Override
 # with GEMINI_MODEL in .env if your key targets a different one.
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 # Temperature for conversational solicitations (cle run).
 # In production this is typically 0.7–1.0 for varied, creative responses.
 # The FINGERPRINTER always runs at 0 regardless — see get_fingerprint_llm().
@@ -85,7 +85,7 @@ def get_fingerprint_llm(model_override: str | None = None):
       T=0.7 → 3/3 runs all different          ✗ (false drift)
 
     `model_override` lets the re-validator probe a DIFFERENT real model to
-    enact genuine drift (e.g. gemini-3.1-flash-lite → gemini-flash-latest).
+    enact genuine drift (e.g. gemini-3.5-flash-lite → gemini-3.6-flash).
     """
     model = model_override or GEMINI_MODEL
     if LLM_PROVIDER == "ollama":

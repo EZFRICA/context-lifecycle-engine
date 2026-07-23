@@ -20,7 +20,7 @@ from .oplog_sse import EventBus
 # Drift is enacted by revalidating the pinned image against a DIFFERENT real
 # model — a true substrate change, not a fake id. Must be a model your key can
 # reach (distinct from the build model). Override per venue.
-DRIFT_MODEL = os.getenv("CLE_DEMO_DRIFT_MODEL", "gemini-flash-latest")
+DRIFT_MODEL = os.getenv("CLE_DEMO_DRIFT_MODEL", "gemini-3.6-flash")
 
 _PY = sys.executable
 
