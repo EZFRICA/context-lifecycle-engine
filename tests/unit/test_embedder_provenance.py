@@ -7,6 +7,7 @@ This is a TEST, not a convention — an untested rule drifts on the first rushed
 session.
 """
 
+import json
 from pathlib import Path
 
 import pytest
@@ -57,6 +58,43 @@ def test_no_test_module_imports_real_embedder() -> None:
 
 def test_stub_embedder_carries_its_id() -> None:
     assert StubEmbedder().embedder_id == "stub:hashed64"
+
+
+# ── R9c: cache integrity — a silent batching collapse must FAIL the suite ───
+
+def test_vector_cache_has_one_distinct_vector_per_text() -> None:
+    """The first generation silently collapsed 190 texts to 2 vectors, because
+    gemini-embedding-2 treats a list of contents as ONE multi-part document.
+    Nothing raised — it was caught by eyeballing the file size. This makes that
+    class of failure a test: count must match, and distinct texts must not
+    share a vector."""
+    from cle.detect.embedders import VECTOR_CACHE
+
+    blob = json.loads(VECTOR_CACHE.read_text())
+    vectors = blob["vectors"]
+    assert blob["count"] == len(vectors), "declared count != stored vectors"
+    assert len(vectors) > 100, f"cache suspiciously small: {len(vectors)} vectors"
+    # No two DISTINCT texts may share an identical vector (the collapse
+    # signature: many keys, one repeated embedding).
+    seen: dict[tuple, str] = {}
+    collisions = []
+    for key, vec in vectors.items():
+        t = tuple(vec)
+        if t in seen:
+            collisions.append((seen[t], key))
+        seen[t] = key
+    assert not collisions, f"{len(collisions)} distinct texts share a vector (batching collapse?)"
+    assert len(seen) == len(vectors)
+
+
+def test_vector_cache_dimensions_are_uniform_and_normalized() -> None:
+    from cle.detect.embedders import VECTOR_CACHE
+
+    blob = json.loads(VECTOR_CACHE.read_text())
+    dim = blob["dim"]
+    for vec in list(blob["vectors"].values())[:25]:
+        assert len(vec) == dim
+        assert abs(sum(v * v for v in vec) ** 0.5 - 1.0) < 1e-6, "vector not L2-normalized"
 
 
 # ── R3: centroid provenance is part of agent identity ───────────────────────
