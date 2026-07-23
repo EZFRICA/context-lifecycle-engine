@@ -43,7 +43,7 @@ def _weekly_history() -> list[Message]:
 
 
 def _trigger() -> TriggerSpec:
-    return TriggerSpec(centroid=EMBEDDER.embed("write the weekly recap of my project"))
+    return TriggerSpec(centroid=EMBEDDER.embed("write the weekly recap of my project"), embedder_id=EMBEDDER.embedder_id)
 
 
 def _run(messages: list[Message], sink: io.StringIO | None = None):
@@ -95,7 +95,7 @@ def test_out_of_cluster_capture_shows_in_false_trigger_rate() -> None:
     # nonzero false-trigger rate against recap traffic.
     messages = _weekly_history()
     outcome = replay_validate(
-        trigger=TriggerSpec(centroid=EMBEDDER.embed("debug the kubernetes ingress timeout")),
+        trigger=TriggerSpec(centroid=EMBEDDER.embed("debug the kubernetes ingress timeout"), embedder_id=EMBEDDER.embedder_id),
         messages=messages,
         window_label="30d",
         existing_triggers=[],
@@ -112,7 +112,7 @@ def test_existing_topology_wins_ties_and_reduces_capture() -> None:
     # If an existing agent already owns the recap intent, the candidate
     # captures nothing — no theft from legitimate routing.
     messages = _weekly_history()
-    incumbent = TriggerSpec(centroid=EMBEDDER.embed("write the weekly recap of my project"))
+    incumbent = TriggerSpec(centroid=EMBEDDER.embed("write the weekly recap of my project"), embedder_id=EMBEDDER.embedder_id)
     outcome = replay_validate(
         trigger=_trigger(),
         messages=messages,

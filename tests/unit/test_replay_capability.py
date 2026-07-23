@@ -36,7 +36,7 @@ def _history(requires: str | None, results: list[str | None]) -> list[Message]:
 
 def _replay(messages, mounted: frozenset[str]):
     return replay_validate(
-        trigger=TriggerSpec(centroid=EMB.embed(OPENER)), messages=messages,
+        trigger=TriggerSpec(centroid=EMB.embed(OPENER), embedder_id=EMB.embedder_id), messages=messages,
         window_label="t", existing_triggers=[], embedder=EMB, config=CFG,
         oplog=OpLog(io.StringIO()), actor="human:t", mounted_tools=mounted,
     )

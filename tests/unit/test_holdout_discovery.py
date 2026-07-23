@@ -194,7 +194,7 @@ def test_holdout_discovery_structural_sanity() -> None:
 
     strongest_signal, _, strongest_centroid = max(detected, key=lambda d: d[0].occurrences)
     outcome = replay_validate(
-        trigger=TriggerSpec(centroid=strongest_centroid),
+        trigger=TriggerSpec(centroid=strongest_centroid, embedder_id=HashedTokenEmbedder.embedder_id),
         messages=messages,
         window_label="holdout",
         existing_triggers=[],

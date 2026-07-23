@@ -40,7 +40,7 @@ def _trigger_from_clean_history() -> TriggerSpec:
     recap_cluster = next(
         cid for e, cid in zip(episodes, assignments) if e.opener == RECAP_OPENER
     )
-    return TriggerSpec(centroid=clusterer.centroids[recap_cluster])
+    return TriggerSpec(centroid=clusterer.centroids[recap_cluster], embedder_id=HashedTokenEmbedder.embedder_id)
 
 
 def test_adversarial_window_produces_false_triggers() -> None:

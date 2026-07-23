@@ -38,15 +38,44 @@ class PeriodSpec(BaseModel, frozen=True):
     tolerance: float = Field(ge=0.0)
 
 
+class SpaceMismatchError(Exception):
+    """Two centroids from different embedder provenance were compared.
+
+    A centroid is only meaningful inside the vector space that produced it,
+    so comparing across spaces is a category error, not a small numeric one.
+    """
+
+
 class TriggerSpec(BaseModel, frozen=True):
     """ENTRYPOINT of an image — immutable, in-image (BLUEPRINT §4).
 
     centroid is produced by detect/ and tested by replay; period is the
     optional temporal condition for recurrence agents.
+
+    CLE need (provenance): `embedder_id` names the vector space the centroid
+    lives in. A centroid is only meaningful within that space, so an embedder
+    swap invalidates centroids exactly as a model swap invalidates a
+    `model_fingerprint` — one layer deeper, and this one touches agent
+    IDENTITY: the trigger is what the agent *is*. Because `Image.hash` covers
+    the trigger, two images built on different embedders necessarily have
+    different hashes, and cross-space centroid comparison raises rather than
+    returning a meaningless cosine.
+
+    There is deliberately NO `model_version`: the embedding API exposes no
+    version signal distinct from the model id, and storing a placeholder would
+    give false assurance about detecting silent provider-side drift.
     """
 
     centroid: tuple[float, ...]
+    embedder_id: str
     period: PeriodSpec | None = None
+
+    def require_same_space(self, other: "TriggerSpec") -> None:
+        if self.embedder_id != other.embedder_id:
+            raise SpaceMismatchError(
+                f"centroids from different vector spaces: {self.embedder_id!r} vs "
+                f"{other.embedder_id!r} — an embedder swap invalidates centroids"
+            )
 
 
 class PreEvidence(BaseModel, frozen=True):

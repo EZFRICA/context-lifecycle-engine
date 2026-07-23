@@ -75,7 +75,17 @@ def parse_trigger(source: SourceSpec) -> TriggerSpec:
         period = PeriodSpec(
             interval=period_raw["interval"], tolerance=period_raw.get("tolerance", 0.25)
         )
-    return TriggerSpec(centroid=tuple(float(v) for v in trigger_raw["centroid"]), period=period)
+    # Provenance: the source declares the vector space its centroid came from.
+    # A source written before provenance existed is, by definition, a v1
+    # bag-of-tokens centroid — naming that space explicitly is honest, and a
+    # centroid mislabelled this way fails LOUDLY later (SpaceMismatchError on
+    # comparison) rather than silently pretending to share a space.
+    embedder_id = trigger_raw.get("embedder_id", "stub:hashed64")
+    return TriggerSpec(
+        centroid=tuple(float(v) for v in trigger_raw["centroid"]),
+        embedder_id=str(embedder_id),
+        period=period,
+    )
 
 
 def assemble(

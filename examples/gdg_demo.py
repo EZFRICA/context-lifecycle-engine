@@ -90,8 +90,8 @@ def build_window() -> list[Message]:
 
 
 def main() -> None:
-    candidate = TriggerSpec(centroid=EMB.embed(CANDIDATE_OPENER))
-    incumbent = TriggerSpec(centroid=EMB.embed(INCUMBENT_OPENER))
+    candidate = TriggerSpec(centroid=EMB.embed(CANDIDATE_OPENER), embedder_id=EMB.embedder_id)
+    incumbent = TriggerSpec(centroid=EMB.embed(INCUMBENT_OPENER), embedder_id=EMB.embedder_id)
 
     print("=== routing cosines (why competition, not a clean room) ===")
     for label, opener in [("CANONICAL", CANONICAL), ("CONTESTED", CONTESTED),

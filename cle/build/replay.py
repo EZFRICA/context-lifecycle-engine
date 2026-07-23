@@ -92,6 +92,13 @@ def _replay(
     config: DetectorConfig,
     mounted_tools: frozenset[str],
 ) -> ReplayOutcome:
+    # Provenance gate: routing compares the candidate centroid against every
+    # incumbent centroid. Those cosines are only meaningful inside ONE vector
+    # space, so a cross-space comparison raises instead of returning a number
+    # that looks fine and means nothing.
+    for incumbent in existing_triggers:
+        trigger.require_same_space(incumbent)
+
     episodes = segment(list(messages), config)
     if not episodes:
         raise ReplayError("replay window contains no episodes")
