@@ -1,7 +1,7 @@
 # CLE Metrics Inventory — Article 9 Skeleton
 
 Every number `examples/full_loop.sh` produces, with its provenance, honest
-scope, and the **test that pins it**. The suite has **187 tests (+1 opt-in integration) across 22 files**
+scope, and the **test that pins it**. The suite has **191 tests (+1 opt-in integration) across 24 files**
 (`uv run pytest`); each metric below names the test(s) that guard its
 behaviour.
 
@@ -283,3 +283,80 @@ only — nothing is executed; `tool_result` is frozen decor, never asserted
 correct. Backends: SqliteStore joins InMemory/File behind the same
 Protocol (conformance parametrized ×3); Weaviate stays opt-in
 (`integration` marker, skipped by default).
+
+### `world_state_attribution` — the exclusion's reach, made permanent
+
+The `cluster_stability` line now carries, on every analysis, how far the
+world_state excuse reaches: `ws_would_be_intra` (world_state pairs that
+would be `intra_cluster` by time alone — i.e. UNSTABLE with an identical
+tool_result) and `ws_share_pct` (world_state / all divergent pairs). The
+per-type counts moved under a `divergent_pairs` object so the log is
+unambiguous — every count is a **pair** count, not an episode count.
+
+On the real GDG `events` cluster the number is stark and stays visible:
+**`ws_share_pct` = 100.0** (all 506 divergent pairs excused) with
+**`ws_would_be_intra` = 164**. This is not a healthy signal — it is the
+measurement telling us it cannot see (next section).
+
+### `resolution` — degeneracy diagnostic (a weak measure is not a verdict)
+
+When a cluster's divergent-pair cosines concentrate in a band narrower than
+`degenerate_band_width` (0.05) across at least `degenerate_min_pairs` (10),
+the line carries `resolution: "degenerate"` and the `band_width`. On the
+GDG `events` cluster **all 506 divergent pairs sit at one cosine (band
+width 0.0000)** — the divergence measure cannot separate a mild
+contradiction from lexically diverse but consistent follow-ups, so *any*
+threshold placed inside that bin is arbitrary. The flag is **diagnostic
+only**: it is logged, never blocks, and `unstable` is still computed. Same
+principle as PreEvidence ≠ Evidence — a weak measurement must not
+masquerade as a strong verdict. Practical payoff: a finer embedder spreads
+the band, and the gain becomes measurable. Pinned by
+`test_degenerate_cluster_is_flagged_never_blocking` /
+`test_spread_cluster_resolves`.
+
+**Known limitation (moderate-band blindness on tool-bearing clusters).**
+A MODERATE preference flip (directive cosine between 0.10 and 0.35)
+co-occurring with a differing tool_result is still classified world_state
+and excluded. Investigation confirmed the blindness directly: a synthetic
+moderate flip (cosine 0.191, differing tool_result, 2 days apart) injected
+into `events` classifies as `world_state`, absorbed. Only SEVERE
+divergence (<0.10) surfaces (the adversarial guard). This is **not fixed by
+a threshold**: on the degenerate `events` band, `world_state_min_cosine=0.20`
+excuses everything (blind) and `=0.25` flags all 506 (a wholesale FALSE
+positive, since `events` carries no labeled contradiction). Closing it
+needs a finer embedder AND the fixture debt below.
+
+### Fixture debt (recorded, deliberately not fixed here)
+
+All four labeled `intra_cluster` contradictions in the GDG fixture live in
+the tool-**less** `newsletter` cluster (`news-5/8/22/25`) — where they are
+correctly flagged, since no tool means no world_state excuse. But
+world_state masking can only occur on a tool-**bearing** cluster. **The
+fixture therefore never exercises the case the classifier was built to
+test.** Calibrating the moderate band requires BOTH a planted moderate
+contradiction inside a tool-bearing cluster (differing tool_result,
+directive cosine clearly separable from the lexical-noise floor) AND a
+finer embedder that gives that separation a real spread. Until both exist,
+the moderate-band verdict on tool-bearing clusters is `resolution:
+degenerate`, by design.
+
+### GDG demo — competition, not a clean room (`examples/gdg_demo.py`)
+
+Replaying the `events` candidate against the raw fixture prints
+`capture=1.000 / false=0.000` — a tautology from two biases: a **clean-room
+build** (no incumbent to compete) and the **degenerate** `events` cluster
+(45 identical openers, so no incumbent can own a *fraction* of it). The
+demo corrects the first with a **legitimate** pre-seeded incumbent
+(`venue_booking`, a real prior agent that reserves rooms and already owns
+the reworded "book the room" phrasings): capture falls **1.000 → 0.600**,
+honest topology competition. `test_gdg_demo.py` pins both.
+
+The non-trivial **`false_trigger` = 0.143 is obtained by planting its
+cause**: one adversarial "bridge" episode that reads as sponsor work (joins
+that cluster) yet clears the candidate's bar. This is a deliberate
+construct — exactly like `prompt_history_adversarial.jsonl` — not an
+emergent false trigger. The GDG fixture's ten labeled *routing* threads do
+NOT produce one on their own: their openers top out at cosine 0.522 to the
+`events` centroid, below the 0.6 firing bar, so real routing traffic is
+correctly never captured. The bridge exists only to show the false-trigger
+machinery fires under competition.

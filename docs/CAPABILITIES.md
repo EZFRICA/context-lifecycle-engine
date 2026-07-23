@@ -5,7 +5,7 @@ capability is demonstrated. The system has two cardinal pillars — **detection*
 (agents emerge from usage) and **lifecycle** (they earn or lose standing on
 lived evidence) — over a content-addressed store, a runtime, and a live
 dashboard. Everything below is exercised by `examples/full_loop.sh` and pinned
-by the 187-test suite unless noted.
+by the 191-test suite unless noted.
 
 ---
 
@@ -127,7 +127,7 @@ back to an agent.
 
 ---
 
-## Test coverage — 187 tests (+1 opt-in integration), 22 files (`uv run pytest`)
+## Test coverage — 191 tests (+1 opt-in integration), 24 files (`uv run pytest`)
 
 Every capability above is guarded by property and unit tests. No test needs a
 real model, an API key, or the network (stub fingerprinters internally); CI runs
@@ -185,3 +185,18 @@ requirement; replay capture requires centroid AND mount), SqliteStore
 four-contradiction taxonomy with its guards (grey-zone total partition,
 no-tool-never-world_state, severe-divergence adversarial override) — see
 docs/METRICS.md for the table and stated limits.
+
+**Resolution honesty (Option B extended).** The `cluster_stability` line
+carries `world_state_attribution` (`ws_would_be_intra`, `ws_share_pct`) so
+the exclusion's reach is permanently visible — on the real `events` cluster
+it is 100%. It also carries a `resolution` flag: when the divergent cosines
+concentrate too narrowly (the `events` band width is 0.0000, a single
+value) the cluster is `degenerate` — **unresolvable at the current
+measurement resolution**, neither stable nor unstable. Diagnostic only,
+never blocking (a weak measure is not a verdict; PreEvidence ≠ Evidence).
+The moderate-band blind spot on tool-bearing clusters and the fixture debt
+(all planted contradictions live in the tool-less cluster) are recorded in
+docs/METRICS.md. **`examples/gdg_demo.py`** shows topology competition: a
+legitimate incumbent drops the `events` candidate's capture from 1.000 to
+0.600, and a deliberately-planted, documented bridge episode yields a
+non-trivial false_trigger (0.143) — no clean-room tautology.
