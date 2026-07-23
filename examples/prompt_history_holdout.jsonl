@@ -1,80 +1,109 @@
-{"user_id": "gdg_organiser", "ts": "2026-04-07T19:00:00+00:00", "text": "draft the agenda for next month's gdg meetup", "thread_id": "meetup-prep-0"}
-{"user_id": "gdg_organiser", "ts": "2026-04-07T19:06:00+00:00", "text": "add a lightning talk slot after the main session", "thread_id": "meetup-prep-0"}
-{"user_id": "gdg_organiser", "ts": "2026-04-07T19:12:00+00:00", "text": "include rsvp instructions and the venue address", "thread_id": "meetup-prep-0"}
-{"user_id": "gdg_organiser", "ts": "2026-04-07T19:18:00+00:00", "text": "thanks", "thread_id": "meetup-prep-0"}
-{"user_id": "gdg_organiser", "ts": "2026-04-08T20:00:00+00:00", "text": "write a twitter thread announcing the gdg meetup", "thread_id": "social-1"}
-{"user_id": "gdg_organiser", "ts": "2026-04-08T20:06:00+00:00", "text": "thanks", "thread_id": "social-1"}
-{"user_id": "gdg_organiser", "ts": "2026-04-10T23:00:00+00:00", "text": "write a speaker invite email for our upcoming gdg session", "thread_id": "outreach-0"}
-{"user_id": "gdg_organiser", "ts": "2026-04-10T23:06:00+00:00", "text": "make the subject line more specific to the talk topic", "thread_id": "outreach-0"}
-{"user_id": "gdg_organiser", "ts": "2026-04-10T23:12:00+00:00", "text": "thanks", "thread_id": "outreach-0"}
-{"user_id": "gdg_organiser", "ts": "2026-04-13T01:00:00+00:00", "text": "help me draft the venue booking request for the gdg event", "thread_id": "venue-0"}
-{"user_id": "gdg_organiser", "ts": "2026-04-13T01:09:00+00:00", "text": "the form needs the expected headcount and av requirements", "thread_id": "venue-0"}
-{"user_id": "gdg_organiser", "ts": "2026-04-13T01:18:00+00:00", "text": "add a contingency clause in case we need to reschedule", "thread_id": "venue-0"}
-{"user_id": "gdg_organiser", "ts": "2026-04-13T01:27:00+00:00", "text": "the venue manager wants insurance proof \u2014 how do i phrase that", "thread_id": "venue-0"}
-{"user_id": "gdg_organiser", "ts": "2026-04-13T01:36:00+00:00", "text": "this is taking forever, can you summarise what we've agreed so far", "thread_id": "venue-0"}
-{"user_id": "gdg_organiser", "ts": "2026-04-14T00:00:00+00:00", "text": "help me reply to a sponsor asking about attendee demographics", "thread_id": "sponsor-1"}
-{"user_id": "gdg_organiser", "ts": "2026-04-14T00:06:00+00:00", "text": "thanks", "thread_id": "sponsor-1"}
-{"user_id": "gdg_organiser", "ts": "2026-04-17T19:00:00+00:00", "text": "review the draft budget for the q2 gdg events", "thread_id": "budget-q2"}
-{"user_id": "gdg_organiser", "ts": "2026-04-17T19:06:00+00:00", "text": "thanks", "thread_id": "budget-q2"}
-{"user_id": "gdg_organiser", "ts": "2026-04-20T23:00:00+00:00", "text": "suggest icebreaker activities for a mixed technical crowd", "thread_id": "icebreaker"}
-{"user_id": "gdg_organiser", "ts": "2026-04-20T23:06:00+00:00", "text": "thanks", "thread_id": "icebreaker"}
-{"user_id": "gdg_organiser", "ts": "2026-04-24T23:00:00+00:00", "text": "write a speaker invite email for our upcoming gdg session", "thread_id": "outreach-1"}
-{"user_id": "gdg_organiser", "ts": "2026-04-24T23:06:00+00:00", "text": "make the subject line more specific to the talk topic", "thread_id": "outreach-1"}
-{"user_id": "gdg_organiser", "ts": "2026-04-24T23:12:00+00:00", "text": "thanks", "thread_id": "outreach-1"}
-{"user_id": "gdg_organiser", "ts": "2026-04-27T01:00:00+00:00", "text": "help me draft the venue booking request for the gdg event", "thread_id": "venue-1"}
-{"user_id": "gdg_organiser", "ts": "2026-04-27T01:09:00+00:00", "text": "the form needs the expected headcount and av requirements", "thread_id": "venue-1"}
-{"user_id": "gdg_organiser", "ts": "2026-04-27T01:18:00+00:00", "text": "add a contingency clause in case we need to reschedule", "thread_id": "venue-1"}
-{"user_id": "gdg_organiser", "ts": "2026-04-27T01:27:00+00:00", "text": "the venue manager wants insurance proof \u2014 how do i phrase that", "thread_id": "venue-1"}
-{"user_id": "gdg_organiser", "ts": "2026-04-27T01:36:00+00:00", "text": "this is taking forever, can you summarise what we've agreed so far", "thread_id": "venue-1"}
-{"user_id": "gdg_organiser", "ts": "2026-04-29T18:00:00+00:00", "text": "write a post-event thank-you note to the speaker", "thread_id": "thankyou-1"}
-{"user_id": "gdg_organiser", "ts": "2026-04-29T18:06:00+00:00", "text": "thanks", "thread_id": "thankyou-1"}
-{"user_id": "gdg_organiser", "ts": "2026-05-02T20:00:00+00:00", "text": "help me collect feedback from attendees after the meetup", "thread_id": "feedback-1"}
-{"user_id": "gdg_organiser", "ts": "2026-05-02T20:06:00+00:00", "text": "thanks", "thread_id": "feedback-1"}
-{"user_id": "gdg_organiser", "ts": "2026-05-05T19:00:00+00:00", "text": "draft the agenda for next month's gdg meetup", "thread_id": "meetup-prep-1"}
-{"user_id": "gdg_organiser", "ts": "2026-05-05T19:06:00+00:00", "text": "add a lightning talk slot after the main session", "thread_id": "meetup-prep-1"}
-{"user_id": "gdg_organiser", "ts": "2026-05-05T19:12:00+00:00", "text": "include rsvp instructions and the venue address", "thread_id": "meetup-prep-1"}
-{"user_id": "gdg_organiser", "ts": "2026-05-05T19:18:00+00:00", "text": "thanks", "thread_id": "meetup-prep-1"}
-{"user_id": "gdg_organiser", "ts": "2026-05-08T23:00:00+00:00", "text": "write a speaker invite email for our upcoming gdg session", "thread_id": "outreach-2"}
-{"user_id": "gdg_organiser", "ts": "2026-05-08T23:06:00+00:00", "text": "make the subject line more specific to the talk topic", "thread_id": "outreach-2"}
-{"user_id": "gdg_organiser", "ts": "2026-05-08T23:12:00+00:00", "text": "thanks", "thread_id": "outreach-2"}
-{"user_id": "gdg_organiser", "ts": "2026-05-10T19:00:00+00:00", "text": "draft a linkedin post recapping the gdg session highlights", "thread_id": "linkedin-1"}
-{"user_id": "gdg_organiser", "ts": "2026-05-10T19:06:00+00:00", "text": "thanks", "thread_id": "linkedin-1"}
-{"user_id": "gdg_organiser", "ts": "2026-05-16T01:00:00+00:00", "text": "help me draft the venue booking request for the gdg event", "thread_id": "venue-2"}
-{"user_id": "gdg_organiser", "ts": "2026-05-16T01:09:00+00:00", "text": "the form needs the expected headcount and av requirements", "thread_id": "venue-2"}
-{"user_id": "gdg_organiser", "ts": "2026-05-16T01:18:00+00:00", "text": "add a contingency clause in case we need to reschedule", "thread_id": "venue-2"}
-{"user_id": "gdg_organiser", "ts": "2026-05-16T01:27:00+00:00", "text": "the venue manager wants insurance proof \u2014 how do i phrase that", "thread_id": "venue-2"}
-{"user_id": "gdg_organiser", "ts": "2026-05-16T01:36:00+00:00", "text": "this is taking forever, can you summarise what we've agreed so far", "thread_id": "venue-2"}
-{"user_id": "gdg_organiser", "ts": "2026-05-18T00:00:00+00:00", "text": "create a speaker bio template for our website", "thread_id": "bio-template"}
-{"user_id": "gdg_organiser", "ts": "2026-05-18T00:06:00+00:00", "text": "thanks", "thread_id": "bio-template"}
-{"user_id": "gdg_organiser", "ts": "2026-05-22T23:00:00+00:00", "text": "write a speaker invite email for our upcoming gdg session", "thread_id": "outreach-3"}
-{"user_id": "gdg_organiser", "ts": "2026-05-22T23:06:00+00:00", "text": "make the subject line more specific to the talk topic", "thread_id": "outreach-3"}
-{"user_id": "gdg_organiser", "ts": "2026-05-22T23:12:00+00:00", "text": "thanks", "thread_id": "outreach-3"}
-{"user_id": "gdg_organiser", "ts": "2026-05-24T18:00:00+00:00", "text": "write a reminder email to rsvp holders two days before the event", "thread_id": "reminder-1"}
-{"user_id": "gdg_organiser", "ts": "2026-05-24T18:06:00+00:00", "text": "thanks", "thread_id": "reminder-1"}
-{"user_id": "gdg_organiser", "ts": "2026-05-27T23:00:00+00:00", "text": "summarise the action items from the gdg planning call", "thread_id": "planning-call"}
-{"user_id": "gdg_organiser", "ts": "2026-05-27T23:06:00+00:00", "text": "thanks", "thread_id": "planning-call"}
-{"user_id": "gdg_organiser", "ts": "2026-05-31T19:00:00+00:00", "text": "help me reply to a venue quote that seems too expensive", "thread_id": "venue-quote"}
-{"user_id": "gdg_organiser", "ts": "2026-05-31T19:06:00+00:00", "text": "thanks", "thread_id": "venue-quote"}
-{"user_id": "gdg_organiser", "ts": "2026-06-02T19:00:00+00:00", "text": "draft the agenda for next month's gdg meetup", "thread_id": "meetup-prep-2"}
-{"user_id": "gdg_organiser", "ts": "2026-06-02T19:06:00+00:00", "text": "add a lightning talk slot after the main session", "thread_id": "meetup-prep-2"}
-{"user_id": "gdg_organiser", "ts": "2026-06-02T19:12:00+00:00", "text": "include rsvp instructions and the venue address", "thread_id": "meetup-prep-2"}
-{"user_id": "gdg_organiser", "ts": "2026-06-02T19:18:00+00:00", "text": "thanks", "thread_id": "meetup-prep-2"}
-{"user_id": "gdg_organiser", "ts": "2026-06-05T23:00:00+00:00", "text": "write a speaker invite email for our upcoming gdg session", "thread_id": "outreach-4"}
-{"user_id": "gdg_organiser", "ts": "2026-06-05T23:06:00+00:00", "text": "make the subject line more specific to the talk topic", "thread_id": "outreach-4"}
-{"user_id": "gdg_organiser", "ts": "2026-06-05T23:12:00+00:00", "text": "thanks", "thread_id": "outreach-4"}
-{"user_id": "gdg_organiser", "ts": "2026-06-07T01:00:00+00:00", "text": "help me draft the venue booking request for the gdg event", "thread_id": "venue-3"}
-{"user_id": "gdg_organiser", "ts": "2026-06-07T01:09:00+00:00", "text": "the form needs the expected headcount and av requirements", "thread_id": "venue-3"}
-{"user_id": "gdg_organiser", "ts": "2026-06-07T01:18:00+00:00", "text": "add a contingency clause in case we need to reschedule", "thread_id": "venue-3"}
-{"user_id": "gdg_organiser", "ts": "2026-06-07T01:27:00+00:00", "text": "the venue manager wants insurance proof \u2014 how do i phrase that", "thread_id": "venue-3"}
-{"user_id": "gdg_organiser", "ts": "2026-06-07T01:36:00+00:00", "text": "this is taking forever, can you summarise what we've agreed so far", "thread_id": "venue-3"}
-{"user_id": "gdg_organiser", "ts": "2026-06-16T20:00:00+00:00", "text": "draft a call for speakers announcement for the next quarter", "thread_id": "cfp-q3"}
-{"user_id": "gdg_organiser", "ts": "2026-06-16T20:06:00+00:00", "text": "thanks", "thread_id": "cfp-q3"}
-{"user_id": "gdg_organiser", "ts": "2026-06-19T23:00:00+00:00", "text": "write a speaker invite email for our upcoming gdg session", "thread_id": "outreach-5"}
-{"user_id": "gdg_organiser", "ts": "2026-06-19T23:06:00+00:00", "text": "make the subject line more specific to the talk topic", "thread_id": "outreach-5"}
-{"user_id": "gdg_organiser", "ts": "2026-06-19T23:12:00+00:00", "text": "thanks", "thread_id": "outreach-5"}
-{"user_id": "gdg_organiser", "ts": "2026-06-21T18:00:00+00:00", "text": "review my community guidelines document for the gdg chapter", "thread_id": "guidelines"}
-{"user_id": "gdg_organiser", "ts": "2026-06-21T18:06:00+00:00", "text": "thanks", "thread_id": "guidelines"}
-{"user_id": "gdg_organiser", "ts": "2026-06-30T19:00:00+00:00", "text": "draft the agenda for next month's gdg meetup", "thread_id": "meetup-prep-3"}
-{"user_id": "gdg_organiser", "ts": "2026-06-30T19:06:00+00:00", "text": "add a lightning talk slot after the main session", "thread_id": "meetup-prep-3"}
-{"user_id": "gdg_organiser", "ts": "2026-06-30T19:12:00+00:00", "text": "include rsvp instructions and the venue address", "thread_id": "meetup-prep-3"}
-{"user_id": "gdg_organiser", "ts": "2026-06-30T19:18:00+00:00", "text": "thanks", "thread_id": "meetup-prep-3"}
+{"user_id": "gdg_organiser", "ts": "2026-04-08T15:06:00+00:00", "text": "summarise the action items from the planning call", "thread_id": "noise-0"}
+{"user_id": "gdg_organiser", "ts": "2026-04-08T15:12:00+00:00", "text": "thanks", "thread_id": "noise-0"}
+{"user_id": "gdg_organiser", "ts": "2026-04-09T12:06:00+00:00", "text": "organise the meetup programme, lightning talks first", "thread_id": "meetup-prep-0"}
+{"user_id": "gdg_organiser", "ts": "2026-04-09T12:15:00+00:00", "text": "leave room for q and a", "thread_id": "meetup-prep-0"}
+{"user_id": "gdg_organiser", "ts": "2026-04-11T20:05:00+00:00", "text": "reach out to that ml engineer about giving a talk", "thread_id": "outreach-0"}
+{"user_id": "gdg_organiser", "ts": "2026-04-11T20:08:00+00:00", "text": "double check the date", "thread_id": "outreach-0"}
+{"user_id": "gdg_organiser", "ts": "2026-04-11T20:10:00+00:00", "text": "thanks", "thread_id": "outreach-0"}
+{"user_id": "gdg_organiser", "ts": "2026-04-13T17:02:00+00:00", "text": "rework the booking email, add the parking and access details", "thread_id": "venue-0"}
+{"user_id": "gdg_organiser", "ts": "2026-04-13T17:05:00+00:00", "text": "double check the date", "thread_id": "venue-0"}
+{"user_id": "gdg_organiser", "ts": "2026-04-13T17:12:00+00:00", "text": "leave room for q and a", "thread_id": "venue-0"}
+{"user_id": "gdg_organiser", "ts": "2026-04-13T17:15:00+00:00", "text": "flag anything blocking", "thread_id": "venue-0"}
+{"user_id": "gdg_organiser", "ts": "2026-04-16T16:06:00+00:00", "text": "draft a call for speakers for next quarter", "thread_id": "noise-1"}
+{"user_id": "gdg_organiser", "ts": "2026-04-22T14:11:00+00:00", "text": "block out the talks and breaks for the monthly gathering", "thread_id": "meetup-prep-1"}
+{"user_id": "gdg_organiser", "ts": "2026-04-22T14:16:00+00:00", "text": "cc the co organiser", "thread_id": "meetup-prep-1"}
+{"user_id": "gdg_organiser", "ts": "2026-04-23T11:10:00+00:00", "text": "ping a few candidates about speaking this month", "thread_id": "outreach-1"}
+{"user_id": "gdg_organiser", "ts": "2026-04-24T20:00:00+00:00", "text": "summarise the action items from the planning call", "thread_id": "noise-2"}
+{"user_id": "gdg_organiser", "ts": "2026-04-24T20:02:00+00:00", "text": "thanks", "thread_id": "noise-2"}
+{"user_id": "gdg_organiser", "ts": "2026-04-26T10:04:00+00:00", "text": "the venue keeps changing terms, summarise where we landed", "thread_id": "venue-1"}
+{"user_id": "gdg_organiser", "ts": "2026-04-26T10:09:00+00:00", "text": "keep it short and friendly", "thread_id": "venue-1"}
+{"user_id": "gdg_organiser", "ts": "2026-04-26T10:14:00+00:00", "text": "make the tone warm", "thread_id": "venue-1"}
+{"user_id": "gdg_organiser", "ts": "2026-04-26T10:22:00+00:00", "text": "double check the date", "thread_id": "venue-1"}
+{"user_id": "gdg_organiser", "ts": "2026-05-02T19:06:00+00:00", "text": "summarise the action items from the planning call", "thread_id": "noise-3"}
+{"user_id": "gdg_organiser", "ts": "2026-05-02T19:13:00+00:00", "text": "thanks", "thread_id": "noise-3"}
+{"user_id": "gdg_organiser", "ts": "2026-05-05T09:03:00+00:00", "text": "sketch the meetup agenda, keep some buffer for networking", "thread_id": "meetup-prep-2"}
+{"user_id": "gdg_organiser", "ts": "2026-05-05T09:11:00+00:00", "text": "thanks", "thread_id": "meetup-prep-2"}
+{"user_id": "gdg_organiser", "ts": "2026-05-05T16:09:00+00:00", "text": "draft an invitation to someone to present at the meetup", "thread_id": "outreach-2"}
+{"user_id": "gdg_organiser", "ts": "2026-05-05T16:18:00+00:00", "text": "keep it short and friendly", "thread_id": "outreach-2"}
+{"user_id": "gdg_organiser", "ts": "2026-05-09T08:04:00+00:00", "text": "sort the deposit wording for the venue contract", "thread_id": "venue-2"}
+{"user_id": "gdg_organiser", "ts": "2026-05-09T08:12:00+00:00", "text": "mention we cover transport", "thread_id": "venue-2"}
+{"user_id": "gdg_organiser", "ts": "2026-05-09T08:22:00+00:00", "text": "leave room for q and a", "thread_id": "venue-2"}
+{"user_id": "gdg_organiser", "ts": "2026-05-09T08:29:00+00:00", "text": "double check the date", "thread_id": "venue-2"}
+{"user_id": "gdg_organiser", "ts": "2026-05-10T20:03:00+00:00", "text": "help reply to a venue quote that seems too expensive", "thread_id": "noise-4"}
+{"user_id": "gdg_organiser", "ts": "2026-05-17T15:08:00+00:00", "text": "write a speaker invite email for our upcoming gdg session", "thread_id": "outreach-3"}
+{"user_id": "gdg_organiser", "ts": "2026-05-18T14:12:00+00:00", "text": "collect feedback from attendees after the meetup", "thread_id": "noise-5"}
+{"user_id": "gdg_organiser", "ts": "2026-05-18T17:06:00+00:00", "text": "plan the sessions and timing for the monthly meetup", "thread_id": "meetup-prep-3"}
+{"user_id": "gdg_organiser", "ts": "2026-05-18T17:13:00+00:00", "text": "perfect", "thread_id": "meetup-prep-3"}
+{"user_id": "gdg_organiser", "ts": "2026-05-22T07:03:00+00:00", "text": "how do i phrase the insurance clause the venue manager wants", "thread_id": "venue-3"}
+{"user_id": "gdg_organiser", "ts": "2026-05-22T07:11:00+00:00", "text": "double check the date", "thread_id": "venue-3"}
+{"user_id": "gdg_organiser", "ts": "2026-05-22T07:20:00+00:00", "text": "cc the co organiser", "thread_id": "venue-3"}
+{"user_id": "gdg_organiser", "ts": "2026-05-22T07:25:00+00:00", "text": "leave room for q and a", "thread_id": "venue-3"}
+{"user_id": "gdg_organiser", "ts": "2026-05-26T14:01:00+00:00", "text": "reply to a sponsor asking about attendee demographics", "thread_id": "noise-6"}
+{"user_id": "gdg_organiser", "ts": "2026-05-29T09:04:00+00:00", "text": "invite the person who did the flutter talk to come back", "thread_id": "outreach-4"}
+{"user_id": "gdg_organiser", "ts": "2026-05-29T09:14:00+00:00", "text": "flag anything blocking", "thread_id": "outreach-4"}
+{"user_id": "gdg_organiser", "ts": "2026-05-29T09:23:00+00:00", "text": "mention we cover transport", "thread_id": "outreach-4"}
+{"user_id": "gdg_organiser", "ts": "2026-05-29T09:27:00+00:00", "text": "asante", "thread_id": "outreach-4"}
+{"user_id": "gdg_organiser", "ts": "2026-05-31T17:11:00+00:00", "text": "put together the evening schedule for our devfest warmup", "thread_id": "meetup-prep-4"}
+{"user_id": "gdg_organiser", "ts": "2026-05-31T17:12:00+00:00", "text": "flag anything blocking", "thread_id": "meetup-prep-4"}
+{"user_id": "gdg_organiser", "ts": "2026-05-31T17:21:00+00:00", "text": "add the rsvp link", "thread_id": "meetup-prep-4"}
+{"user_id": "gdg_organiser", "ts": "2026-05-31T17:25:00+00:00", "text": "make the tone warm", "thread_id": "meetup-prep-4"}
+{"user_id": "gdg_organiser", "ts": "2026-05-31T17:35:00+00:00", "text": "ok got it", "thread_id": "meetup-prep-4"}
+{"user_id": "gdg_organiser", "ts": "2026-06-03T10:08:00+00:00", "text": "write an rsvp reminder for two days before", "thread_id": "noise-7"}
+{"user_id": "gdg_organiser", "ts": "2026-06-03T10:15:00+00:00", "text": "thanks", "thread_id": "noise-7"}
+{"user_id": "gdg_organiser", "ts": "2026-06-04T10:09:00+00:00", "text": "draft another reservation request for a backup location", "thread_id": "venue-4"}
+{"user_id": "gdg_organiser", "ts": "2026-06-04T10:14:00+00:00", "text": "double check the date", "thread_id": "venue-4"}
+{"user_id": "gdg_organiser", "ts": "2026-06-04T10:23:00+00:00", "text": "make the tone warm", "thread_id": "venue-4"}
+{"user_id": "gdg_organiser", "ts": "2026-06-04T10:28:00+00:00", "text": "add the rsvp link", "thread_id": "venue-4"}
+{"user_id": "gdg_organiser", "ts": "2026-06-10T17:05:00+00:00", "text": "email a prospective speaker for the next devfest", "thread_id": "outreach-5"}
+{"user_id": "gdg_organiser", "ts": "2026-06-10T17:12:00+00:00", "text": "keep it short and friendly", "thread_id": "outreach-5"}
+{"user_id": "gdg_organiser", "ts": "2026-06-10T17:15:00+00:00", "text": "flag anything blocking", "thread_id": "outreach-5"}
+{"user_id": "gdg_organiser", "ts": "2026-06-10T17:16:00+00:00", "text": "thanks", "thread_id": "outreach-5"}
+{"user_id": "gdg_organiser", "ts": "2026-06-11T21:09:00+00:00", "text": "suggest icebreakers for a mixed technical crowd", "thread_id": "noise-8"}
+{"user_id": "gdg_organiser", "ts": "2026-06-13T12:08:00+00:00", "text": "faut preparer le programme du prochain meetup", "thread_id": "meetup-prep-5"}
+{"user_id": "gdg_organiser", "ts": "2026-06-13T12:10:00+00:00", "text": "double check the date", "thread_id": "meetup-prep-5"}
+{"user_id": "gdg_organiser", "ts": "2026-06-13T12:15:00+00:00", "text": "keep it short and friendly", "thread_id": "meetup-prep-5"}
+{"user_id": "gdg_organiser", "ts": "2026-06-13T12:21:00+00:00", "text": "leave room for q and a", "thread_id": "meetup-prep-5"}
+{"user_id": "gdg_organiser", "ts": "2026-06-13T12:28:00+00:00", "text": "ok got it", "thread_id": "meetup-prep-5"}
+{"user_id": "gdg_organiser", "ts": "2026-06-17T15:09:00+00:00", "text": "chase the venue again, they still havent confirmed the date", "thread_id": "venue-5"}
+{"user_id": "gdg_organiser", "ts": "2026-06-17T15:15:00+00:00", "text": "add the rsvp link", "thread_id": "venue-5"}
+{"user_id": "gdg_organiser", "ts": "2026-06-17T15:16:00+00:00", "text": "mention we cover transport", "thread_id": "venue-5"}
+{"user_id": "gdg_organiser", "ts": "2026-06-17T15:21:00+00:00", "text": "make the tone warm", "thread_id": "venue-5"}
+{"user_id": "gdg_organiser", "ts": "2026-06-19T15:11:00+00:00", "text": "write an rsvp reminder for two days before", "thread_id": "noise-9"}
+{"user_id": "gdg_organiser", "ts": "2026-06-19T15:16:00+00:00", "text": "ok got it", "thread_id": "noise-9"}
+{"user_id": "gdg_organiser", "ts": "2026-06-22T18:02:00+00:00", "text": "faut contacter une intervenante pour la session", "thread_id": "outreach-6"}
+{"user_id": "gdg_organiser", "ts": "2026-06-22T18:08:00+00:00", "text": "thanks", "thread_id": "outreach-6"}
+{"user_id": "gdg_organiser", "ts": "2026-06-26T12:12:00+00:00", "text": "draft the agenda for next months nairobi gdg meetup", "thread_id": "meetup-prep-6"}
+{"user_id": "gdg_organiser", "ts": "2026-06-26T12:13:00+00:00", "text": "add the rsvp link", "thread_id": "meetup-prep-6"}
+{"user_id": "gdg_organiser", "ts": "2026-06-26T12:20:00+00:00", "text": "flag anything blocking", "thread_id": "meetup-prep-6"}
+{"user_id": "gdg_organiser", "ts": "2026-06-26T12:25:00+00:00", "text": "keep it short and friendly", "thread_id": "meetup-prep-6"}
+{"user_id": "gdg_organiser", "ts": "2026-06-26T12:27:00+00:00", "text": "thanks", "thread_id": "meetup-prep-6"}
+{"user_id": "gdg_organiser", "ts": "2026-06-27T07:08:00+00:00", "text": "draft a call for speakers for next quarter", "thread_id": "noise-10"}
+{"user_id": "gdg_organiser", "ts": "2026-06-30T15:11:00+00:00", "text": "the venue form needs headcount and av requirements added", "thread_id": "venue-6"}
+{"user_id": "gdg_organiser", "ts": "2026-06-30T15:16:00+00:00", "text": "leave room for q and a", "thread_id": "venue-6"}
+{"user_id": "gdg_organiser", "ts": "2026-06-30T15:21:00+00:00", "text": "cc the co organiser", "thread_id": "venue-6"}
+{"user_id": "gdg_organiser", "ts": "2026-06-30T15:25:00+00:00", "text": "make the tone warm", "thread_id": "venue-6"}
+{"user_id": "gdg_organiser", "ts": "2026-07-04T11:08:00+00:00", "text": "compose an outreach note to a potential presenter", "thread_id": "outreach-7"}
+{"user_id": "gdg_organiser", "ts": "2026-07-04T11:16:00+00:00", "text": "add the rsvp link", "thread_id": "outreach-7"}
+{"user_id": "gdg_organiser", "ts": "2026-07-04T11:22:00+00:00", "text": "mention we cover transport", "thread_id": "outreach-7"}
+{"user_id": "gdg_organiser", "ts": "2026-07-04T11:30:00+00:00", "text": "thanks", "thread_id": "outreach-7"}
+{"user_id": "gdg_organiser", "ts": "2026-07-05T21:01:00+00:00", "text": "draft a call for speakers for next quarter", "thread_id": "noise-11"}
+{"user_id": "gdg_organiser", "ts": "2026-07-09T21:05:00+00:00", "text": "we need a run of show for the community night, start it", "thread_id": "meetup-prep-7"}
+{"user_id": "gdg_organiser", "ts": "2026-07-09T21:08:00+00:00", "text": "great", "thread_id": "meetup-prep-7"}
+{"user_id": "gdg_organiser", "ts": "2026-07-13T08:06:00+00:00", "text": "collect feedback from attendees after the meetup", "thread_id": "noise-12"}
+{"user_id": "gdg_organiser", "ts": "2026-07-13T08:09:00+00:00", "text": "perfect", "thread_id": "noise-12"}
+{"user_id": "gdg_organiser", "ts": "2026-07-13T20:04:00+00:00", "text": "help me draft the venue booking request for the gdg event", "thread_id": "venue-7"}
+{"user_id": "gdg_organiser", "ts": "2026-07-13T20:12:00+00:00", "text": "add the rsvp link", "thread_id": "venue-7"}
+{"user_id": "gdg_organiser", "ts": "2026-07-13T20:17:00+00:00", "text": "cc the co organiser", "thread_id": "venue-7"}
+{"user_id": "gdg_organiser", "ts": "2026-07-13T20:19:00+00:00", "text": "make the tone warm", "thread_id": "venue-7"}
+{"user_id": "gdg_organiser", "ts": "2026-07-16T18:05:00+00:00", "text": "ask around and email a speaker for the community night", "thread_id": "outreach-8"}
+{"user_id": "gdg_organiser", "ts": "2026-07-16T18:06:00+00:00", "text": "cc the co organiser", "thread_id": "outreach-8"}
+{"user_id": "gdg_organiser", "ts": "2026-07-16T18:10:00+00:00", "text": "flag anything blocking", "thread_id": "outreach-8"}
+{"user_id": "gdg_organiser", "ts": "2026-07-21T11:08:00+00:00", "text": "draft a call for speakers for next quarter", "thread_id": "noise-13"}
+{"user_id": "gdg_organiser", "ts": "2026-07-22T18:12:00+00:00", "text": "prep the agenda for the gdg night, add a demo slot", "thread_id": "meetup-prep-8"}
+{"user_id": "gdg_organiser", "ts": "2026-07-22T18:20:00+00:00", "text": "cc the co organiser", "thread_id": "meetup-prep-8"}
+{"user_id": "gdg_organiser", "ts": "2026-07-22T18:23:00+00:00", "text": "leave room for q and a", "thread_id": "meetup-prep-8"}
+{"user_id": "gdg_organiser", "ts": "2026-07-22T18:27:00+00:00", "text": "asante", "thread_id": "meetup-prep-8"}
+{"user_id": "gdg_organiser", "ts": "2026-07-26T17:00:00+00:00", "text": "redo the booking request, they need a contingency for reschedule", "thread_id": "venue-8"}
+{"user_id": "gdg_organiser", "ts": "2026-07-26T17:08:00+00:00", "text": "add the rsvp link", "thread_id": "venue-8"}
+{"user_id": "gdg_organiser", "ts": "2026-07-26T17:15:00+00:00", "text": "mention we cover transport", "thread_id": "venue-8"}
+{"user_id": "gdg_organiser", "ts": "2026-07-26T17:20:00+00:00", "text": "make the tone warm", "thread_id": "venue-8"}

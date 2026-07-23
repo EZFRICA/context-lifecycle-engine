@@ -1,62 +1,83 @@
 {
+ "planted_intents": [
+  "events",
+  "newsletter",
+  "speakers",
+  "sponsors",
+  "agenda_meetup",
+  "agenda_workshop",
+  "venue_policy"
+ ],
+ "domain_tool": {
+  "events": "calendar_api",
+  "speakers": "outreach_email",
+  "sponsors": "sponsor_crm",
+  "newsletter": null,
+  "agenda_meetup": null,
+  "agenda_workshop": null,
+  "venue_policy": null
+ },
  "labeled_threads": {
-  "events-10": "world_state",
-  "events-11": "world_state",
-  "events-30": "world_state",
-  "events-31": "world_state",
-  "news-5": "intra_cluster",
-  "news-8": "intra_cluster",
-  "news-22": "intra_cluster",
-  "news-25": "intra_cluster",
-  "plan-2": "temporal",
-  "plan-4": "temporal",
-  "plan-6": "temporal",
-  "plan-33": "temporal",
-  "plan-36": "temporal",
-  "plan-39": "temporal",
-  "plan-42": "temporal",
-  "agenda-m-7": "routing",
-  "agenda-w-7": "routing",
-  "agenda-m-14": "routing",
-  "agenda-w-14": "routing",
-  "agenda-m-21": "routing",
-  "agenda-w-21": "routing",
-  "agenda-m-28": "routing",
-  "agenda-w-28": "routing",
-  "agenda-m-35": "routing",
-  "agenda-w-35": "routing"
+  "events-1-0": "world_state",
+  "events-1-1": "world_state",
+  "events-3-0": "world_state",
+  "events-3-1": "world_state",
+  "newsletter-2": "intra_cluster",
+  "newsletter-3": "intra_cluster",
+  "newsletter-9": "intra_cluster",
+  "newsletter-10": "intra_cluster",
+  "agenda_meetup-0": "routing",
+  "agenda_workshop-0": "routing",
+  "agenda_meetup-1": "routing",
+  "agenda_workshop-1": "routing",
+  "agenda_meetup-2": "routing",
+  "agenda_workshop-2": "routing",
+  "agenda_meetup-3": "routing",
+  "agenda_workshop-3": "routing",
+  "agenda_meetup-4": "routing",
+  "agenda_workshop-4": "routing",
+  "agenda_meetup-5": "routing",
+  "agenda_workshop-5": "routing",
+  "agenda_meetup-6": "routing",
+  "agenda_workshop-6": "routing",
+  "agenda_meetup-7": "routing",
+  "agenda_workshop-7": "routing",
+  "agenda_meetup-8": "routing",
+  "agenda_workshop-8": "routing",
+  "venue_policy-0": "temporal",
+  "venue_policy-1": "temporal",
+  "venue_policy-2": "temporal",
+  "venue_policy-3": "temporal",
+  "venue_policy-4": "temporal",
+  "venue_policy-5": "temporal",
+  "venue_policy-6": "temporal",
+  "venue_policy-7": "temporal"
  },
  "domains": {
   "events": {
-   "tool": "calendar_api",
-   "opener": "schedule the monthly gdg meetup in the main room"
+   "tool": "calendar_api"
   },
   "speakers": {
-   "tool": "outreach_email",
-   "opener": "write a speaker invite email for the next gdg session"
+   "tool": "outreach_email"
   },
   "sponsors": {
-   "tool": "sponsor_crm",
-   "opener": "update the sponsor pipeline notes after today's call"
+   "tool": "sponsor_crm"
   },
   "community": {
-   "tool": null,
-   "opener": null
+   "tool": null
   }
  },
  "patterns": {
   "newsletter": {
-   "opener": "write the weekly gdg newsletter digest for members",
    "expected": "unstable_no_candidate"
   },
   "venue_policy": {
-   "opener": "sort out venue reservations before next month's community event",
    "expected": "candidate_from_recent"
   },
   "routing_pair": {
-   "openers": [
-    "prepare the agenda for the gdg meetup night",
-    "draft the workshop agenda for the coding session"
+   "intents": [
+    "agenda_meetup",
+    "agenda_workshop"
    ]
   }
  }

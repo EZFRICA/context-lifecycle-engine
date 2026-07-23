@@ -1,146 +1,170 @@
 """Holdout history generator — a process-independent discovery source.
 
 PROCESS INDEPENDENCE — what this module deliberately does NOT share with
-cle/detect (this is the whole point; it breaks the circularity of
-make_fixture.py, which plants patterns with the SAME embedder the detector
-uses):
+cle/detect (the whole point; it breaks the circularity of make_fixture.py,
+which plants patterns with the SAME embedder the detector uses):
 
   * It imports NOTHING from `cle` — pure stdlib. It emits plain prompt-history
-    dicts; the detector processes them blind. (The test converts them to the
-    Message schema — that conversion is on the detector's side, not here.)
-  * It does NOT use the embedder, so it cannot know the dimension (64) or which
-    token hashes land in which buckets — it cannot reverse-engineer clusters.
-  * It does NOT use the cosine threshold (0.6), the min_signal_occurrences (3)
-    gate, DetectorConfig, or any centroid from make_fixture.py.
-  * Patterns come from domain knowledge of a GDG (Google Developer Group)
-    organiser's week, not from inspecting what the detector will find. It is
-    hand-authored and deterministic — an LLM roleplaying the same organiser
-    would give the same KIND of independence (no shared geometry); the
-    hand-authored form keeps the discovery test reproducible offline.
+    dicts; the detector processes them blind.
+  * It does NOT use the embedder, the dimension (64), the cosine threshold
+    (0.6), the min_signal_occurrences gate, DetectorConfig, or any centroid.
+  * Patterns come from domain knowledge of a DIFFERENT organiser's week (a
+    Nairobi GDG lead, distinct voice from the Abidjan ground-truth fixture),
+    not from inspecting what the detector will find.
 
-Roles of the three sources: the fixture tests RECOVERY (planted patterns come
-back), the adversarial fixture tests REJECTION (traps don't fire), and this
-holdout tests DISCOVERY (unplanted patterns emerge). If the holdout produces
-ugly numbers, report them — that is the point. Do not tune thresholds to make
-it look good. (In practice the detector discovers 2 of the 3 authored patterns;
-the monthly meetup thread is NOT recovered — a genuine surprise, left as-is.)
+FREEZE-ONCE + realistic (the realism run): openers are genuinely varied
+(>= 8 distinct per recurring pattern), timing is irregular, closers vary, and
+some episodes have no closer. Determinism comes from the committed .jsonl and
+a fixed seed. Whether the detector RECOVERS these patterns from realistic
+paraphrase is exactly what the discovery test MEASURES — and reports, never
+tunes. (On realistic data the v1 bag-of-tokens embedder fragments paraphrase
+badly; expect discovery to drop. That is a finding about the detector.)
 
-Run from the repo root:
-    .venv/bin/python examples/make_holdout.py
-
+Run:  .venv/bin/python examples/make_holdout.py
 Writes examples/prompt_history_holdout.jsonl.
 """
 
 import json
+import random
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 EXAMPLES = Path(__file__).resolve().parent
+T0 = datetime(2026, 4, 7, 0, 0, tzinfo=timezone.utc)
+WEEKS = 16
+DAYS = WEEKS * 7
+SEED = 424242
 
-# The GDG organiser starts their documented history on this anchor.
-T0 = datetime(2026, 4, 7, 9, 0, tzinfo=timezone.utc)  # a Tuesday
+# Recurring patterns — the organiser's own voice, distinct from the Abidjan
+# ground-truth banks. >= 8 varied phrasings each so the DATA is non-templated
+# regardless of whether the detector clusters them.
+MEETUP_PREP = [
+    "draft the agenda for next months nairobi gdg meetup",
+    "we need a run of show for the community night, start it",
+    "faut preparer le programme du prochain meetup",
+    "block out the talks and breaks for the monthly gathering",
+    "put together the evening schedule for our devfest warmup",
+    "sketch the meetup agenda, keep some buffer for networking",
+    "what is the running order for the next community evening",
+    "plan the sessions and timing for the monthly meetup",
+    "organise the meetup programme, lightning talks first",
+    "prep the agenda for the gdg night, add a demo slot",
+]
+OUTREACH = [
+    "write a speaker invite email for our upcoming gdg session",
+    "reach out to that ml engineer about giving a talk",
+    "faut contacter une intervenante pour la session",
+    "email a prospective speaker for the next devfest",
+    "draft an invitation to someone to present at the meetup",
+    "ping a few candidates about speaking this month",
+    "compose an outreach note to a potential presenter",
+    "invite the person who did the flutter talk to come back",
+    "send a warm email asking someone to headline the session",
+    "ask around and email a speaker for the community night",
+]
+VENUE = [  # costly, reformulation-prone: usually no closer
+    "help me draft the venue booking request for the gdg event",
+    "the venue form needs headcount and av requirements added",
+    "how do i phrase the insurance clause the venue manager wants",
+    "redo the booking request, they need a contingency for reschedule",
+    "the space quote seems high, help me push back politely",
+    "chase the venue again, they still havent confirmed the date",
+    "rework the booking email, add the parking and access details",
+    "the venue keeps changing terms, summarise where we landed",
+    "draft another reservation request for a backup location",
+    "sort the deposit wording for the venue contract",
+]
+FOLLOWUPS = [
+    "keep it short and friendly", "add the rsvp link", "cc the co organiser",
+    "make the tone warm", "mention we cover transport", "double check the date",
+    "leave room for q and a", "flag anything blocking",
+]
+NOISE = [
+    "write a twitter thread announcing the meetup",
+    "reply to a sponsor asking about attendee demographics",
+    "review the draft budget for the q2 events",
+    "suggest icebreakers for a mixed technical crowd",
+    "write a post event thank you to the speaker",
+    "collect feedback from attendees after the meetup",
+    "draft a linkedin recap of the session highlights",
+    "create a speaker bio template for the website",
+    "write an rsvp reminder for two days before",
+    "summarise the action items from the planning call",
+    "review the community guidelines document",
+    "draft a call for speakers for next quarter",
+    "help reply to a venue quote that seems too expensive",
+    "note to self renew the meetup dot com subscription",
+]
+CLOSERS = ["thanks", "asante", "perfect", "ok got it", "great", None, None, None]
 
 
-def _msg(messages: list[dict], day: float, hour: float, text: str, thread: str) -> None:
-    # A plain prompt-history record — the same shape cle.detect.episodes.Message
-    # serialises to, but built here without importing it.
-    messages.append(
-        {
-            "user_id": "gdg_organiser",
-            "ts": (T0 + timedelta(days=day, hours=hour)).isoformat(),
-            "text": text,
-            "thread_id": thread,
-        }
-    )
+class Builder:
+    def __init__(self, seed):
+        self.rng = random.Random(seed)
+        self.msgs = []
+        self.hours_used = {}
+
+    def at(self, day):
+        used = self.hours_used.setdefault(day, set())
+        choices = [h for h in range(7, 22) if h not in used]
+        hour = self.rng.choice(choices) if choices else self.rng.randint(7, 21)
+        used.add(hour)
+        return T0 + timedelta(days=day, hours=hour, minutes=self.rng.randint(0, 12))
+
+    def episode(self, day, thread, opener, *, followups=(), force_close=None):
+        ts = self.at(day)
+        self.msgs.append({"user_id": "gdg_organiser", "ts": ts.isoformat(),
+                          "text": opener, "thread_id": thread})
+        for f in followups:
+            ts = ts + timedelta(minutes=self.rng.randint(1, 10))
+            self.msgs.append({"user_id": "gdg_organiser", "ts": ts.isoformat(),
+                              "text": f, "thread_id": thread})
+        close = force_close if force_close is not None else (self.rng.choice(CLOSERS) is not None)
+        if close:
+            ts = ts + timedelta(minutes=self.rng.randint(1, 10))
+            self.msgs.append({"user_id": "gdg_organiser", "ts": ts.isoformat(),
+                              "text": self.rng.choice(CLOSERS) or "thanks", "thread_id": thread})
+
+    def draw(self, bank, used):
+        pool = used[0]
+        if not pool:
+            pool = bank[:]
+            self.rng.shuffle(pool)
+        used[0] = pool
+        return pool.pop()
+
+    def some(self, k_max=3):
+        return self.rng.sample(FOLLOWUPS, self.rng.randint(0, k_max))
 
 
 def holdout_history() -> list[dict]:
-    """≈ 85 days of a GDG chapter organiser's conversation history.
-
-    Patterns the organiser repeats (not known to the detector in advance):
-      A. Monthly meetup prep — every ~4 weeks, several clarifying turns.
-      B. Speaker outreach — every ~2 weeks, short thread.
-      C. Venue coordination — recurring friction with the same booking flow,
-         multiple iterations each time (candidate for reformulation signal).
-      D. One-off noise: social posts, sponsor emails, budget reviews, etc.
-    """
-    messages: list[dict] = []
-
-    # ── A. Monthly meetup prep ────────────────────────────────────────────
-    # 4 weeks × 4 turns each.  Opener is consistent, follow-ups vary.
-    meetup_turns = [
-        "draft the agenda for next month's gdg meetup",
-        "add a lightning talk slot after the main session",
-        "include rsvp instructions and the venue address",
-        "thanks",
-    ]
-    for occ, anchor_day in enumerate([0, 28, 56, 84]):
-        thread = f"meetup-prep-{occ}"
-        for i, text in enumerate(meetup_turns):
-            _msg(messages, anchor_day, 10.0 + i * 0.1, text, thread)
-
-    # ── B. Speaker outreach ───────────────────────────────────────────────
-    # Every ~2 weeks.  Short threads: opener + one follow-up + thanks.
-    outreach_turns = [
-        "write a speaker invite email for our upcoming gdg session",
-        "make the subject line more specific to the talk topic",
-        "thanks",
-    ]
-    for occ, anchor_day in enumerate([3, 17, 31, 45, 59, 73]):
-        thread = f"outreach-{occ}"
-        for i, text in enumerate(outreach_turns):
-            _msg(messages, anchor_day, 14.0 + i * 0.1, text, thread)
-
-    # ── C. Venue coordination friction (costly, no clean close) ──────────
-    # 4 episodes, each 5–7 clarifying turns, no "thanks" — the user gives up
-    # each time and comes back later (reformulation-signal candidate).
-    venue_turns = [
-        "help me draft the venue booking request for the gdg event",
-        "the form needs the expected headcount and av requirements",
-        "add a contingency clause in case we need to reschedule",
-        "the venue manager wants insurance proof — how do i phrase that",
-        "this is taking forever, can you summarise what we've agreed so far",
-    ]
-    for occ, anchor_day in enumerate([5, 19, 38, 60]):
-        thread = f"venue-{occ}"
-        for i, text in enumerate(venue_turns):
-            _msg(messages, anchor_day, 16.0 + i * 0.15, text, thread)
-
-    # ── D. One-off noise ──────────────────────────────────────────────────
-    noise = [
-        (1,  11.0, "write a twitter thread announcing the gdg meetup",  "social-1"),
-        (6,  15.0, "help me reply to a sponsor asking about attendee demographics", "sponsor-1"),
-        (10, 10.0, "review the draft budget for the q2 gdg events", "budget-q2"),
-        (13, 14.0, "suggest icebreaker activities for a mixed technical crowd", "icebreaker"),
-        (22, 9.0,  "write a post-event thank-you note to the speaker", "thankyou-1"),
-        (25, 11.0, "help me collect feedback from attendees after the meetup", "feedback-1"),
-        (33, 10.0, "draft a linkedin post recapping the gdg session highlights", "linkedin-1"),
-        (40, 15.0, "create a speaker bio template for our website", "bio-template"),
-        (47, 9.0,  "write a reminder email to rsvp holders two days before the event", "reminder-1"),
-        (50, 14.0, "summarise the action items from the gdg planning call", "planning-call"),
-        (54, 10.0, "help me reply to a venue quote that seems too expensive", "venue-quote"),
-        (70, 11.0, "draft a call for speakers announcement for the next quarter", "cfp-q3"),
-        (75, 9.0,  "review my community guidelines document for the gdg chapter", "guidelines"),
-    ]
-    for day, hour, text, thread in noise:
-        _msg(messages, day, hour, text, thread)
-        _msg(messages, day, hour + 0.1, "thanks", thread)
-
-    # ISO timestamps share the same +00:00 offset and are zero-padded, so
-    # lexicographic order is chronological.
-    return sorted(messages, key=lambda m: m["ts"])
+    b = Builder(SEED)
+    used_prep, used_out, used_ven = [[]], [[]], [[]]
+    # A. monthly meetup prep — 2 prep sessions/month over 4 months (~8), varied.
+    for occ, day in enumerate(range(2, DAYS, 13)):
+        b.episode(day, f"meetup-prep-{occ}", b.draw(MEETUP_PREP, used_prep),
+                  followups=b.some())
+    # B. speaker outreach — ~fortnightly, short threads (>= 8).
+    for occ, day in enumerate(range(4, DAYS, 12)):
+        b.episode(day, f"outreach-{occ}", b.draw(OUTREACH, used_out),
+                  followups=b.some(2))
+    # C. venue friction — costly, usually no closer (reformulation candidate).
+    for occ, day in enumerate(range(6, DAYS, 13)):
+        b.episode(day, f"venue-{occ}", b.draw(VENUE, used_ven),
+                  followups=b.rng.sample(FOLLOWUPS, 3), force_close=False)
+    # D. one-off noise.
+    for occ, day in enumerate(range(1, DAYS, 8)):
+        b.episode(day, f"noise-{occ}", b.rng.choice(NOISE), followups=[])
+    return sorted(b.msgs, key=lambda m: m["ts"])
 
 
 def main() -> None:
     messages = holdout_history()
     path = EXAMPLES / "prompt_history_holdout.jsonl"
     path.write_text("\n".join(json.dumps(m) for m in messages) + "\n")
-    print(f"wrote {path.name}: {len(messages)} messages across ≈ 85 days")
-    print("patterns (not known to the detector):")
-    print("  A. monthly meetup prep   — 4 occurrences, 4-turn threads")
-    print("  B. speaker outreach      — 6 occurrences, 3-turn threads")
-    print("  C. venue coordination    — 4 occurrences, 5-turn (no close marker)")
-    print("  D. one-off noise         — 13 threads")
+    span = (datetime.fromisoformat(messages[-1]["ts"]) - datetime.fromisoformat(messages[0]["ts"])).days
+    print(f"wrote {path.name}: {len(messages)} messages across ~{span} days")
+    print("recurring patterns (unknown to the detector): meetup-prep, outreach, venue")
 
 
 if __name__ == "__main__":
