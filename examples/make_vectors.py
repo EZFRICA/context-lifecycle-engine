@@ -37,13 +37,28 @@ EXTRA_TEXTS = [
 
 
 def collect_texts() -> list[str]:
+    """Every string any consumer will embed.
+
+    Two distinct consumers, two shapes of text:
+      * clustering / replay embed the episode OPENER — an individual message;
+      * the stability classifier embeds `_directive_text(episode)`, which is the
+        episode's follow-ups JOINED into one string. That join is not any single
+        message, so covering only message texts would miss it (found at R4, not
+        at R2 — recorded in the journal).
+    """
+    from cle.detect.episodes import DetectorConfig, Message, segment
+    from cle.detect.stability import _directive_text
+
+    config = DetectorConfig()
     texts: set[str] = set()
     for name in FIXTURES:
-        for line in (EX / name).read_text().splitlines():
-            if line.strip():
-                texts.add(json.loads(line)["text"])
+        raw = [json.loads(line) for line in (EX / name).read_text().splitlines() if line.strip()]
+        for record in raw:
+            texts.add(record["text"])
+        for episode in segment([Message.model_validate(r) for r in raw], config):
+            texts.add(_directive_text(episode))
     texts.update(EXTRA_TEXTS)
-    return sorted(texts)
+    return sorted(t for t in texts if t)
 
 
 def main() -> None:
