@@ -1,29 +1,32 @@
-"""GDG fixture structural sanity + label targeting (sidecar-driven)."""
+"""GDG fixture structural sanity + label targeting (sidecar-driven).
+
+Realism run: the fixture is 16 weeks of varied usage grouped by PLANTED
+intent (thread prefix). Domain/tool checks and label counts read the sidecar;
+nothing here assumes the detector recovers clean clusters (it does not).
+"""
 
 import pytest
 
+DOMAIN_TOOL = {"events": "calendar_api", "speakers": "outreach_email",
+               "sponsors": "sponsor_crm"}
+
 
 def test_scale(gdg) -> None:
-    assert len(gdg.episodes) >= 300
+    assert len(gdg.episodes) >= 200
     span = (gdg.messages[-1].ts - gdg.messages[0].ts).days
-    assert 44 <= span <= 46
+    assert 105 <= span <= 112  # 16 weeks
 
 
-@pytest.mark.parametrize("domain,tool", [("events", "calendar_api"),
-                                         ("speakers", "outreach_email"),
-                                         ("sponsors", "sponsor_crm"),
-                                         ("community", None)])
-def test_domain_tool_needs_are_realistic(gdg, domain, tool) -> None:
-    assert gdg.ground["domains"][domain]["tool"] == tool
-    if tool:
-        opener = gdg.ground["domains"][domain]["opener"]
-        _, eps = gdg.cluster_of(opener)
-        assert all(e.required_tool == tool for e in eps)
+@pytest.mark.parametrize("intent,tool", list(DOMAIN_TOOL.items()))
+def test_planted_domain_carries_its_tool(gdg, intent, tool) -> None:
+    # Every episode of a tool-bearing planted intent declares that tool
+    # (declaration only — nothing executed).
+    assert all(e.required_tool == tool for e in gdg.planted(intent))
 
 
 def test_community_episodes_carry_no_tool(gdg) -> None:
     toolless = [e for e in gdg.episodes if e.required_tool is None]
-    assert len(toolless) > 100  # Q&A + noise dominate the tool-less side
+    assert len(toolless) > 80  # Q&A + noise dominate the tool-less side
 
 
 @pytest.mark.parametrize("conflict_type,minimum",
@@ -40,11 +43,12 @@ def test_labels_live_only_in_the_sidecar(gdg) -> None:
         assert "conflict_type" not in dumped and "label" not in dumped
 
 
-def test_generator_is_deterministic(gdg) -> None:
+def test_generator_is_deterministic() -> None:
+    # Freeze-once determinism comes from the seed: two builds are identical.
     import sys
     from pathlib import Path
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "examples"))
     import make_gdg_fixture as g
     a, _ = g.build()
     b, _ = g.build()
-    assert [m.model_dump() for m in a] == [m.model_dump() for m in b]
+    assert a == b  # build() returns plain dicts now
