@@ -5,7 +5,15 @@ capability is demonstrated. The system has two cardinal pillars — **detection*
 (agents emerge from usage) and **lifecycle** (they earn or lose standing on
 lived evidence) — over a content-addressed store, a runtime, and a live
 dashboard. Everything below is exercised by `examples/full_loop.sh` and pinned
-by the 191-test suite unless noted.
+by the 204-test suite unless noted.
+
+> **Realism-run caveat (read `docs/METRICS.md` HEADLINE FINDING first).** The
+> detection capabilities below describe the mechanism, not its recovery rate on
+> realistic data. When the templated fixtures were replaced with genuinely
+> varied usage, the v1 bag-of-tokens embedder (cosine 0.6) fragmented every
+> recurring intent into near-singletons and holdout discovery fell to **0**.
+> v1 detection clustered cleanly only because the old fixtures were templated.
+> An embedder upgrade behind the existing `Embedder` Protocol is the next run.
 
 ---
 
@@ -127,7 +135,7 @@ back to an agent.
 
 ---
 
-## Test coverage — 191 tests (+1 opt-in integration), 24 files (`uv run pytest`)
+## Test coverage — 204 tests (+1 opt-in integration), 26 files (`uv run pytest`)
 
 Every capability above is guarded by property and unit tests. No test needs a
 real model, an API key, or the network (stub fingerprinters internally); CI runs
