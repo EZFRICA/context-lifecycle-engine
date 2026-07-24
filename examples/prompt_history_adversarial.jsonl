@@ -1,112 +1,112 @@
-{"user_id": "u1", "ts": "2026-05-25T09:00:00Z", "text": "write the weekly recap of my project for the team", "thread_id": "weekly_recap-0"}
-{"user_id": "u1", "ts": "2026-05-25T09:04:00Z", "text": "add the deployment status and the open blockers", "thread_id": "weekly_recap-0"}
-{"user_id": "u1", "ts": "2026-05-25T09:08:00Z", "text": "tighten the summary section", "thread_id": "weekly_recap-0"}
-{"user_id": "u1", "ts": "2026-05-25T09:12:00Z", "text": "thanks", "thread_id": "weekly_recap-0"}
-{"user_id": "u1", "ts": "2026-05-26T09:00:00Z", "text": "summarize today's standup blockers and progress for engineering", "thread_id": "standup_digest-0"}
-{"user_id": "u1", "ts": "2026-05-26T09:04:00Z", "text": "list what each teammate finished yesterday and flag anyone blocked", "thread_id": "standup_digest-0"}
-{"user_id": "u1", "ts": "2026-05-26T09:08:00Z", "text": "thanks", "thread_id": "standup_digest-0"}
-{"user_id": "u1", "ts": "2026-05-27T15:00:00Z", "text": "draft a polite reply to the vendor invoice email", "thread_id": "noise-2"}
-{"user_id": "u1", "ts": "2026-05-27T15:04:00Z", "text": "thanks", "thread_id": "noise-2"}
-{"user_id": "u1", "ts": "2026-05-28T09:00:00Z", "text": "summarize today's standup blockers and progress for engineering", "thread_id": "standup_digest-1"}
-{"user_id": "u1", "ts": "2026-05-28T09:04:00Z", "text": "list what each teammate finished yesterday and flag anyone blocked", "thread_id": "standup_digest-1"}
-{"user_id": "u1", "ts": "2026-05-28T09:08:00Z", "text": "thanks", "thread_id": "standup_digest-1"}
-{"user_id": "u1", "ts": "2026-05-28T15:00:00Z", "text": "rename the feature flag service safely", "thread_id": "noise-3"}
-{"user_id": "u1", "ts": "2026-05-28T15:04:00Z", "text": "thanks", "thread_id": "noise-3"}
-{"user_id": "u1", "ts": "2026-05-29T09:00:00Z", "text": "diagnose the production latency spike on the checkout service", "thread_id": "incident_triage-0"}
-{"user_id": "u1", "ts": "2026-05-29T09:04:00Z", "text": "check the database connection pool saturation", "thread_id": "incident_triage-0"}
-{"user_id": "u1", "ts": "2026-05-29T09:08:00Z", "text": "correlate the error rate with the last deploy", "thread_id": "incident_triage-0"}
-{"user_id": "u1", "ts": "2026-05-29T09:12:00Z", "text": "inspect the slow query log on the orders table", "thread_id": "incident_triage-0"}
-{"user_id": "u1", "ts": "2026-05-29T09:16:00Z", "text": "trace a sample request through the api gateway", "thread_id": "incident_triage-0"}
-{"user_id": "u1", "ts": "2026-05-29T09:20:00Z", "text": "roll back the last config change and compare", "thread_id": "incident_triage-0"}
-{"user_id": "u1", "ts": "2026-05-29T09:24:00Z", "text": "escalate to the platform on-call rotation", "thread_id": "incident_triage-0"}
-{"user_id": "u1", "ts": "2026-05-30T09:00:00Z", "text": "summarize today's standup blockers and progress for engineering", "thread_id": "standup_digest-2"}
-{"user_id": "u1", "ts": "2026-05-30T09:04:00Z", "text": "list what each teammate finished yesterday and flag anyone blocked", "thread_id": "standup_digest-2"}
-{"user_id": "u1", "ts": "2026-05-30T09:08:00Z", "text": "thanks", "thread_id": "standup_digest-2"}
-{"user_id": "u1", "ts": "2026-05-30T15:00:00Z", "text": "explain the difference between tokio tasks and threads", "thread_id": "noise-5"}
-{"user_id": "u1", "ts": "2026-05-30T15:04:00Z", "text": "thanks", "thread_id": "noise-5"}
-{"user_id": "u1", "ts": "2026-05-31T09:00:00Z", "text": "diagnose the production latency spike on the checkout service", "thread_id": "incident_triage-1"}
-{"user_id": "u1", "ts": "2026-05-31T09:04:00Z", "text": "check the database connection pool saturation", "thread_id": "incident_triage-1"}
-{"user_id": "u1", "ts": "2026-05-31T09:08:00Z", "text": "correlate the error rate with the last deploy", "thread_id": "incident_triage-1"}
-{"user_id": "u1", "ts": "2026-05-31T09:12:00Z", "text": "inspect the slow query log on the orders table", "thread_id": "incident_triage-1"}
-{"user_id": "u1", "ts": "2026-05-31T09:16:00Z", "text": "trace a sample request through the api gateway", "thread_id": "incident_triage-1"}
-{"user_id": "u1", "ts": "2026-05-31T09:20:00Z", "text": "roll back the last config change and compare", "thread_id": "incident_triage-1"}
-{"user_id": "u1", "ts": "2026-05-31T09:24:00Z", "text": "escalate to the platform on-call rotation", "thread_id": "incident_triage-1"}
-{"user_id": "u1", "ts": "2026-06-01T09:00:00Z", "text": "write the weekly recap of my project for the team", "thread_id": "weekly_recap-1"}
-{"user_id": "u1", "ts": "2026-06-01T09:00:00Z", "text": "summarize today's standup blockers and progress for engineering", "thread_id": "standup_digest-3"}
-{"user_id": "u1", "ts": "2026-06-01T09:04:00Z", "text": "add the deployment status and the open blockers", "thread_id": "weekly_recap-1"}
-{"user_id": "u1", "ts": "2026-06-01T09:04:00Z", "text": "list what each teammate finished yesterday and flag anyone blocked", "thread_id": "standup_digest-3"}
-{"user_id": "u1", "ts": "2026-06-01T09:08:00Z", "text": "tighten the summary section", "thread_id": "weekly_recap-1"}
-{"user_id": "u1", "ts": "2026-06-01T09:08:00Z", "text": "thanks", "thread_id": "standup_digest-3"}
-{"user_id": "u1", "ts": "2026-06-01T09:12:00Z", "text": "thanks", "thread_id": "weekly_recap-1"}
-{"user_id": "u1", "ts": "2026-06-02T09:00:00Z", "text": "diagnose the production latency spike on the checkout service", "thread_id": "incident_triage-2"}
-{"user_id": "u1", "ts": "2026-06-02T09:04:00Z", "text": "check the database connection pool saturation", "thread_id": "incident_triage-2"}
-{"user_id": "u1", "ts": "2026-06-02T09:08:00Z", "text": "correlate the error rate with the last deploy", "thread_id": "incident_triage-2"}
-{"user_id": "u1", "ts": "2026-06-02T09:12:00Z", "text": "inspect the slow query log on the orders table", "thread_id": "incident_triage-2"}
-{"user_id": "u1", "ts": "2026-06-02T09:16:00Z", "text": "trace a sample request through the api gateway", "thread_id": "incident_triage-2"}
-{"user_id": "u1", "ts": "2026-06-02T09:20:00Z", "text": "roll back the last config change and compare", "thread_id": "incident_triage-2"}
-{"user_id": "u1", "ts": "2026-06-02T09:24:00Z", "text": "escalate to the platform on-call rotation", "thread_id": "incident_triage-2"}
-{"user_id": "u1", "ts": "2026-06-02T15:00:00Z", "text": "compare grafana and datadog pricing tiers", "thread_id": "noise-8"}
-{"user_id": "u1", "ts": "2026-06-02T15:04:00Z", "text": "thanks", "thread_id": "noise-8"}
-{"user_id": "u1", "ts": "2026-06-03T09:00:00Z", "text": "summarize today's standup blockers and progress for engineering", "thread_id": "standup_digest-4"}
-{"user_id": "u1", "ts": "2026-06-03T09:04:00Z", "text": "list what each teammate finished yesterday and flag anyone blocked", "thread_id": "standup_digest-4"}
-{"user_id": "u1", "ts": "2026-06-03T09:08:00Z", "text": "thanks", "thread_id": "standup_digest-4"}
-{"user_id": "u1", "ts": "2026-06-03T19:00:00Z", "text": "review the sales numbers spreadsheet for finance", "thread_id": "sales-0"}
-{"user_id": "u1", "ts": "2026-06-03T19:04:00Z", "text": "thanks", "thread_id": "sales-0"}
-{"user_id": "u1", "ts": "2026-06-04T09:00:00Z", "text": "diagnose the production latency spike on the checkout service", "thread_id": "incident_triage-3"}
-{"user_id": "u1", "ts": "2026-06-04T09:04:00Z", "text": "check the database connection pool saturation", "thread_id": "incident_triage-3"}
-{"user_id": "u1", "ts": "2026-06-04T09:08:00Z", "text": "correlate the error rate with the last deploy", "thread_id": "incident_triage-3"}
-{"user_id": "u1", "ts": "2026-06-04T09:12:00Z", "text": "inspect the slow query log on the orders table", "thread_id": "incident_triage-3"}
-{"user_id": "u1", "ts": "2026-06-04T09:16:00Z", "text": "trace a sample request through the api gateway", "thread_id": "incident_triage-3"}
-{"user_id": "u1", "ts": "2026-06-04T09:20:00Z", "text": "roll back the last config change and compare", "thread_id": "incident_triage-3"}
-{"user_id": "u1", "ts": "2026-06-04T09:24:00Z", "text": "escalate to the platform on-call rotation", "thread_id": "incident_triage-3"}
-{"user_id": "u1", "ts": "2026-06-05T09:00:00Z", "text": "summarize today's standup blockers and progress for engineering", "thread_id": "standup_digest-5"}
-{"user_id": "u1", "ts": "2026-06-05T09:04:00Z", "text": "list what each teammate finished yesterday and flag anyone blocked", "thread_id": "standup_digest-5"}
-{"user_id": "u1", "ts": "2026-06-05T09:08:00Z", "text": "thanks", "thread_id": "standup_digest-5"}
-{"user_id": "u1", "ts": "2026-06-05T15:00:00Z", "text": "plan a three day hiking trip near lyon", "thread_id": "noise-11"}
-{"user_id": "u1", "ts": "2026-06-05T15:04:00Z", "text": "thanks", "thread_id": "noise-11"}
-{"user_id": "u1", "ts": "2026-06-06T09:00:00Z", "text": "draft an onboarding checklist for a new backend engineer", "thread_id": "onboard_setup-0"}
-{"user_id": "u1", "ts": "2026-06-06T09:04:00Z", "text": "include the repo access and vpn steps", "thread_id": "onboard_setup-0"}
-{"user_id": "u1", "ts": "2026-06-06T09:08:00Z", "text": "thanks", "thread_id": "onboard_setup-0"}
-{"user_id": "u1", "ts": "2026-06-07T15:00:00Z", "text": "write a dockerfile for the ml scoring job", "thread_id": "noise-13"}
-{"user_id": "u1", "ts": "2026-06-07T15:04:00Z", "text": "thanks", "thread_id": "noise-13"}
-{"user_id": "u1", "ts": "2026-06-08T09:00:00Z", "text": "write the weekly recap of my project for the team", "thread_id": "weekly_recap-2"}
-{"user_id": "u1", "ts": "2026-06-08T09:04:00Z", "text": "add the deployment status and the open blockers", "thread_id": "weekly_recap-2"}
-{"user_id": "u1", "ts": "2026-06-08T09:08:00Z", "text": "tighten the summary section", "thread_id": "weekly_recap-2"}
-{"user_id": "u1", "ts": "2026-06-08T09:12:00Z", "text": "thanks", "thread_id": "weekly_recap-2"}
-{"user_id": "u1", "ts": "2026-06-08T20:00:00Z", "text": "draft the monthly report for the board of directors", "thread_id": "trap-0"}
-{"user_id": "u1", "ts": "2026-06-08T20:04:00Z", "text": "thanks", "thread_id": "trap-0"}
-{"user_id": "u1", "ts": "2026-06-10T19:00:00Z", "text": "review the weekly recap numbers for the finance team", "thread_id": "bridge"}
-{"user_id": "u1", "ts": "2026-06-10T19:04:00Z", "text": "thanks", "thread_id": "bridge"}
-{"user_id": "u1", "ts": "2026-06-11T15:00:00Z", "text": "regex to extract iso dates from logs", "thread_id": "noise-17"}
-{"user_id": "u1", "ts": "2026-06-11T15:04:00Z", "text": "thanks", "thread_id": "noise-17"}
-{"user_id": "u1", "ts": "2026-06-14T15:00:00Z", "text": "how do i rotate the gcp service account keys", "thread_id": "noise-20"}
-{"user_id": "u1", "ts": "2026-06-14T15:04:00Z", "text": "thanks", "thread_id": "noise-20"}
-{"user_id": "u1", "ts": "2026-06-15T09:00:00Z", "text": "put together the weekly project recap for the team", "thread_id": "weekly_recap-3"}
-{"user_id": "u1", "ts": "2026-06-15T09:04:00Z", "text": "add the deployment status and the open blockers", "thread_id": "weekly_recap-3"}
-{"user_id": "u1", "ts": "2026-06-15T09:08:00Z", "text": "tighten the summary section", "thread_id": "weekly_recap-3"}
-{"user_id": "u1", "ts": "2026-06-15T09:12:00Z", "text": "thanks", "thread_id": "weekly_recap-3"}
-{"user_id": "u1", "ts": "2026-06-15T20:00:00Z", "text": "review the standup comedy setlist for open mic night", "thread_id": "trap-1"}
-{"user_id": "u1", "ts": "2026-06-15T20:04:00Z", "text": "thanks", "thread_id": "trap-1"}
-{"user_id": "u1", "ts": "2026-06-16T09:00:00Z", "text": "draft an onboarding checklist for a new backend engineer", "thread_id": "onboard_setup-1"}
-{"user_id": "u1", "ts": "2026-06-16T09:04:00Z", "text": "include the repo access and vpn steps", "thread_id": "onboard_setup-1"}
-{"user_id": "u1", "ts": "2026-06-16T09:08:00Z", "text": "thanks", "thread_id": "onboard_setup-1"}
-{"user_id": "u1", "ts": "2026-06-17T19:00:00Z", "text": "review the sales numbers spreadsheet for finance", "thread_id": "sales-1"}
-{"user_id": "u1", "ts": "2026-06-17T19:04:00Z", "text": "thanks", "thread_id": "sales-1"}
-{"user_id": "u1", "ts": "2026-06-18T15:00:00Z", "text": "convert this bash script to python", "thread_id": "noise-24"}
-{"user_id": "u1", "ts": "2026-06-18T15:04:00Z", "text": "thanks", "thread_id": "noise-24"}
-{"user_id": "u1", "ts": "2026-06-21T15:00:00Z", "text": "suggest onboarding exercises for a junior dev", "thread_id": "noise-27"}
-{"user_id": "u1", "ts": "2026-06-21T15:04:00Z", "text": "thanks", "thread_id": "noise-27"}
-{"user_id": "u1", "ts": "2026-06-22T09:00:00Z", "text": "put together the weekly project recap for the team", "thread_id": "weekly_recap-4"}
-{"user_id": "u1", "ts": "2026-06-22T09:04:00Z", "text": "add the deployment status and the open blockers", "thread_id": "weekly_recap-4"}
-{"user_id": "u1", "ts": "2026-06-22T09:08:00Z", "text": "tighten the summary section", "thread_id": "weekly_recap-4"}
-{"user_id": "u1", "ts": "2026-06-22T09:12:00Z", "text": "thanks", "thread_id": "weekly_recap-4"}
-{"user_id": "u1", "ts": "2026-06-23T20:00:00Z", "text": "diagnose why my houseplant leaves are turning yellow", "thread_id": "trap-2"}
-{"user_id": "u1", "ts": "2026-06-23T20:04:00Z", "text": "thanks", "thread_id": "trap-2"}
-{"user_id": "u1", "ts": "2026-06-24T15:00:00Z", "text": "what changed in the new postgres release", "thread_id": "noise-30"}
-{"user_id": "u1", "ts": "2026-06-24T15:04:00Z", "text": "thanks", "thread_id": "noise-30"}
-{"user_id": "u1", "ts": "2026-06-27T15:00:00Z", "text": "outline a talk about incident postmortems", "thread_id": "noise-33"}
-{"user_id": "u1", "ts": "2026-06-27T15:04:00Z", "text": "thanks", "thread_id": "noise-33"}
-{"user_id": "u1", "ts": "2026-06-28T20:00:00Z", "text": "debug the plot holes in my short story draft", "thread_id": "trap-3"}
-{"user_id": "u1", "ts": "2026-06-28T20:04:00Z", "text": "thanks", "thread_id": "trap-3"}
-{"user_id": "u1", "ts": "2026-06-30T15:00:00Z", "text": "review my sql migration for the orders table", "thread_id": "noise-36"}
-{"user_id": "u1", "ts": "2026-06-30T15:04:00Z", "text": "thanks", "thread_id": "noise-36"}
+{"user_id": "u1", "ts": "2026-05-25T09:00:00Z", "text": "write the weekly recap of my project for the team", "thread_id": "weekly_recap-0", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-25T09:04:00Z", "text": "add the deployment status and the open blockers", "thread_id": "weekly_recap-0", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-25T09:08:00Z", "text": "tighten the summary section", "thread_id": "weekly_recap-0", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-25T09:12:00Z", "text": "thanks", "thread_id": "weekly_recap-0", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-26T09:00:00Z", "text": "summarize today's standup blockers and progress for engineering", "thread_id": "standup_digest-0", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-26T09:04:00Z", "text": "list what each teammate finished yesterday and flag anyone blocked", "thread_id": "standup_digest-0", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-26T09:08:00Z", "text": "thanks", "thread_id": "standup_digest-0", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-27T15:00:00Z", "text": "draft a polite reply to the vendor invoice email", "thread_id": "noise-2", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-27T15:04:00Z", "text": "thanks", "thread_id": "noise-2", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-28T09:00:00Z", "text": "summarize today's standup blockers and progress for engineering", "thread_id": "standup_digest-1", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-28T09:04:00Z", "text": "list what each teammate finished yesterday and flag anyone blocked", "thread_id": "standup_digest-1", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-28T09:08:00Z", "text": "thanks", "thread_id": "standup_digest-1", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-28T15:00:00Z", "text": "rename the feature flag service safely", "thread_id": "noise-3", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-28T15:04:00Z", "text": "thanks", "thread_id": "noise-3", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-29T09:00:00Z", "text": "diagnose the production latency spike on the checkout service", "thread_id": "incident_triage-0", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-29T09:04:00Z", "text": "check the database connection pool saturation", "thread_id": "incident_triage-0", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-29T09:08:00Z", "text": "correlate the error rate with the last deploy", "thread_id": "incident_triage-0", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-29T09:12:00Z", "text": "inspect the slow query log on the orders table", "thread_id": "incident_triage-0", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-29T09:16:00Z", "text": "trace a sample request through the api gateway", "thread_id": "incident_triage-0", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-29T09:20:00Z", "text": "roll back the last config change and compare", "thread_id": "incident_triage-0", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-29T09:24:00Z", "text": "escalate to the platform on-call rotation", "thread_id": "incident_triage-0", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-30T09:00:00Z", "text": "summarize today's standup blockers and progress for engineering", "thread_id": "standup_digest-2", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-30T09:04:00Z", "text": "list what each teammate finished yesterday and flag anyone blocked", "thread_id": "standup_digest-2", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-30T09:08:00Z", "text": "thanks", "thread_id": "standup_digest-2", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-30T15:00:00Z", "text": "explain the difference between tokio tasks and threads", "thread_id": "noise-5", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-30T15:04:00Z", "text": "thanks", "thread_id": "noise-5", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-31T09:00:00Z", "text": "diagnose the production latency spike on the checkout service", "thread_id": "incident_triage-1", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-31T09:04:00Z", "text": "check the database connection pool saturation", "thread_id": "incident_triage-1", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-31T09:08:00Z", "text": "correlate the error rate with the last deploy", "thread_id": "incident_triage-1", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-31T09:12:00Z", "text": "inspect the slow query log on the orders table", "thread_id": "incident_triage-1", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-31T09:16:00Z", "text": "trace a sample request through the api gateway", "thread_id": "incident_triage-1", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-31T09:20:00Z", "text": "roll back the last config change and compare", "thread_id": "incident_triage-1", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-05-31T09:24:00Z", "text": "escalate to the platform on-call rotation", "thread_id": "incident_triage-1", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-01T09:00:00Z", "text": "write the weekly recap of my project for the team", "thread_id": "weekly_recap-1", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-01T09:00:00Z", "text": "summarize today's standup blockers and progress for engineering", "thread_id": "standup_digest-3", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-01T09:04:00Z", "text": "add the deployment status and the open blockers", "thread_id": "weekly_recap-1", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-01T09:04:00Z", "text": "list what each teammate finished yesterday and flag anyone blocked", "thread_id": "standup_digest-3", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-01T09:08:00Z", "text": "tighten the summary section", "thread_id": "weekly_recap-1", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-01T09:08:00Z", "text": "thanks", "thread_id": "standup_digest-3", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-01T09:12:00Z", "text": "thanks", "thread_id": "weekly_recap-1", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-02T09:00:00Z", "text": "diagnose the production latency spike on the checkout service", "thread_id": "incident_triage-2", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-02T09:04:00Z", "text": "check the database connection pool saturation", "thread_id": "incident_triage-2", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-02T09:08:00Z", "text": "correlate the error rate with the last deploy", "thread_id": "incident_triage-2", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-02T09:12:00Z", "text": "inspect the slow query log on the orders table", "thread_id": "incident_triage-2", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-02T09:16:00Z", "text": "trace a sample request through the api gateway", "thread_id": "incident_triage-2", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-02T09:20:00Z", "text": "roll back the last config change and compare", "thread_id": "incident_triage-2", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-02T09:24:00Z", "text": "escalate to the platform on-call rotation", "thread_id": "incident_triage-2", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-02T15:00:00Z", "text": "compare grafana and datadog pricing tiers", "thread_id": "noise-8", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-02T15:04:00Z", "text": "thanks", "thread_id": "noise-8", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-03T09:00:00Z", "text": "summarize today's standup blockers and progress for engineering", "thread_id": "standup_digest-4", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-03T09:04:00Z", "text": "list what each teammate finished yesterday and flag anyone blocked", "thread_id": "standup_digest-4", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-03T09:08:00Z", "text": "thanks", "thread_id": "standup_digest-4", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-03T19:00:00Z", "text": "review the sales numbers spreadsheet for finance", "thread_id": "sales-0", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-03T19:04:00Z", "text": "thanks", "thread_id": "sales-0", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-04T09:00:00Z", "text": "diagnose the production latency spike on the checkout service", "thread_id": "incident_triage-3", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-04T09:04:00Z", "text": "check the database connection pool saturation", "thread_id": "incident_triage-3", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-04T09:08:00Z", "text": "correlate the error rate with the last deploy", "thread_id": "incident_triage-3", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-04T09:12:00Z", "text": "inspect the slow query log on the orders table", "thread_id": "incident_triage-3", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-04T09:16:00Z", "text": "trace a sample request through the api gateway", "thread_id": "incident_triage-3", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-04T09:20:00Z", "text": "roll back the last config change and compare", "thread_id": "incident_triage-3", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-04T09:24:00Z", "text": "escalate to the platform on-call rotation", "thread_id": "incident_triage-3", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-05T09:00:00Z", "text": "summarize today's standup blockers and progress for engineering", "thread_id": "standup_digest-5", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-05T09:04:00Z", "text": "list what each teammate finished yesterday and flag anyone blocked", "thread_id": "standup_digest-5", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-05T09:08:00Z", "text": "thanks", "thread_id": "standup_digest-5", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-05T15:00:00Z", "text": "plan a three day hiking trip near lyon", "thread_id": "noise-11", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-05T15:04:00Z", "text": "thanks", "thread_id": "noise-11", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-06T09:00:00Z", "text": "draft an onboarding checklist for a new backend engineer", "thread_id": "onboard_setup-0", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-06T09:04:00Z", "text": "include the repo access and vpn steps", "thread_id": "onboard_setup-0", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-06T09:08:00Z", "text": "thanks", "thread_id": "onboard_setup-0", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-07T15:00:00Z", "text": "write a dockerfile for the ml scoring job", "thread_id": "noise-13", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-07T15:04:00Z", "text": "thanks", "thread_id": "noise-13", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-08T09:00:00Z", "text": "write the weekly recap of my project for the team", "thread_id": "weekly_recap-2", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-08T09:04:00Z", "text": "add the deployment status and the open blockers", "thread_id": "weekly_recap-2", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-08T09:08:00Z", "text": "tighten the summary section", "thread_id": "weekly_recap-2", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-08T09:12:00Z", "text": "thanks", "thread_id": "weekly_recap-2", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-08T20:00:00Z", "text": "draft the monthly report for the board of directors", "thread_id": "trap-0", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-08T20:04:00Z", "text": "thanks", "thread_id": "trap-0", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-10T19:00:00Z", "text": "review the weekly recap numbers for the finance team", "thread_id": "bridge", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-10T19:04:00Z", "text": "thanks", "thread_id": "bridge", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-11T15:00:00Z", "text": "regex to extract iso dates from logs", "thread_id": "noise-17", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-11T15:04:00Z", "text": "thanks", "thread_id": "noise-17", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-14T15:00:00Z", "text": "how do i rotate the gcp service account keys", "thread_id": "noise-20", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-14T15:04:00Z", "text": "thanks", "thread_id": "noise-20", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-15T09:00:00Z", "text": "put together the weekly project recap for the team", "thread_id": "weekly_recap-3", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-15T09:04:00Z", "text": "add the deployment status and the open blockers", "thread_id": "weekly_recap-3", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-15T09:08:00Z", "text": "tighten the summary section", "thread_id": "weekly_recap-3", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-15T09:12:00Z", "text": "thanks", "thread_id": "weekly_recap-3", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-15T20:00:00Z", "text": "review the standup comedy setlist for open mic night", "thread_id": "trap-1", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-15T20:04:00Z", "text": "thanks", "thread_id": "trap-1", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-16T09:00:00Z", "text": "draft an onboarding checklist for a new backend engineer", "thread_id": "onboard_setup-1", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-16T09:04:00Z", "text": "include the repo access and vpn steps", "thread_id": "onboard_setup-1", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-16T09:08:00Z", "text": "thanks", "thread_id": "onboard_setup-1", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-17T19:00:00Z", "text": "review the sales numbers spreadsheet for finance", "thread_id": "sales-1", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-17T19:04:00Z", "text": "thanks", "thread_id": "sales-1", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-18T15:00:00Z", "text": "convert this bash script to python", "thread_id": "noise-24", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-18T15:04:00Z", "text": "thanks", "thread_id": "noise-24", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-21T15:00:00Z", "text": "suggest onboarding exercises for a junior dev", "thread_id": "noise-27", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-21T15:04:00Z", "text": "thanks", "thread_id": "noise-27", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-22T09:00:00Z", "text": "put together the weekly project recap for the team", "thread_id": "weekly_recap-4", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-22T09:04:00Z", "text": "add the deployment status and the open blockers", "thread_id": "weekly_recap-4", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-22T09:08:00Z", "text": "tighten the summary section", "thread_id": "weekly_recap-4", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-22T09:12:00Z", "text": "thanks", "thread_id": "weekly_recap-4", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-23T20:00:00Z", "text": "diagnose why my houseplant leaves are turning yellow", "thread_id": "trap-2", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-23T20:04:00Z", "text": "thanks", "thread_id": "trap-2", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-24T15:00:00Z", "text": "what changed in the new postgres release", "thread_id": "noise-30", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-24T15:04:00Z", "text": "thanks", "thread_id": "noise-30", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-27T15:00:00Z", "text": "outline a talk about incident postmortems", "thread_id": "noise-33", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-27T15:04:00Z", "text": "thanks", "thread_id": "noise-33", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-28T20:00:00Z", "text": "debug the plot holes in my short story draft", "thread_id": "trap-3", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-28T20:04:00Z", "text": "thanks", "thread_id": "trap-3", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-30T15:00:00Z", "text": "review my sql migration for the orders table", "thread_id": "noise-36", "requires_tool": null, "tool_result": null}
+{"user_id": "u1", "ts": "2026-06-30T15:04:00Z", "text": "thanks", "thread_id": "noise-36", "requires_tool": null, "tool_result": null}
