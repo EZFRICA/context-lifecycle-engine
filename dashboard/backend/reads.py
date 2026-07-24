@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from cle.detect.stability import divergence_check_available
 from cle.lifecycle.topology import current_agents, latest_version
 from cle.oplog import OpLog
 from cle.runtime.container import load_containers, load_image
@@ -43,6 +44,12 @@ def _image_view(backend: FileStore, image_hash: str) -> dict[str, Any]:
         "fingerprint_short": _short(image.model_fingerprint),
         "probe_count": len(image.probe_set),
         "trigger_period_seconds": period,
+        "trigger_embedder_id": image.trigger.embedder_id,
+        # Whether the contradiction (stability) check could run in this
+        # candidate's vector space. False => a DISCLOSED GAP the human must see
+        # at the override gate, not an evidence measurement. Derived from the
+        # classifier's own predicate (single source of truth).
+        "stability_checked": divergence_check_available(image.trigger.embedder_id),
         "pre_evidence": image.pre_evidence.model_dump(),
     }
 
@@ -69,6 +76,8 @@ def image_detail(state_dir: Path, image_hash: str) -> dict[str, Any]:
         "probe_count": len(image.probe_set),
         "trigger_dims": len(image.trigger.centroid),
         "trigger_period_seconds": period,
+        "trigger_embedder_id": image.trigger.embedder_id,
+        "stability_checked": divergence_check_available(image.trigger.embedder_id),
         "pre_evidence": image.pre_evidence.model_dump(),
     }
 

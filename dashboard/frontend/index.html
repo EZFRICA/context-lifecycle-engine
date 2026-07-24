@@ -79,6 +79,15 @@
             <span class="badge pre" x-text="'cost ' + c.image.pre_evidence.historical_cost.toFixed(1) + ' it/ep'"></span>
           </div>
           <div class="caption">pre_evidence · trigger only — not answer quality · window <span x-text="c.image.pre_evidence.window"></span></div>
+          <!-- Disclosed gap (NOT an evidence badge — an absence): the
+               contradiction check could not run in this candidate's vector
+               space. Styled distinctly so it never reads as a measurement. -->
+          <div class="gap" x-show="c.image.stability_checked === false">
+            <span class="gap-mark">⚠ contradiction check did not run</span>
+            <div class="gap-note">Cosine measures topical relatedness, not contradiction, so the
+              stability check is unavailable for <span class="mono" x-text="c.image.trigger_embedder_id"></span>.
+              This is a disclosed gap, not a clean result — you are deciding without it.</div>
+          </div>
           <div class="row" style="margin-top:10px">
             <button class="btn amber" @click.stop="approve(c.agent)">Approve → trial</button>
             <button class="btn coral" @click.stop="decline(c.agent)">Decline</button>

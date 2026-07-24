@@ -93,6 +93,14 @@ Verdict = Literal["stable", "unstable", "unavailable"]
 # Replacing cosine with a signed/entailment operator is its own run.
 DIVERGENCE_HEURISTIC_CALIBRATED_FOR = frozenset({"stub:hashed64"})
 
+
+def divergence_check_available(embedder_id: str | None) -> bool:
+    """Did / would the contradiction check run in this vector space? The single
+    source of truth for both the signal gate and any consumer that needs to
+    disclose the gap (e.g. the dashboard override card) — never re-derive the
+    set elsewhere."""
+    return embedder_id in DIVERGENCE_HEURISTIC_CALIBRATED_FOR
+
 # Pair types that count toward instability. temporal is evolution;
 # world_state is environment.
 _UNSTABLE_TYPES = ("intra_cluster", "grey_zone")
@@ -188,7 +196,7 @@ def analyze_cluster_stability(
     # directives, this classifier measures NOTHING. Report that, rather than
     # returning "stable" and letting a blind check read as reassurance.
     embedder_id = getattr(embedder, "embedder_id", None)
-    if embedder_id not in DIVERGENCE_HEURISTIC_CALIBRATED_FOR:
+    if not divergence_check_available(embedder_id):
         empty = {t: 0 for t in ("intra_cluster", "grey_zone", "temporal", "world_state")}
         oplog.emit(
             "cluster_stability",
