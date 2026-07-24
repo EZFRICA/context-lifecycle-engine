@@ -210,15 +210,38 @@ def test_verdict_is_unavailable_in_an_unsound_vector_space() -> None:
     assert json.loads(sink.getvalue().splitlines()[-1])["verdict"] == "unavailable"
 
 
-def test_unavailable_births_no_candidate() -> None:
-    # "Not measured" must never be treated as "stable": with no stability
-    # evidence in this space, no candidate may be born on the assumption of it.
+def test_unavailable_still_births_a_candidate_with_a_disclosed_gap() -> None:
+    # The stability check is a VETO, not a precondition. When it cannot run,
+    # detection PROCEEDS — blocking would stop the first pillar producing
+    # anything at all — and the candidate carries the gap to the human gate.
     from cle.detect.embedders import default_embedder
 
     eps = _episodes([(d, OP, SHORT, None, None) for d in range(0, 8, 2)])
     signal = detect_signal_gated(eps, 3.0, CFG, default_embedder(),
                                  OpLog(io.StringIO()), actor="human:t")
-    assert signal is None
+    assert signal is not None, "an unavailable check must not kill detection"
+    assert signal.stability == "unavailable"
+
+
+def test_provenance_never_claims_stable_when_the_check_did_not_run() -> None:
+    # The negative: a non-measurement must never be recorded as a clean check.
+    from cle.detect.embedders import default_embedder
+
+    eps = _episodes([(d, OP, SHORT, None, None) for d in range(0, 8, 2)])
+    unavailable = detect_signal_gated(eps, 3.0, CFG, default_embedder(),
+                                      OpLog(io.StringIO()), actor="human:t")
+    assert unavailable.stability != "stable"
+    # ...and in a space the heuristic IS calibrated for, it says so honestly.
+    checked = detect_signal_gated(eps, 3.0, CFG, EMB, OpLog(io.StringIO()), actor="human:t")
+    assert checked is not None and checked.stability == "stable"
+
+
+def test_unstable_is_still_a_hard_veto() -> None:
+    # Reversing the unavailable block must NOT weaken the real veto.
+    eps = _episodes([(d, OP, SHORT if i % 2 == 0 else LONG, None, None)
+                     for i, d in enumerate(range(0, 8, 2))])
+    assert detect_signal_gated(eps, 3.0, CFG, EMB, OpLog(io.StringIO()),
+                               actor="human:t") is None
 
 
 def test_sound_space_still_returns_a_two_valued_verdict() -> None:

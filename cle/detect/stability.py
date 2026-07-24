@@ -80,18 +80,18 @@ from cle.oplog import OpLog
 DivergenceType = Literal["intra_cluster", "grey_zone", "temporal", "world_state"]
 Verdict = Literal["stable", "unstable", "unavailable"]
 
-# Directive-divergence-by-cosine is only defensible in a space where opposing
-# instructions actually land far apart. That is true (by lexical accident) for
-# the bag-of-tokens embedder, and FALSE for a real semantic embedder: it scores
-# the planted OPPOSING directives at 0.62-0.86, because they ARE about the same
-# thing — cosine measures topical relatedness, not contradiction. In any other
-# space the classifier detects nothing, so it must report `unavailable` rather
-# than a reassuring "stable".
+# The spaces the bag-of-tokens divergence heuristic was CALIBRATED FOR. This is
+# not a soundness property: R6 showed the heuristic only appeared to work there
+# by lexical coincidence — opposing instructions happen to share few tokens —
+# not because cosine measures contradiction. In a real semantic space it scores
+# the planted OPPOSING directives at 0.62-0.86 (they ARE about the same thing),
+# detects nothing, and must report `unavailable` rather than a reassuring
+# "stable".
 #
 # CLE need: a NON-MEASUREMENT MUST NEVER MASQUERADE AS A VERDICT — the same
 # principle as PreEvidence != Evidence and the `degenerate` resolution flag.
 # Replacing cosine with a signed/entailment operator is its own run.
-DIVERGENCE_SOUND_EMBEDDERS = frozenset({"stub:hashed64"})
+DIVERGENCE_HEURISTIC_CALIBRATED_FOR = frozenset({"stub:hashed64"})
 
 # Pair types that count toward instability. temporal is evolution;
 # world_state is environment.
@@ -188,7 +188,7 @@ def analyze_cluster_stability(
     # directives, this classifier measures NOTHING. Report that, rather than
     # returning "stable" and letting a blind check read as reassurance.
     embedder_id = getattr(embedder, "embedder_id", None)
-    if embedder_id not in DIVERGENCE_SOUND_EMBEDDERS:
+    if embedder_id not in DIVERGENCE_HEURISTIC_CALIBRATED_FOR:
         empty = {t: 0 for t in ("intra_cluster", "grey_zone", "temporal", "world_state")}
         oplog.emit(
             "cluster_stability",
@@ -196,7 +196,7 @@ def analyze_cluster_stability(
             cluster=cluster_label,
             verdict="unavailable",
             unstable=False,
-            reason="directive-divergence-by-cosine is not sound for "
+            reason="the bag-of-tokens divergence heuristic is not calibrated for "
                    f"embedder_id={embedder_id!r}",
             resolution="unavailable",
             band_width=0.0,
