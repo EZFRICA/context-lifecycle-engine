@@ -20,8 +20,10 @@ dashboard. Everything below is pinned by the 219-test suite unless noted.
 > **2. A real embedding model helps detection, but is not a drop-in.** At the
 > old 0.6 threshold it over-merges everything into 2 clusters and
 > `false_trigger` jumps 0.061 → 0.632. Recalibrated to **0.775** (approved,
-> scoped to `embedder_id`) it beats v1 — the holdout recovers 3/3 planted
-> patterns — but GDG recovery still tops out at 2/7.
+> scoped to `embedder_id`) it beats v1 — the holdout births a pure candidate for
+> all 3 patterns (**2 clean recoveries + 1 pure fragment**, R10) — but GDG
+> recovery still tops out at 2/7, and of its 6 born candidates only 2 are
+> genuine (R10).
 >
 > **3. It breaks contradiction detection outright.** Cosine measures topical
 > relatedness, not contradiction, so the four-type taxonomy (§9) detects
@@ -160,6 +162,13 @@ assembled prompt, the frozen probes). `▶ demo` walks the whole loop live on th
 real model. Read-mostly: the only writes are Approve/Decline, through the CLI,
 logged as `human:dashboard`. Metrics shown are the human's window — never fed
 back to an agent.
+- **Disclosed-gap marker on Births cards** — when a candidate's contradiction
+  check could not run in its vector space (`stability="unavailable"`), the card
+  shows a distinct dashed *"⚠ contradiction check did not run"* marker,
+  deliberately **not** styled as an evidence badge (it is an absence, not a
+  measurement). Derived at read time from `image.trigger.embedder_id` via the
+  classifier's own predicate (`divergence_check_available`) — no new write path.
+  The human decides at the override gate knowing the check did not run.
 
 ## 9. Embedder substrate & centroid provenance (`cle/detect/embedders.py`)
 - **Three implementations behind one Protocol** — `RealEmbedder` (a ~20-line
@@ -304,9 +313,10 @@ via the CLI, on top of the stub-based `test_revalidate_holds_then_drifts`.
 - **Contradiction classification is inert in a real embedding space** — cosine
   measures topical relatedness, not contradiction. Where it reports
   `unavailable`, nothing was measured; that is not a clean bill of health.
-- **The 0.775 threshold rests on ONE independent confirmation** (the holdout's
-  3/3). The GDG sweep peak is *in-sample* — chosen on the data it is then scored
-  against — and is not evidence. A second independent source should move it.
+- **The 0.775 threshold rests on ONE independent confirmation** (the holdout: a
+  pure candidate for all 3 patterns, 2 clean + 1 fragment — R10). The GDG sweep
+  peak is *in-sample* — chosen on the data it is then scored against — and is not
+  evidence. A second independent source should move it.
 - **The adversarial/demo source is still templated**, so every *legacy demo*
   number above inherits that bias.
 

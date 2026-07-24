@@ -236,10 +236,13 @@ tests/          property/ + unit/ — hypothesis for the invariants
 uv run pytest -q
 ```
 
-**100 tests** (property + unit) enforce every invariant — two-hash inequality,
+**219 tests** (property + unit; +1 opt-in Weaviate integration test, skipped by
+default) enforce every invariant — two-hash inequality,
 staged-failure-writes-nothing, the Goodhart reflection test,
 `PreEvidence`/`Evidence` type separation, build determinism, and probe-set hash
-coverage. **No test requires Weaviate, an API key, or a network call.**
+coverage. **No test requires Weaviate, an API key, or a network call** (the
+detection embedder is a committed vector cache; a cache miss is an error, never
+a live call).
 
 ### Three data sources, three roles
 
@@ -253,18 +256,45 @@ a consistency check, not a discovery test. So the fixtures are split by role:
 | **holdout** (`make_holdout.py`) | a history written **independently** of the detector (imports nothing from `cle`, never touches the embedder, cosine threshold or centroids) — the system **discovers** unplanted patterns |
 
 The holdout test asserts only structural sanity and **reports** its numbers
-without asserting them: on the current holdout the detector discovers 2 of the 3
-authored patterns — the third is missed because a noise episode pollutes its
-cluster. That result is documented as-is, not tuned away.
+without asserting them. What it reports depends on the substrate (see *Measured
+findings* below): with the v1 bag-of-tokens embedder on realistic data it
+discovers **0**; with the real embedder at its calibrated threshold it produces
+a pure candidate for all three patterns, of which **2 are clean recoveries and
+1 is a pure fragment** (`docs/METRICS.md`, R10). Documented as-is, not tuned.
 
 ---
+
+## Measured findings (read before trusting any number)
+
+The quick-start and `full_loop.sh` numbers above (`weekly_recap` capture 0.60,
+`false_trigger ≈ 0.081`, the three detected agents) come from the **legacy
+templated demo source** (`make_fixture.py`) and describe *mechanics*, not
+recovery on realistic usage. Three measurement runs since have found:
+
+1. **v1 detection only clustered because the fixtures were templated.** On
+   realistic, varied phrasing the bag-of-tokens embedder (cosine 0.6) shatters
+   every intent into near-singletons; holdout discovery falls to **0**.
+2. **A real embedding model helps but is not a drop-in.** At the old 0.6
+   threshold it over-merges into 2 clusters and `false_trigger` jumps
+   0.061 → 0.632; recalibrated to **0.775** (scoped to `embedder_id`) it beats
+   v1 — but GDG recovery still tops out at **2/7** planted intents, and of the
+   candidates it births only a minority are clean (`docs/METRICS.md`, R10).
+3. **It breaks contradiction detection.** Cosine measures topical relatedness,
+   not contradiction, so the stability classifier detects nothing in a real
+   embedding space and now returns `unavailable` — a disclosed gap surfaced at
+   the human gate, never a reassuring "stable".
+
+`docs/METRICS.md` is organised into three eras (A legacy demo / B realistic data
+/ C real embedder = current) with per-number provenance; read the era labels.
 
 ## Status
 
 P1–P3 of the v1 blueprint are implemented: two-hash store, three-stage build with
 replay validation, the minimal detector, the container runtime with switch-cost
 logging, the seven-state lifecycle with a shadow engine, the topology writer, and
-the re-validator — plus a live Gemini substrate and the FastAPI dashboard.
+the re-validator — plus a live Gemini substrate and the FastAPI dashboard. What
+those mechanisms *recover on realistic data* is the subject of *Measured
+findings* above and `docs/METRICS.md`.
 
 Known limits, stated plainly: replay validates the **trigger only**, never answer
 quality, and never the temporal period (`period_tested` is always false);

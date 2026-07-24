@@ -45,8 +45,9 @@ detection on that realistic data is unambiguous:
 - **Discovery collapses to zero.** The process-independent holdout, which the
   old templated version recovered 2 of 3 patterns from, yields **0 agents
   discovered** — every recurring pattern fragments below the 3-occurrence
-  signal gate. *(Era C: the real embedder at 0.775 recovers **3/3**. Zero is the
-  v1 result, not the end state.)*
+  signal gate. *(Era C: the real embedder at 0.775 births a pure candidate for
+  all 3 patterns — 2 clean recoveries + 1 fragment, R10. Zero is the v1 result,
+  not the end state.)*
 - **The degenerate metrics were artifacts.** `band_width` on the tool-bearing
   `events` intent went **0.0000 → 0.3381**; `ws_share_pct` **100% → ~30%**;
   the "perfect" `capture=1.000` becomes **0.500** even from the *ideal*
@@ -248,9 +249,10 @@ roles are distinct and non-interchangeable.
 
 > These figures are from the **templated** holdout (80 messages, 27 episodes,
 > 85 days). That fixture has since been rebuilt with realistic phrasing (109
-> messages, 41 episodes), and discovery re-measured: **0** with the v1 embedder,
-> **3/3 planted patterns** with the real embedder at 0.775. Kept because the
-> *reason* the meetup pattern was missed is still instructive.
+> messages, 41 episodes), and discovery re-measured: **0** with the v1 embedder;
+> with the real embedder at 0.775, a pure candidate for all 3 patterns —
+> **2 clean recoveries + 1 fragment** (R10). Kept because the *reason* the
+> meetup pattern was missed here is still instructive.
 
 The holdout history: **80 messages, 27 episodes, 85 days** (GDG organiser).
 The detector found:
@@ -633,6 +635,31 @@ mostly below 0.35). No threshold rescues this — the bar would have to exceed
 0.86, which flags every pair. **Contradiction detection needs a different
 operator (entailment/NLI or a signed direction), not a distance threshold.**
 
+Because the check is unsound here it returns `verdict="unavailable"`. That does
+**not** block candidate birth (it is a safety veto, never a precondition): the
+candidate is born carrying `stability="unavailable"` in its provenance, a
+disclosed gap surfaced on the Births card at the human override gate. Reversing
+the earlier block restored the first pillar from **0** candidates to 6 (GDG) /
+3 (holdout) — see purity next.
+
+### Born-candidate purity (R10) — counts NEVER stand bare
+
+Bare counts are the trap (cf. the holdout 0→1 mega-cluster). Every born
+candidate classified against the planted intents: GENUINE (recall ≥ 0.8 AND
+purity ≥ 0.8), FRAGMENT (purity ≥ 0.8, recall < 0.8 — a pure subset), SPURIOUS
+(purity < 0.8, or no planted intent — noise-dominated).
+
+| fixture | candidates | GENUINE | FRAGMENT | SPURIOUS | stability |
+|---|---|---|---|---|---|
+| GDG | 6 | **2** (`speakers` r0.92/p1.00, `agenda_workshop` r0.89/p1.00) | 2 (`newsletter` r0.19/p1.00, `sponsors` r0.64/p0.90) | 2 (20-ep noise agglomerate p0.45; 3-ep noise recurrence, no intent) | all `unavailable` |
+| holdout | 3 | **2** (`outreach` r0.89/p0.89, `meetup-prep` r0.89/p1.00) | 1 (`venue` r0.56/p1.00) | 0 | all `unavailable` |
+
+So the honest reading of "6 GDG candidates" is **2 genuine, 2 pure fragments, 2
+spurious** — and both spurious ones (a 20-episode agglomerate merging
+`events`+`agenda_meetup`+`venue_policy`, and a 3-episode noise recurrence) would
+reach a human as proposals. That is exactly why the disclosed-gap marker is on
+the Births card. GDG's 2 genuine matches R5's 2/7 strict recovery.
+
 ### Threshold sweep (swept at 0.6; 0.775 subsequently APPROVED and applied)
 
 | thr | clusters | recovered (strict) | events_false | events_capture |
@@ -661,11 +688,13 @@ sweep peak is **in-sample**: 0.775 was *chosen* on the same fixture it is then
 scored against, so the 2/7 figure is not independent evidence and must not be
 cited as such. The credible evidence is the **holdout** — process-independent,
 authored without knowledge of the embedder, and *never consulted to pick the
-threshold* — which at 0.775 recovers **3/3 planted patterns** with near-perfect
-purity (`outreach` 8/9, `meetup-prep` 8/8, `venue` 5/5). That is **a single
-independent confirmation point.** One holdout, one threshold, one embedder. It
-justifies adopting 0.775 over 0.6; it does not establish 0.775 as calibrated in
-general, and a second independent source should move it.
+threshold* — which at 0.775 births a **pure candidate for all 3 patterns**
+(purity `outreach` 8/9, `meetup-prep` 8/8, `venue` 5/5). Of those, **2 are clean
+recoveries** (recall AND purity ≥ 0.8: outreach, meetup-prep) and **1 is a pure
+fragment** (`venue`, recall 5/9 = 0.56) — R10. That is **a single independent
+confirmation point.** One holdout, one threshold, one embedder. It justifies
+adopting 0.775 over 0.6; it does not establish 0.775 as calibrated in general,
+and a second independent source should move it.
 
 ### world_state verdict — the question is superseded
 
