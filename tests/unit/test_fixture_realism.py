@@ -79,6 +79,12 @@ def test_gdg_timing_is_not_single_valued() -> None:
 
 
 def test_tool_bearing_intent_directive_band_is_not_degenerate() -> None:
+    # SCOPE — `stub:hashed64` ONLY (the one test in this module that is not a
+    # pure data property). Under the real embedder this band is 0.0000 again,
+    # for the OPPOSITE reason: not one repeated cosine but NO divergent pair at
+    # all. So it cannot be read as "the fixture is varied" in that space — there
+    # it is the anti-templating DATA checks above that carry the guarantee.
+    #
     # The events intent is tool-bearing; its divergent-pair directive cosines
     # must SPREAD (band_width > the degeneracy floor). A degenerate band means
     # the follow-ups were templated — the exact defect that made moderate-band
