@@ -4,7 +4,7 @@ A résumé of everything the Context Lifecycle Engine does, why, and where each
 capability is demonstrated. The system has two cardinal pillars — **detection**
 (agents emerge from usage) and **lifecycle** (they earn or lose standing on
 lived evidence) — over a content-addressed store, a runtime, and a live
-dashboard. Everything below is pinned by the 217-test suite unless noted.
+dashboard. Everything below is pinned by the 219-test suite unless noted.
 
 > ## ⚠ Read this before any number below
 >
@@ -212,8 +212,12 @@ back to an agent.
 - **Three-valued verdict** — `analyze_cluster_stability` returns `stable`,
   `unstable`, or **`unavailable`**; the last is returned in any space where
   directive-divergence-by-cosine is unsound, and the signal gate treats it as
-  *not measured* (no candidate is born). **A non-measurement must never
-  masquerade as a verdict** — the same principle as PreEvidence ≠ Evidence.
+  *not measured*: detection PROCEEDS and the candidate is born carrying
+  `stability="unavailable"` in its provenance, surfaced at the human override
+  gate. The check is a safety **veto** (an `unstable` cluster yields no
+  candidate), never a precondition — blocking on its absence would stop the
+  first pillar producing anything at all. **A non-measurement must never
+  masquerade as a verdict**, but it is a disclosed gap, not a silent pass.
 - **Permanent attribution + resolution diagnostic** — the `cluster_stability`
   line always carries `world_state_attribution` (`ws_would_be_intra`,
   `ws_share_pct`) so the exclusion's reach stays visible, and a `resolution`
@@ -242,7 +246,7 @@ back to an agent.
 
 ---
 
-## Test coverage — 217 tests across 26 files (+1 opt-in integration)
+## Test coverage — 219 tests across 26 files (+1 opt-in integration)
 
 Every capability above is guarded by property and unit tests. **No test needs a
 real model, an API key, or the network**: fingerprinters are stubbed and the
@@ -262,7 +266,7 @@ CI runs the suite plus an offline `full_loop.sh` smoke (`CLE_MODEL_A/B=stub-*`).
 | **Embedder & provenance** | `test_embedder_provenance` (10) | suite default is `CachedEmbedder`; miss raises; no test imports `RealEmbedder`; embedder swap changes `Image.hash`; cross-space compare raises; **cache-collapse integrity** |
 | Build | `test_build_invariants` (6), `test_staged_failure` (3) | two-hash, determinism, probe-hash coverage, one log line; staged failure writes nothing |
 | Replay & tools | `test_replay` (5), `test_replay_capability` (5), `test_tools_gating` (18) | both rates always computed; competition lowers capture; capture = centroid **AND** mount; tools declared, never executed |
-| **Contradiction taxonomy** | `test_contradictions` (21), `test_stability_classifier` (4) | the four types + guards; `unavailable` in an unsound space births no candidate; degeneracy diagnostic |
+| **Contradiction taxonomy** | `test_contradictions` (23), `test_stability_classifier` (4) | the four types + guards; `unavailable` still births a candidate but with a disclosed gap, and never records stability=stable; `unstable` stays a hard veto |
 | **Fixture realism** | `test_fixture_realism` (14), `test_gdg_fixture` (11) | ≥ 8 distinct openers per *planted* intent; no sentence > 15%; timing not single-valued; labels stay in the sidecar |
 | Adversarial & demo | `test_adversarial_fixture` (1), `test_gdg_demo` (2) | a bridge yields non-trivial false-trigger; incumbent competition drops capture below 1.0 |
 | Holdout discovery | `test_holdout_discovery` (1) | structural sanity only — cold-start gate, valid centroids, well-formed logs, false-trigger ≤ ceiling. The discovery **count is reported, not gated** |

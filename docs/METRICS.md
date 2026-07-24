@@ -1,7 +1,7 @@
 # CLE Metrics Inventory — Article 9 Skeleton
 
 Every number the system produces, with its provenance, honest scope, and the
-**test that pins it**. The suite has **217 tests across 26 files** (+1 opt-in
+**test that pins it**. The suite has **219 tests across 26 files** (+1 opt-in
 integration, `uv run pytest`); each metric below names the test(s) that guard
 its behaviour.
 
@@ -359,7 +359,11 @@ capture 1.0, false-trigger 0.0, cost 3.0 — reported, not asserted.)
 >
 > Guard: `analyze_cluster_stability` now returns the third verdict
 > **`unavailable`** in any space where directive-divergence-by-cosine is
-> unsound, and `detect_signal_gated` treats it as *not measured* (no candidate).
+> not calibrated. Detection then PROCEEDS and the candidate is born carrying
+> `stability="unavailable"` in its provenance, surfaced at the human override
+> gate — a DISCLOSED GAP, not a silent pass. The check is a safety veto, never
+> a precondition: blocking on its absence would stop the first pillar producing
+> anything at all.
 > A non-measurement must never masquerade as a verdict — the same principle as
 > PreEvidence ≠ Evidence and the `degenerate` resolution flag.
 
