@@ -1,9 +1,33 @@
 # CLE Metrics Inventory — Article 9 Skeleton
 
-Every number `examples/full_loop.sh` produces, with its provenance, honest
-scope, and the **test that pins it**. The suite has **217 tests (+1 opt-in integration) across 27 files**
-(`uv run pytest`); each metric below names the test(s) that guard its
-behaviour.
+Every number the system produces, with its provenance, honest scope, and the
+**test that pins it**. The suite has **217 tests across 26 files** (+1 opt-in
+integration, `uv run pytest`); each metric below names the test(s) that guard
+its behaviour.
+
+> ## How to read this document
+>
+> It grew by accretion, one run at a time, and **later runs invalidated earlier
+> numbers**. Read the era labels, not just the figures. Three eras:
+>
+> | Era | Data | Embedder | Sections |
+> |---|---|---|---|
+> | **A — legacy demo** | templated `make_fixture.py` | `stub:hashed64` @0.6 | *Build / Runtime / Lifecycle / Topology metrics*, the *three data sources* |
+> | **B — realistic data** | realistic freeze-once fixtures | `stub:hashed64` @0.6 | *Realism run — re-measurement* |
+> | **C — real embedder** | same realistic fixtures | `google:gemini-embedding-2:768` @0.775 | *Embedder upgrade run* (**current**) |
+>
+> - **Era A numbers are still labelled by agent name** (`weekly_recap` 0.60,
+>   recap-family false-trigger 0.081, the three detected agents). That source is
+>   still templated; treat them as demo mechanics, not measured reality.
+> - **Era B** is where the headline finding lives: v1 detection only ever worked
+>   because the data was templated.
+> - **Era C is the current state.** Where A/B and C disagree, C wins.
+> - The **GDG enriched run** section (four-contradiction taxonomy) describes a
+>   mechanism that is **inert in era C** — it carries its own warning block.
+>
+> Anything measured before era C and not re-measured since is marked *templated*
+> or *legacy demo* inline. If a number carries no era label and no test name,
+> distrust it.
 
 ## HEADLINE FINDING (realism run) — v1 detection worked only because the data was templated
 
@@ -19,9 +43,10 @@ detection on that realistic data is unambiguous:
   ground-truth fixture `events` recovers as **10 openers → 9 clusters**,
   `venue_policy` **8 → 8**; 63 detected clusters for 7 planted intents.
 - **Discovery collapses to zero.** The process-independent holdout, which the
-  old templated version recovered 2 of 3 patterns from, now yields **0 agents
+  old templated version recovered 2 of 3 patterns from, yields **0 agents
   discovered** — every recurring pattern fragments below the 3-occurrence
-  signal gate.
+  signal gate. *(Era C: the real embedder at 0.775 recovers **3/3**. Zero is the
+  v1 result, not the end state.)*
 - **The degenerate metrics were artifacts.** `band_width` on the tool-bearing
   `events` intent went **0.0000 → 0.3381**; `ws_share_pct` **100% → ~30%**;
   the "perfect" `capture=1.000` becomes **0.500** even from the *ideal*
@@ -51,13 +76,7 @@ the anti-templating guard is `tests/unit/test_fixture_realism.py`.
 > on the model. So these numbers are reproducible offline even though the
 > system runs on real models locally.
 
-> **Caveat — the pre-realism numbers below.** The per-metric provenance in the
-> sections that follow (e.g. `weekly_recap` capture 0.60, the recap-family
-> false-trigger 0.081) is from `make_fixture.py`, the ADVERSARIAL/demo source
-> that is still templated (see *Scope note* at the end). Treat those as the
-> legacy-demo numbers; the realistic re-measurement is the *Realism run* section.
-
-## Build metrics
+## Build metrics — *era A (legacy templated demo source)*
 
 ### `capture_rate` — varies (e.g. `weekly_recap` 0.60, others 1.00)
 - **Source**: `cle/build/replay.py` — fraction of the cluster's episodes whose
@@ -112,7 +131,7 @@ the anti-templating guard is `tests/unit/test_fixture_realism.py`.
 - **Does NOT prove**: real closure quality — demo closures are labels derived
   from iteration counts; true closures need the detector watching for a return.
 
-## Runtime metrics
+## Runtime metrics — *era A (legacy templated demo source)*
 
 ### Switch cost: `diff_blocks` (4) / `diff_tokens` (127)
 - **Source**: `cle/runtime/container.py::switch_cost()` — symmetric difference
@@ -137,7 +156,7 @@ the anti-templating guard is `tests/unit/test_fixture_realism.py`.
 - **Does NOT prove**: agent quality — divergent counts prove isolation works,
   not that one workspace is better served.
 
-## Lifecycle metrics
+## Lifecycle metrics — *era A (legacy templated demo source)*
 
 ### Shadow-engine divergence (human vs. engine `would:`)
 - **Source**: `cle/lifecycle/engine.py::shadow_decide()` — every `cle tag` with
@@ -183,7 +202,7 @@ the anti-templating guard is `tests/unit/test_fixture_realism.py`.
   the substrate changed; it says nothing about whether the change was good or
   bad.
 
-## Topology metrics
+## Topology metrics — *era A (legacy templated demo source)*
 
 ### `diff_size` (0 or 1 per `topology_write`)
 - **Source**: `cle/lifecycle/topology.py::write_topology()` — 1 if the durable
@@ -225,7 +244,13 @@ roles are distinct and non-interchangeable.
 | `probe_deltas` (5/5 probes moved) | ground\_truth (build) + live substrate |
 | Holdout: 2 agents discovered (recurrence ×6, reformulation ×4) | holdout |
 
-### Holdout result (as discovered — not tuned)
+### Holdout result — *era A, on the templated holdout (superseded)*
+
+> These figures are from the **templated** holdout (80 messages, 27 episodes,
+> 85 days). That fixture has since been rebuilt with realistic phrasing (109
+> messages, 41 episodes), and discovery re-measured: **0** with the v1 embedder,
+> **3/3 planted patterns** with the real embedder at 0.775. Kept because the
+> *reason* the meetup pattern was missed is still instructive.
 
 The holdout history: **80 messages, 27 episodes, 85 days** (GDG organiser).
 The detector found:
@@ -368,38 +393,47 @@ tool_result) and `ws_share_pct` (world_state / all divergent pairs). The
 per-type counts moved under a `divergent_pairs` object so the log is
 unambiguous — every count is a **pair** count, not an episode count.
 
-On the real GDG `events` cluster the number is stark and stays visible:
-**`ws_share_pct` = 100.0** (all 506 divergent pairs excused) with
-**`ws_would_be_intra` = 164**. This is not a healthy signal — it is the
-measurement telling us it cannot see (next section).
+*On the **templated** GDG fixture (the era this section was written in)* the
+number was stark: **`ws_share_pct` = 100.0** (all 506 divergent pairs excused)
+with **`ws_would_be_intra` = 164` — not a healthy signal, but the measurement
+telling us it could not see (next section).
+
+**Superseded twice since.** On the *realistic* fixtures with the v1 embedder it
+falls to **35.5%** (`ws_would_be_intra` = 2); with the **real embedder** it is
+**0.0%**, because nothing registers as divergent at all. The field itself
+remains the point: the exclusion's reach stays permanently visible.
 
 ### `resolution` — degeneracy diagnostic (a weak measure is not a verdict)
 
 When a cluster's divergent-pair cosines concentrate in a band narrower than
 `degenerate_band_width` (0.05) across at least `degenerate_min_pairs` (10),
-the line carries `resolution: "degenerate"` and the `band_width`. On the
-GDG `events` cluster **all 506 divergent pairs sit at one cosine (band
-width 0.0000)** — the divergence measure cannot separate a mild
-contradiction from lexically diverse but consistent follow-ups, so *any*
-threshold placed inside that bin is arbitrary. The flag is **diagnostic
-only**: it is logged, never blocks, and `unstable` is still computed. Same
-principle as PreEvidence ≠ Evidence — a weak measurement must not
-masquerade as a strong verdict. Practical payoff: a finer embedder spreads
-the band, and the gain becomes measurable. Pinned by
-`test_degenerate_cluster_is_flagged_never_blocking` /
+the line carries `resolution: "degenerate"` and the `band_width`. *On the
+**templated** fixture* **all 506 divergent pairs sat at one cosine (band width
+0.0000)** — the measure could not separate a mild contradiction from lexically
+diverse but consistent follow-ups, so *any* threshold placed inside that bin was
+arbitrary. The flag is **diagnostic only**: logged, never blocking, and
+`unstable` is still computed. Same principle as PreEvidence ≠ Evidence — a weak
+measurement must not masquerade as a strong verdict. Pinned by
+`test_degenerate_band_is_flagged_when_directives_collapse` /
 `test_spread_cluster_resolves`.
 
-**Known limitation (moderate-band blindness on tool-bearing clusters).**
-A MODERATE preference flip (directive cosine between 0.10 and 0.35)
-co-occurring with a differing tool_result is still classified world_state
-and excluded. Investigation confirmed the blindness directly: a synthetic
-moderate flip (cosine 0.191, differing tool_result, 2 days apart) injected
-into `events` classifies as `world_state`, absorbed. Only SEVERE
-divergence (<0.10) surfaces (the adversarial guard). This is **not fixed by
-a threshold**: on the degenerate `events` band, `world_state_min_cosine=0.20`
-excuses everything (blind) and `=0.25` flags all 506 (a wholesale FALSE
-positive, since `events` carries no labeled contradiction). Closing it
-needs a finer embedder AND the fixture debt below.
+**Predicted payoff, and what actually happened.** The prediction was that a
+finer measure spreads the band and makes the gain measurable. Half right: on the
+*realistic* fixtures the v1 band spread **0.0000 → 0.3381** (`resolved`), which
+is the predicted win. But with the **real embedder** the band returns to
+**0.0000** for the opposite reason — not one repeated cosine, but *no divergent
+pairs at all*. Degeneracy and inertness look alike in this field and must not be
+confused; that is why the classifier now also reports the `unavailable` verdict.
+
+**Known limitation, now superseded (moderate-band blindness).** On the templated
+data a MODERATE preference flip (directive cosine 0.10–0.35) co-occurring with a
+differing tool_result was classified `world_state` and excluded — confirmed by
+injection (cosine 0.191 → absorbed); only SEVERE divergence (<0.10) surfaced. It
+was **not fixable by a threshold**: `world_state_min_cosine=0.20` excused
+everything, `=0.25` flagged all 506 (wholesale false positive). The realism run
+then showed the *cluster-level* version of this blindness was an artifact of
+degenerate data, and the embedder run made the whole question moot — see the
+`world_state` verdict in *Embedder upgrade run*.
 
 ### Fixture debt (recorded, deliberately not fixed here)
 
@@ -436,7 +470,7 @@ NOT produce one on their own: their openers top out at cosine 0.522 to the
 correctly never captured. The bridge exists only to show the false-trigger
 machinery fires under competition.
 
-## Realism run — re-measurement (frozen realistic fixtures)
+## Realism run — re-measurement — *era B (realistic data, v1 embedder)*
 
 All numbers below are on the realistic freeze-once fixtures (`examples/
 phrasing.py` banks; generators reproducible on demand, never run in CI).
@@ -524,7 +558,7 @@ properly. It is called out here rather than silently left: the realism guard
 covers the GDG and holdout sources; extending it to the adversarial source is
 deferred with the demo rework.
 
-## Embedder upgrade run — a real embedding model behind the Protocol
+## Embedder upgrade run — *era C (**current**: real embedder @0.775)*
 
 Substrate: `google:gemini-embedding-2:768` (768-dim, MRL-truncated), frozen to
 `examples/vectors.google-gemini-embedding-2-768.json` — 247 distinct fixture
@@ -595,7 +629,7 @@ mostly below 0.35). No threshold rescues this — the bar would have to exceed
 0.86, which flags every pair. **Contradiction detection needs a different
 operator (entailment/NLI or a signed direction), not a distance threshold.**
 
-### Threshold sweep (reported; the configured default is UNCHANGED)
+### Threshold sweep (swept at 0.6; 0.775 subsequently APPROVED and applied)
 
 | thr | clusters | recovered (strict) | events_false | events_capture |
 |---|---|---|---|---|
