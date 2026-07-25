@@ -1,490 +1,128 @@
 # CLE Metrics Inventory — Article 9 Skeleton
 
-Every number the system produces, with its provenance, honest scope, and the
-**test that pins it**. The suite has **219 tests across 26 files** (+1 opt-in
-integration, `uv run pytest`); each metric below names the test(s) that guard
-its behaviour.
+Every number the system produces, with its provenance, its honest scope, and
+the test that pins it. Suite: **220 tests across 26 files** (+1 opt-in
+integration test, skipped by default) — `uv run pytest`.
 
-> ## How to read this document
->
-> It grew by accretion, one run at a time, and **later runs invalidated earlier
-> numbers**. Read the era labels, not just the figures. Three eras:
->
-> | Era | Data | Embedder | Sections |
-> |---|---|---|---|
-> | **A — legacy demo** | templated `make_fixture.py` | `stub:hashed64` @0.6 | *Build / Runtime / Lifecycle / Topology metrics*, the *three data sources* |
-> | **B — realistic data** | realistic freeze-once fixtures | `stub:hashed64` @0.6 | *Realism run — re-measurement* |
-> | **C — real embedder** | same realistic fixtures | `google:gemini-embedding-2:768` @0.775 | *Embedder upgrade run* (**current**) |
->
-> - **Era A numbers are still labelled by agent name** (`weekly_recap` 0.60,
->   recap-family false-trigger 0.081, the three detected agents). That source is
->   still templated; treat them as demo mechanics, not measured reality.
-> - **Era B** is where the headline finding lives: v1 detection only ever worked
->   because the data was templated.
-> - **Era C is the current state.** Where A/B and C disagree, C wins.
-> - The **GDG enriched run** section (four-contradiction taxonomy) describes a
->   mechanism that is **inert in era C** — it carries its own warning block.
->
-> Anything measured before era C and not re-measured since is marked *templated*
-> or *legacy demo* inline. If a number carries no era label and no test name,
-> distrust it.
-
-## HEADLINE FINDING (realism run) — v1 detection worked only because the data was templated
-
-The old fixtures were templated: one identical opener repeated per intent
-(`"schedule the monthly gdg meetup in the main room"` appeared 45 times, once
-per day). The realism run replaced them with genuinely varied human usage
-(≥ 8 distinct phrasings per recurring intent, franglais, typos, irregular
-timing; `examples/phrasing.py`, frozen into the committed `.jsonl`). Re-running
-detection on that realistic data is unambiguous:
-
-- **The v1 bag-of-tokens embedder (cosine 0.6) cannot cluster paraphrase.**
-  Each planted intent shatters into near one-cluster-per-episode: on the GDG
-  ground-truth fixture `events` recovers as **10 openers → 9 clusters**,
-  `venue_policy` **8 → 8**; 63 detected clusters for 7 planted intents.
-- **Discovery collapses to zero.** The process-independent holdout, which the
-  old templated version recovered 2 of 3 patterns from, yields **0 agents
-  discovered** — every recurring pattern fragments below the 3-occurrence
-  signal gate. *(Era C: the real embedder at 0.775 births a pure candidate for
-  all 3 patterns — 2 clean recoveries + 1 fragment, R10. Zero is the v1 result,
-  not the end state.)*
-- **The degenerate metrics were artifacts.** `band_width` on the tool-bearing
-  `events` intent went **0.0000 → 0.3381**; `ws_share_pct` **100% → ~30%**;
-  the "perfect" `capture=1.000` becomes **0.500** even from the *ideal*
-  centroid (it cannot match its own varied openers).
-
-The unavoidable conclusion, stated plainly: **v1 detection was only ever
-"working" because the fixtures were templated.** Identical openers are the one
-input a 0.6 bag-of-tokens embedder clusters reliably; realistic usage defeats
-it. This is the most important result of the project so far. It is a finding
-about the DETECTOR, not the data — no threshold was tuned to hide or soften it
-(the realism-run decision: realistic data uncapped, guard on data properties
-grouped by planted intent, recovery **reported not gated**). The embedder
-upgrade was run separately against this frozen baseline — see *Embedder upgrade
-run* at the end. Its short version: a real embedding model does NOT rescue v1.
-It inverts the failure (over-merging instead of over-fragmenting), needs a
-per-embedder threshold (0.775, not 0.6) before it beats v1 at all, and it
-**breaks contradiction detection outright** — cosine measures topical
-relatedness, not contradiction.
-
-The full per-intent re-measurement is in *Realism run — re-measurement* below;
-the anti-templating guard is `tests/unit/test_fixture_realism.py`.
-
-> **Numbers vs. substrate.** The replay numbers (`capture_rate`,
-> `false_trigger_rate`, `historical_cost`, `closure_distribution`) are computed
-> from the **embedder + trigger geometry** and are identical whether the build
-> runs on a real Gemini model or a stub — only the `model_fingerprint` depends
-> on the model. So these numbers are reproducible offline even though the
-> system runs on real models locally.
-
-## Build metrics — *era A (legacy templated demo source)*
-
-### `capture_rate` — varies (e.g. `weekly_recap` 0.60, others 1.00)
-- **Source**: `cle/build/replay.py` — fraction of the cluster's episodes whose
-  opener the candidate's trigger would intercept, **measured against the current
-  topology**: an incumbent whose centroid is closer wins the episode
-  (`candidate_similarity > incumbent_similarity`, ties to the incumbent).
-- **Why it's not always 1.0**: `weekly_recap` captures 0.60 because the
-  hand-authored `status_report` already owns 2 of its 5 (reworded) episodes —
-  capture is what the candidate would *actually* intercept, not what it could in
-  a vacuum. Uncontested agents (`standup_digest`, `incident_triage`) capture 1.00.
-- **Verified by**: `test_replay.py::test_both_rates_are_always_computed`,
-  `::test_out_of_cluster_capture_shows_in_false_trigger_rate`,
-  `::test_existing_topology_wins_ties_and_reduces_capture` (competition lowers
-  capture); determinism by `::test_replay_is_deterministic`.
-- **Does NOT prove**: answer quality (invariant 5 — trigger geometry only). See
-  *Honest caveats* §3 for the period-not-tested note.
-
-### `false_trigger_rate` — ≈ 0.081 for the recap family, 0.0 for the others
-- **Source**: `cle/build/replay.py` — fraction of **out-of-cluster** episodes
-  the candidate would have stolen. Always computed wherever `capture_rate` is.
-  The adversarial window contains a "bridge" episode that *fires* (a genuine
-  false trigger, keeping the rate off zero) plus several near-miss **traps**
-  that are correctly *rejected* (they lower the rate by growing the correctly-
-  handled out-of-cluster denominator — 0.091 with the bridge alone → 0.081 once
-  the traps are added).
-- **Verified by**: `test_replay.py::test_both_rates_are_always_computed`;
-  `test_adversarial_fixture.py::test_adversarial_window_produces_false_triggers`
-  (asserts the recap trigger yields a non-zero rate on the adversarial window).
-- **Does NOT prove**: zero false triggers at deployment — the window is a
-  sample; shifted traffic may route differently.
-
-### `historical_cost` — per-agent (recap 3.4, standup 2.7, incident 7.0 it/ep)
-- **Source**: `cle/build/replay.py` — mean iteration count of in-cluster
-  episodes, **excluding abandoned** closures (anti-Goodhart: an agent that
-  induces abandonment must not benefit from fewer counted iterations).
-- **Verified by**: the abandoned-exclusion rule —
-  `test_episodes.py::test_silent_expensive_close_is_abandoned` and
-  `test_signals.py::test_baseline_is_median_iterations_excluding_abandoned`;
-  the value ships in `PreEvidence` (`test_replay.py`).
-- **Does NOT prove**: the candidate will lower cost — it's the baseline that
-  trial `Evidence.cost_ratio` is later measured against.
-
-### `closure_distribution` — success / reformulated / abandoned (per agent)
-- **Source**: `cle/build/replay.py` — one op line per successful replay with
-  per-label counts (e.g. `incident_triage` → reformulated-heavy).
-- **Verified by**:
-  `test_build_invariants.py::test_successful_build_logs_exactly_one_line_with_pre_evidence`
-  (the `closure_distribution` line precedes the `build` line); classification by
-  `test_episodes.py` (`test_marker_means_success`,
-  `test_no_marker_but_return_is_reformulated`, `test_silent_cheap_close_is_success`,
-  `test_silent_expensive_close_is_abandoned`).
-- **Does NOT prove**: real closure quality — demo closures are labels derived
-  from iteration counts; true closures need the detector watching for a return.
-
-## Runtime metrics — *era A (legacy templated demo source)*
-
-### Switch cost: `diff_blocks` (4) / `diff_tokens` (127)
-- **Source**: `cle/runtime/container.py::switch_cost()` — symmetric difference
-  of resolved block hashes between outgoing and incoming images, plus the token
-  count of the changed blocks. In the demo this is a *real* switch
-  (`weekly_recap → incident_triage`, disjoint component sets).
-- **Verified by**: `test_runtime.py::test_ensure_run_and_switch_with_costs`
-  (asserts the `switch` line carries both `diff_blocks` and `diff_tokens`, and
-  that they equal `switch_cost()`).
-- **Does NOT prove**: cognitive switch cost for the user — it's the context
-  delta the system must load, a lower bound on disruption.
-
-### Per-container metrics (solicitations, iterations, closures)
-- **Source**: `cle/runtime/metrics_volume.py` — one-way writes via
-  `MetricsVolume.record()`; read only by `cle ps` / the dashboard (the container
-  has **no** read path to its own metrics — the Goodhart boundary).
-- **Verified by**:
-  `test_runtime.py::test_metrics_volume_is_write_only_and_readable_from_the_other_side`,
-  `::test_solicit_writes_no_store_objects`, and the five
-  `test_goodhart_boundary.py` reflection tests (the `Container` record exposes no
-  metrics surface).
-- **Does NOT prove**: agent quality — divergent counts prove isolation works,
-  not that one workspace is better served.
-
-## Lifecycle metrics — *era A (legacy templated demo source)*
-
-### Shadow-engine divergence (human vs. engine `would:`)
-- **Source**: `cle/lifecycle/engine.py::shadow_decide()` — every `cle tag` with
-  evidence also runs the engine in shadow; the line carries
-  `actor:"engine:shadow"` and `would:"<decision>"`. The demo shows a real
-  divergence: human `→ ephemeral`, engine `would: hold` (cost 0.95 > the 0.7
-  promote threshold).
-- **Verified by**:
-  `test_lifecycle.py::test_shadow_engine_decides_but_never_writes` (promote /
-  pin / demote / archive / hold decisions, and that the store snapshot is
-  unchanged — shadow never writes).
-- **Does NOT prove**: the engine is ready for live mode — agreement on demo
-  data is trivial; the divergences are the v2 calibration set.
-
-### Silence-based demotion (`would: demote_silence`)
-- **Source**: `cle/lifecycle/engine.py` — fires when
-  `days_since_last_solicitation > silence_factor × trigger_period_days` (2.0×).
-- **Verified by**: `test_lifecycle.py::test_shadow_engine_silence_demotion`.
-- **Scope (v1)**: shadow rule, data-injected in v1 — the runtime does not yet
-  track last-solicitation; wiring it into `metrics_volume` is the v2 step. The
-  rule fires correctly when the caller supplies the data; no v1 code path closes
-  the loop automatically.
-
-### Revalidation: `probe_deltas` (5/5 probes moved)
-- **Source**: `cle/lifecycle/revalidator.py` — replays the image's frozen
-  probe set and compares per-probe output hashes (frozen at build in
-  `Image.probe_output_hashes`) to fresh ones; drift is **localized** —
-  `probe_deltas` names which probes moved.
-- **Real-substrate behaviour (verified live)**: at temperature 0 the same model
-  yields the same fingerprint (`proof holds`); a *different* real model
-  (`gemini-3.5-flash-lite` → `gemini-3.6-flash`) moves 5/5 probes
-  (`proof expires` → auto-demote to trial). Only the extracted **text** is
-  hashed — volatile response metadata is stripped so proof doesn't expire on
-  noise (`cle/build/fingerprinter.py::response_text`).
-- **Verified by**: `test_lifecycle.py::test_revalidate_holds_then_drifts`
-  (same model holds, changed model demotes and logs `revalidation_failed`).
-- **Deliberate conservatism, not a validation.** The fingerprint is a change
-  detector, not a quality detector. A *better* model — one whose outputs differ
-  from the build-time probe answers — triggers demotion just as a degraded one
-  would. This is intentional: the CLE cannot distinguish improvement from
-  regression without running the agent on live traffic. Re-earning evidence under
-  the new substrate is the designed cost, not a bug. "5/5 probes moved" means
-  the substrate changed; it says nothing about whether the change was good or
-  bad.
-
-## Topology metrics — *era A (legacy templated demo source)*
-
-### `diff_size` (0 or 1 per `topology_write`)
-- **Source**: `cle/lifecycle/topology.py::write_topology()` — 1 if the durable
-  entry (state + image + cause) changed, 0 if only the timestamp moved.
-- **Verified by**: `test_lifecycle.py::test_topology_chain_diff_and_log`
-  (version chaining, structured diff, and the `render_log` provenance).
-- **Does NOT prove**: anything alone — it's the building block for topology
-  churn rate.
-
-### Version chain (many versions across the full loop)
-- **Source**: `cle/lifecycle/topology.py` — monotonic `topology/v<n>`, one per
-  change, parent-chained. The loop walks births (4 agents), promotions, a
-  demotion, drift, and the v2 rebuild, so the chain runs well past a dozen
-  versions; `cle diff topology/v1 topology/v3` renders the three detected agents
-  appearing.
-- **Verified by**: `test_lifecycle.py::test_topology_chain_diff_and_log`.
+The contract is `docs/BLUEPRINT.md`; this document is measurement only. Where
+the two disagree, that is a finding to raise, not a doc to quietly edit.
 
 ---
 
-## Three data sources, three roles
+## How to read this document
 
-All replay numbers currently come from one of three history sources. Their
-roles are distinct and non-interchangeable.
+It was written across three measurement runs, and **later runs invalidated
+earlier numbers**. Read the era label before the figure. Three eras:
 
-| Source | Generator | Role | What it tests |
-|--------|-----------|------|---------------|
-| **ground\_truth** | `examples/make_fixture.py` | Planted patterns | The system **recovers** what we know is there. Centroids, openers, and periods are chosen to form distinct clusters above the threshold. |
-| **adversarial** | `examples/make_fixture.py` (`adversarial_history()`) | Near-but-distinct traps | The system does **not** fire on what isn't there. One "bridge" episode is engineered to sit near the `weekly_recap` centroid and *fire* (a genuine false trigger); several near-miss traps (same vocabulary, different intent — a board report, standup comedy, a wilting houseplant, home wifi latency) must be *rejected*. |
-| **holdout** | `examples/make_holdout.py` | Independent discovery | The system **discovers** unplanted patterns. The generator never imports from `cle/detect`, never reads the cosine threshold or centroids, and uses a completely different domain (GDG organiser). |
-
-### Which existing numbers come from which source
-
-| Metric | Source |
-|--------|--------|
-| `capture_rate` (weekly\_recap = 0.60, others = 1.00) | ground\_truth |
-| `false_trigger_rate` ≈ 0.081 (recap family; bridge fires, 4 traps rejected) | adversarial |
-| `historical_cost` (recap 3.4, standup 2.7, incident 7.0) | ground\_truth |
-| `closure_distribution` per-agent | ground\_truth |
-| `probe_deltas` (5/5 probes moved) | ground\_truth (build) + live substrate |
-| Holdout: 2 agents discovered (recurrence ×6, reformulation ×4) | holdout |
-
-### Holdout result — *era A, on the templated holdout (superseded)*
-
-> These figures are from the **templated** holdout (80 messages, 27 episodes,
-> 85 days). That fixture has since been rebuilt with realistic phrasing (109
-> messages, 41 episodes), and discovery re-measured: **0** with the v1 embedder;
-> with the real embedder at 0.775, a pure candidate for all 3 patterns —
-> **2 clean recoveries + 1 fragment** (R10). Kept because the *reason* the
-> meetup pattern was missed here is still instructive.
-
-The holdout history: **80 messages, 27 episodes, 85 days** (GDG organiser).
-The detector found:
-
-- `recurrence` signal: **6 occurrences, period = 14 days** (speaker outreach)
-- `reformulation` signal: **4 occurrences** (venue coordination friction)
-
-The monthly meetup prep (4 occurrences on a clean 28-day cadence) produced **no
-recurrence signal** — a genuine, instructive surprise. The reason is not the
-occurrence gate (its cluster holds 5 episodes, above `min_signal_occurrences = 3`):
-the hashed-token embedder pulled a *noise* episode ("review the draft budget for
-the q2 gdg events" — shared `gdg`/`draft` tokens) into the meetup cluster, so its
-inter-arrival intervals became irregular (`[10, 18, 28, 28]` days) and the
-recurrence signal's period-stability check correctly rejected it. This is honest
-evidence of clustering imprecision under a cheap embedder; report it, do not tune
-the threshold or hand-separate the clusters to force the pattern through.
-
-> [!NOTE]
-> Holdout numbers MUST NOT be used to tune thresholds. If the numbers are
-> ugly or surprising, that is informative. Fix the threshold only if a separate
-> theoretical or empirical argument (independent of the holdout) demands it.
-
-### Test that guards the holdout
-
-`tests/unit/test_holdout_discovery.py::test_holdout_discovery_structural_sanity`
-
-Runs the full detector on the holdout, then replays the strongest discovered
-candidate to **report** its capture / false-trigger / historical-cost. Asserts
-only structural sanity: ≥1 agent detected, cold-start gate cleared, valid
-centroids, every log line valid JSON with an `op` field, and the *real*
-`false_trigger_rate` below `FALSE_TRIGGER_CEILING = 0.50` (a loose bound, never
-tuned). It does **not** assert exact metric values — asserting them would make
-the holdout a known fixture. (Current run: 2 agents; strongest replay reports
-capture 1.0, false-trigger 0.0, cost 3.0 — reported, not asserted.)
-
----
-
-## Cross-cutting invariants (what makes the numbers trustworthy)
-
-| Invariant | Guarantee | Verified by |
-|---|---|---|
-| Two hashes | `Image.hash != Source.hash`, tags attach to images only | `test_build_invariants.py::test_two_hash_inequality`, `test_tag_targets.py` (5 tests) |
-| Build determinism | same source + components + substrate ⇒ same image hash | `test_build_invariants.py::test_build_determinism` |
-| Probe-set hash coverage | `probe_set` + `probe_output_hashes` are covered by `Image.hash` | `test_build_invariants.py::test_probe_set_is_hash_covered_and_deterministically_selected`, `::test_image_hash_covers_probe_output_hashes` |
-| Staged builds write nothing | a failed resolve/replay leaves the store byte-identical | `test_staged_failure.py` (3), `test_resolver.py` (5) |
-| Integrity | corrupt component → abort, log, refetch, never inject | `test_integrity.py` (4), `test_resolver.py::test_corrupt_component_fails_resolve_and_fires_integrity_log` |
-| Evidence type separation | PreEvidence/Persistence can't reach a promotion | `test_evidence_types.py` (6) |
-| Goodhart boundary | `Container` exposes no metrics read path | `test_goodhart_boundary.py` (5) |
-| Hashing canonicalization | sorted keys, no whitespace, UTF-8, sha256 | `test_content_hash.py` (6) |
-| Detection thresholds | silence, clustering, signals — all relative to the user | `test_episodes.py` (19), `test_clustering.py` (6), `test_signals.py` (10) |
-
-## Honest caveats (apply to all numbers above)
-
-1. **Real models locally, stub for CI.** `cle build`/`run`/`revalidate` use a
-   live Gemini model by default (`gemini-3.5-flash-lite`); the fingerprint runs
-   at temperature 0. GitHub CI forces stub substrates
-   (`CLE_MODEL_A/B=stub-model-*`) so it never calls a model — and the **test
-   suite** uses stub fingerprinters internally, needing no key or network.
-2. **Residual API nondeterminism.** Even at temperature 0 a hosted model can
-   occasionally return different text; that reads as a small genuine drift, not
-   a bug. The `response_text` extractor removes volatile *metadata* drift, not
-   real output drift.
-3. **Period not tested by replay.** `PreEvidence.period_tested` is always
-   `false`. Replay validates the **semantic trigger** (cosine against the
-   centroid); the temporal period, when present, is carried into the image
-   untested. Evaluating temporal fit retrospectively requires the v2 scheduler
-   model. A `capture_rate` of 1.0 does not mean the period fires at the right
-   time — it means the trigger geometry captures the right episodes.
-4. **Silence-demotion: shadow rule, data-injected in v1.** The runtime does not
-   yet track last-solicitation; wiring it into `metrics_volume` is the v2 step.
-   The rule fires correctly when the caller supplies the data; no v1 code path
-   closes the loop automatically.
-5. **Demo closures are labels.** The offline stand-in and the iteration-count
-   closure tags are deterministic sugar; real closures come from the detector
-   observing a return to the cluster (v2).
-6. **Single-user synthetic history.** Replay metrics from `make_fixture.py` are
-   a consistency check (the system recovers planted patterns) and a false-trigger
-   check (the adversarial bridge). A holdout source
-   (`examples/make_holdout.py`) adds process-independent discovery. Real metrics
-   need multi-user, multi-workspace deployment data.
-
-## GDG enriched run — four-contradiction taxonomy (INERT under a real embedder)
-
-> ## ⚠ THIS TAXONOMY IS INERT WITH THE REAL EMBEDDER
->
-> Everything in this section describes a mechanism that **detects nothing**
-> once the substrate is a real embedding model. Zero divergent pairs on all
-> seven planted intents; `band_width` 0.0000 everywhere.
->
-> **Cosine measures topical relatedness, not contradiction.** The planted
-> *opposing* directives score **0.62–0.86** — "keep the digest short" and
-> "make it long and detailed" *are* about the same thing, and a good embedder
-> says so. All sit far above the 0.35 divergence bar, so nothing registers as
-> divergent. **v1 only appeared to detect contradictions through lexical
-> accident**: opposing instructions happen to use different words, so
-> bag-of-tokens overlap was low (0.00–0.47, mostly under 0.35).
-> **No threshold rescues this** — the bar would have to exceed 0.86, which
-> flags every pair. It needs a different operator (signed / entailment), which
-> is its own run.
->
-> **The `world_state` question is superseded, not answered.** The rule is now
-> *unreachable*: the injected contradiction scores 0.7197 and never registers
-> as divergent, so it never reaches the rule at all. Under v1 it scored 0.1140
-> and *was* absorbed as `world_state` — v1 at least saw divergence and
-> mis-attributed some of it; the real embedder sees none.
->
-> Guard: `analyze_cluster_stability` now returns the third verdict
-> **`unavailable`** in any space where directive-divergence-by-cosine is
-> not calibrated. Detection then PROCEEDS and the candidate is born carrying
-> `stability="unavailable"` in its provenance, surfaced at the human override
-> gate — a DISCLOSED GAP, not a silent pass. The check is a safety veto, never
-> a precondition: blocking on its absence would stop the first pillar producing
-> anything at all.
-> A non-measurement must never masquerade as a verdict — the same principle as
-> PreEvidence ≠ Evidence and the `degenerate` resolution flag.
-
-Divergence inside a cluster is classified before synthesis
-(`cle/detect/stability.py`; op line `cluster_stability`) — **valid only for
-`embedder_id=stub:hashed64`**:
-
-| Type | Rule | Reaction | Verified by |
+| Era | Data | Embedder | Status |
 |---|---|---|---|
-| intra_cluster | opposing directives, gap <= 7d, same/no tool_result | UNSTABLE — no candidate | `test_contradictions.py` |
-| grey_zone | gap in 7–21d (TOTAL partition — no uncovered interval) | UNSTABLE by default (calibratable band) | parametrized 3/12/30d |
-| temporal | gap >= 21d | evolution; candidate from the post-flip segment | venue_policy fixture test |
-| world_state | tool_result present BOTH sides and different, moderate divergence | environmental — NOT instability; candidate still born | make-or-break test |
+| **A — legacy demo** | templated `make_fixture.py` | `stub:hashed64` @0.6 | still shipped as the demo; **not realistic usage** |
+| **B — realistic data** | realistic freeze-once fixtures | `stub:hashed64` @0.6 | superseded for detection numbers |
+| **C — real embedder** | same realistic fixtures | `google:gemini-embedding-2:768` @0.775 | **current** |
 
-Guards: no tool_result ⇒ never world_state (no external world in frame);
-SEVERE divergence (<0.10) is never excused by a world change (adversarial
-test) — the residual moderate-band mask is a documented, calibratable
-limitation. Capability gating: capture = centroid match AND tool mount;
-unmounted-tool episodes stay in the denominator. Tools are declarations
-only — nothing is executed; `tool_result` is frozen decor, never asserted
-correct. Backends: SqliteStore joins InMemory/File behind the same
-Protocol (conformance parametrized ×3); Weaviate stays opt-in
-(`integration` marker, skipped by default).
+Rules for the reader:
 
-### `world_state_attribution` — the exclusion's reach, made permanent
+- **Where A/B and C disagree, C wins.**
+- Numbers labelled by agent name (`weekly_recap` 0.60, the recap-family 0.081,
+  the three detected agents) are **era A**. That source is still templated;
+  treat them as demo mechanics, not measured reality.
+- Anything not re-measured in era C carries its era inline.
+- If a number has no era and no test name, distrust it.
 
-The `cluster_stability` line now carries, on every analysis, how far the
-world_state excuse reaches: `ws_would_be_intra` (world_state pairs that
-would be `intra_cluster` by time alone — i.e. UNSTABLE with an identical
-tool_result) and `ws_share_pct` (world_state / all divergent pairs). The
-per-type counts moved under a `divergent_pairs` object so the log is
-unambiguous — every count is a **pair** count, not an episode count.
+---
 
-*On the **templated** GDG fixture (the era this section was written in)* the
-number was stark: **`ws_share_pct` = 100.0** (all 506 divergent pairs excused)
-with **`ws_would_be_intra` = 164` — not a healthy signal, but the measurement
-telling us it could not see (next section).
+## Two headline findings
 
-**Superseded twice since.** On the *realistic* fixtures with the v1 embedder it
-falls to **35.5%** (`ws_would_be_intra` = 2); with the **real embedder** it is
-**0.0%**, because nothing registers as divergent at all. The field itself
-remains the point: the exclusion's reach stays permanently visible.
+### 1. v1 detection only worked because the data was templated
 
-### `resolution` — degeneracy diagnostic (a weak measure is not a verdict)
+The original fixtures repeated one identical opener per intent (the string
+`"schedule the monthly gdg meetup in the main room"` appeared 45 times, once
+per day — a *monthly* meetup scheduled daily). Rebuilt with genuinely varied
+human phrasing (≥ 8 distinct openers per recurring intent, franglais, typos,
+irregular timing), the same detector:
 
-When a cluster's divergent-pair cosines concentrate in a band narrower than
-`degenerate_band_width` (0.05) across at least `degenerate_min_pairs` (10),
-the line carries `resolution: "degenerate"` and the `band_width`. *On the
-**templated** fixture* **all 506 divergent pairs sat at one cosine (band width
-0.0000)** — the measure could not separate a mild contradiction from lexically
-diverse but consistent follow-ups, so *any* threshold placed inside that bin was
-arbitrary. The flag is **diagnostic only**: logged, never blocking, and
-`unstable` is still computed. Same principle as PreEvidence ≠ Evidence — a weak
-measurement must not masquerade as a strong verdict. Pinned by
-`test_degenerate_band_is_flagged_when_directives_collapse` /
-`test_spread_cluster_resolves`.
+- **shattered every planted intent**: `events` 10 distinct openers → 9 clusters,
+  `venue_policy` 8 → 8; **63 clusters for 7 planted intents**;
+- **discovered nothing** on the process-independent holdout: **0 agents**
+  (the templated holdout had yielded 2 of 3);
+- revealed its clean metrics as artifacts: the tool-bearing `events` directive
+  band went `0.0000 → 0.3381`, `ws_share_pct` `100% → 35.5%`, and the "perfect"
+  `capture = 1.000` became **0.500** *even from the ideal centroid*.
 
-**Predicted payoff, and what actually happened.** The prediction was that a
-finer measure spreads the band and makes the gain measurable. Half right: on the
-*realistic* fixtures the v1 band spread **0.0000 → 0.3381** (`resolved`), which
-is the predicted win. But with the **real embedder** the band returns to
-**0.0000** for the opposite reason — not one repeated cosine, but *no divergent
-pairs at all*. Degeneracy and inertness look alike in this field and must not be
-confused; that is why the classifier now also reports the `unavailable` verdict.
+Identical openers are the one input a 0.6 bag-of-tokens embedder clusters
+reliably. This is a finding about the **detector**, not the data: no threshold
+was tuned to soften it.
 
-**Known limitation, now superseded (moderate-band blindness).** On the templated
-data a MODERATE preference flip (directive cosine 0.10–0.35) co-occurring with a
-differing tool_result was classified `world_state` and excluded — confirmed by
-injection (cosine 0.191 → absorbed); only SEVERE divergence (<0.10) surfaced. It
-was **not fixable by a threshold**: `world_state_min_cosine=0.20` excused
-everything, `=0.25` flagged all 506 (wholesale false positive). The realism run
-then showed the *cluster-level* version of this blindness was an artifact of
-degenerate data, and the embedder run made the whole question moot — see the
-`world_state` verdict in *Embedder upgrade run*.
+### 2. A real embedding model is not a drop-in — and it breaks contradiction detection
 
-### Fixture debt (recorded, deliberately not fixed here)
+Swapping in `google:gemini-embedding-2:768` (frozen vectors, offline):
 
-All four labeled `intra_cluster` contradictions in the GDG fixture live in
-the tool-**less** `newsletter` cluster (`news-5/8/22/25`) — where they are
-correctly flagged, since no tool means no world_state excuse. But
-world_state masking can only occur on a tool-**bearing** cluster. **The
-fixture therefore never exercises the case the classifier was built to
-test.** Calibrating the moderate band requires BOTH a planted moderate
-contradiction inside a tool-bearing cluster (differing tool_result,
-directive cosine clearly separable from the lexical-noise floor) AND a
-finer embedder that gives that separation a real spread. Until both exist,
-the moderate-band verdict on tool-bearing clusters is `resolution:
-degenerate`, by design.
+- at the **unchanged 0.6** threshold it fails the opposite way — **over-merging**
+  everything into **2 clusters**, with `false_trigger` exploding **0.061 → 0.632**;
+- **recalibrated to 0.775** it genuinely beats v1 — but GDG recovery still tops
+  out at **2/7** planted intents, and of the 6 candidates it births only **2 are
+  genuine** (see *Born-candidate purity*);
+- it **breaks the contradiction classifier outright**: **zero divergent pairs**
+  across all seven intents. Cosine measures *topical relatedness, not
+  contradiction* — the planted **opposing** directives score **0.62–0.86**
+  because they *are* about the same thing.
 
-### GDG demo — competition, not a clean room (`examples/gdg_demo.py`)
+No threshold rescues the third point (the bar would have to exceed 0.86, which
+flags every pair). It needs a different operator — signed / entailment — which
+is its own run.
 
-Replaying the `events` candidate against the raw fixture prints
-`capture=1.000 / false=0.000` — a tautology from two biases: a **clean-room
-build** (no incumbent to compete) and the **degenerate** `events` cluster
-(45 identical openers, so no incumbent can own a *fraction* of it). The
-demo corrects the first with a **legitimate** pre-seeded incumbent
-(`venue_booking`, a real prior agent that reserves rooms and already owns
-the reworded "book the room" phrasings): capture falls **1.000 → 0.600**,
-honest topology competition. `test_gdg_demo.py` pins both.
+---
 
-The non-trivial **`false_trigger` = 0.143 is obtained by planting its
-cause**: one adversarial "bridge" episode that reads as sponsor work (joins
-that cluster) yet clears the candidate's bar. This is a deliberate
-construct — exactly like `prompt_history_adversarial.jsonl` — not an
-emergent false trigger. The GDG fixture's ten labeled *routing* threads do
-NOT produce one on their own: their openers top out at cosine 0.522 to the
-`events` centroid, below the 0.6 firing bar, so real routing traffic is
-correctly never captured. The bridge exists only to show the false-trigger
-machinery fires under competition.
+## Era A — the legacy templated demo (`examples/full_loop.sh`)
 
-## Realism run — re-measurement — *era B (realistic data, v1 embedder)*
+Produced by `make_fixture.py`, which has **not** been de-templated. These
+numbers describe *mechanics* and are reproducible offline (`CLE_MODEL_A/B=stub-*`).
 
-All numbers below are on the realistic freeze-once fixtures (`examples/
-phrasing.py` banks; generators reproducible on demand, never run in CI).
-Grouped by the PLANTED intent (thread prefix in the committed `.jsonl` +
-sidecar), never by detected cluster — the detector fragments, so "the cluster"
-is not a thing the detector actually forms.
+### Build
 
-### Detector recovery (GDG ground-truth, 516 msgs / 246 episodes / 112 days)
+| Metric | Value | Source & scope |
+|---|---|---|
+| `capture_rate` | `weekly_recap` **0.60**, others 1.00 | `cle/build/replay.py`. 0.60 because the hand-authored `status_report` incumbent already owns 2 of its 5 reworded episodes — capture is measured **against the current topology**, not in a vacuum. |
+| `false_trigger_rate` | **≈ 0.081** (recap family), 0.0 others | Out-of-cluster episodes the trigger would steal. The adversarial window plants one firing "bridge" + 4 near-miss traps that are correctly rejected (0.091 with the bridge alone → 0.081 once the traps enlarge the denominator). |
+| `historical_cost` | recap 3.4, standup 2.7, incident 7.0 it/ep | Mean iterations of in-cluster episodes, **abandoned excluded** (anti-Goodhart: an agent that induces abandonment must not profit from fewer counted iterations). |
+| `closure_distribution` | per-agent success/reformulated/abandoned | One op line per successful replay. |
+
+*Pinned by* `test_replay.py` (both rates always computed, determinism,
+competition lowers capture), `test_adversarial_fixture.py` (non-zero false
+trigger). **Era-A caveat**: the bridge fires because it *shares tokens*, not
+because it is semantically close.
+
+### Runtime
+
+- **Switch cost** `diff_blocks` **4** / `diff_tokens` **127** — symmetric
+  difference of resolved block hashes on a real `weekly_recap → incident_triage`
+  swap (disjoint component sets). *`test_runtime.py::test_ensure_run_and_switch_with_costs`.*
+- **Per-container metrics** — one image, two workspaces, genuinely divergent
+  counts; written one-way through `MetricsVolume.record()`. The container has
+  **no read path** to them. *`test_goodhart_boundary.py` (5 reflection tests).*
+
+### Lifecycle
+
+- **Shadow divergence** — human promotes `standup_digest` to `ephemeral` on
+  `cost_ratio 0.95`; the engine logs `would: hold` (promote rule: cost ≤ 0.7 and
+  occurrences ≥ 3). The divergence is the calibration set for going live.
+- **Revalidation** — `gemini-3.5-flash-lite → gemini-3.6-flash` moves **5/5
+  probes** → `revalidation_failed`, auto-demote to trial. Deliberately
+  conservative: a *better* model demotes too, because the fingerprint is a
+  change detector, not a quality detector. Only extracted **text** is hashed, so
+  proof does not expire on volatile response metadata.
+- **Silence-demotion** — a shadow rule, **data-injected**: the runtime does not
+  yet track last-solicitation. The loop is not closed in v1.
+
+---
+
+## Era B — realistic data, v1 embedder
+
+Fixtures: freeze-once, generated once and **committed** (determinism comes from
+the artifact, not from a deterministic generator). GDG ground truth: 516
+messages, 246 episodes, 112 days, one francophone GDG Abidjan organiser.
+
+### Detector recovery (grouped by *planted* intent, never by detected cluster)
 
 | planted intent | occurrences | distinct openers | detected clusters |
 |---|---|---|---|
@@ -496,96 +134,49 @@ is not a thing the detector actually forms.
 | agenda_workshop | 9 | 8 | 4 |
 | venue_policy | 8 | 8 | 8 |
 
-63 detected clusters total; 22 reach the ≥3-occurrence signal gate but none
-maps cleanly to a planted intent (they fragment AND merge on shared domain
-tokens). Recovery is REPORTED, not gated (`test_gdg_routing_intents_fragment_
-under_realistic_variety`, `test_holdout_discovery_structural_sanity`).
+63 clusters total; 22 reach the ≥3-occurrence signal gate, none mapping cleanly
+to a planted intent. Under a strict criterion (one cluster holding ≥80% of an
+intent **and** ≥80% pure), v1 recovers **0/7** — and that is its *best across a
+full 0.40–1.10 sweep*, not just at 0.6. Lax (≥50%/≥50%): 1/7.
 
-### Stability per planted intent (was: band 0.0000, ws_share 100%, all stable)
+### Stability per planted intent
 
 | intent | unstable | resolution | band_width | ws_share_pct | ws_would_be_intra |
 |---|---|---|---|---|---|
-| events (tool) | True | resolved | 0.3381 | ~30% | 2 |
-| newsletter | True | resolved | 0.3474 | 0% | 0 |
-| speakers (tool) | True | resolved | 0.2691 | 0% | 0 |
-| sponsors (tool) | True | resolved | 0.3464 | 0% | 0 |
-| agenda_meetup | True | resolved | 0.1760 | 0% | 0 |
-| venue_policy | True | resolved | 0.3354 | 0% | 0 |
+| events (tool) | True | resolved | 0.3381 | 35.5 | 2 |
+| newsletter | True | resolved | 0.3474 | 0 | 0 |
+| speakers (tool) | True | resolved | 0.2691 | 0 | 0 |
+| sponsors (tool) | True | resolved | 0.3464 | 0 | 0 |
+| agenda_meetup | True | resolved | 0.1760 | 0 | 0 |
+| venue_policy | True | resolved | 0.3354 | 0 | 0 |
 
-The band is no longer degenerate anywhere with divergent pairs — the
-`band_width = 0.0000` of the old fixture was purely a templating artifact
-(`test_events_intent_is_no_longer_degenerate`). NOTE the over-flag side of
-this: with realistic follow-up variety the classifier reads lexical spread as
-"divergence", so intents that should be clean (e.g. `venue_policy`'s temporal
-evolution) are now flagged unstable and their candidate is suppressed
-(`test_gdg_venue_policy_temporal_recovery_now_blocked`). The directive-cosine
-divergence measure conflates paraphrase with contradiction — the same embedder
-limitation, one layer down.
+The degenerate `band_width = 0.0000` of the templated era was purely an
+artifact. But note the **over-flag** side: with realistic follow-up variety the
+classifier reads lexical spread as "divergence", so `venue_policy`'s genuine
+temporal evolution is flagged unstable and its candidate suppressed. The same
+embedder limitation, one layer down.
 
-### Replay (events planted-centroid — the *ideal* trigger)
+### Replay & discovery
 
-`capture = 0.500`, `false_trigger = 0.061`, `historical_cost = 2.44`. Even the
-mean of all `events` openers matches only half of them at 0.6 — the old
-`capture = 1.000` required identical openers. (The constructed competition demo
-`gdg_demo.py` still shows `1.000 → 0.600` with a seeded incumbent + labeled
-bridge; it is a deliberate illustration on a constructed window, not realistic
-usage.)
+- `events` planted-centroid (the **ideal** trigger): `capture = 0.500`,
+  `false_trigger = 0.0614`, `historical_cost = 2.4375`. Even the mean of all
+  its own openers matches only half of them at 0.6.
+- **Holdout discovery: 0** (109 messages, 41 episodes). Each recurring pattern
+  (`meetup-prep`, `outreach`, `venue`, 9 occurrences each) fragments into 8–9
+  clusters, none reaching the gate.
 
-### Holdout discovery (process-independent, 109 msgs / 41 episodes)
+---
 
-**0 agents discovered** (old templated holdout: 2 of 3). Each recurring
-pattern (`meetup-prep`, `outreach`, `venue`, 9 occurrences each) fragments into
-8–9 clusters, none reaching the 3-occurrence gate. Reported, not gated.
+## Era C — the real embedder (current)
 
-### world_state blindness — structural or artifact? (the revisited question)
+Substrate `google:gemini-embedding-2:768`, 768-dim MRL-truncated. **247 distinct
+fixture texts** embedded in 247 calls (84.2 s) and frozen to
+`examples/vectors.google-gemini-embedding-2-768.json`. CI reads them through
+`CachedEmbedder`; a miss raises `CacheMissError` and never recomputes.
 
-Both, precisely delimited. On an injected MODERATE contradiction (directive
-cosine 0.114) that co-occurs with a differing `tool_result`, the pair is STILL
-classified `world_state` and absorbed — so the *rule-level* blind spot
-(moderate divergence + differing tool_result → world_state, only severe < 0.10
-rescued by adjustment 3) is **structural**, and realistic spread did not
-dissolve it. But the *cluster-level* wholesale blindness ("world_state absorbs
-100%, nothing can ever surface") **was an artifact** of degenerate data: on the
-spread `events` intent world_state absorbs only ~30%, real `intra_cluster`
-pairs surface through non-masked pairs, and the intent is now flagged unstable.
-A genuine contradiction that does NOT happen to coincide with a world change is
-now detected; one that does is still masked. No classifier change was made —
-this is a report (the realism-run instruction).
+### Before / after (GDG, 246 episodes)
 
-### Scope note — the adversarial/rejection source is still templated
-
-`examples/make_fixture.py` (→ `prompt_history.jsonl`,
-`prompt_history_adversarial.jsonl`, the four hand-authored `*_agent.yaml`, and
-the live `full_loop.sh` / dashboard demo) has NOT been de-templated in this
-run. It is the live-demo backbone; de-templating it collapses the hand-authored
-recap/standup/incident demo into the same fragmentation shown above, and the
-embedder upgrade (next run) may restore clustering and let the demo be rebuilt
-properly. It is called out here rather than silently left: the realism guard
-covers the GDG and holdout sources; extending it to the adversarial source is
-deferred with the demo rework.
-
-## Embedder upgrade run — *era C (**current**: real embedder @0.775)*
-
-Substrate: `google:gemini-embedding-2:768` (768-dim, MRL-truncated), frozen to
-`examples/vectors.google-gemini-embedding-2-768.json` — 247 distinct fixture
-texts embedded in 247 calls / 84.2s. CI reads those vectors through
-`CachedEmbedder` (miss = error, never a silent recompute); no key, no network.
-There is deliberately **no `model_version`**: the embed response exposes no
-version signal distinct from the model id, and a placeholder would give false
-assurance about detecting silent provider-side drift.
-
-**Headline: the embedder upgrade is not a drop-in.** It does not "fix" v1 — it
-*inverts the failure mode* (over-fragmenting becomes over-merging), it requires
-a per-embedder threshold, and it **breaks contradiction detection outright**.
-The clustering threshold is embedder-specific and must travel with
-`embedder_id`; 0.6 remains correct for `stub:hashed64`.
-
-### Before / after (GDG ground-truth fixture, 246 episodes)
-
-Recovery criterion: an intent counts as recovered only if one cluster holds
-≥80% of its episodes AND that cluster is ≥80% pure (strict); lax = ≥50%/≥50%.
-
-| figure | v1 @0.6 | real @0.6 (unchanged) | real @0.775 (APPROVED) |
+| figure | v1 @0.6 | real @0.6 | real @0.775 |
 |---|---|---|---|
 | detected clusters | 63 | **2** | 40 |
 | intents recovered (strict) | 0/7 | 0/7 | **2/7** |
@@ -594,73 +185,9 @@ Recovery criterion: an intent counts as recovered only if one cluster holds
 | events capture (ideal centroid) | 0.5000 | 0.8106 | 1.0000 |
 | events false_trigger | 0.0614 | **0.6316** | 0.0044 |
 | events historical_cost | 2.4375 | 2.1322 | — |
-| **holdout discovery** | 0 | 1 *(spurious)* | **3** *(genuine)* |
+| holdout discovery | 0 | 1 *(spurious)* | **3** |
 
-v1's 0/7 strict is its *best over a full 0.40–1.10 sweep*, not just at 0.6.
-
-### Consumer 1 — clustering / detection: improves, but only recalibrated
-
-At the unchanged 0.6 the real embedder collapses everything into **2 clusters**
-and `false_trigger` explodes to **0.632** (the trigger steals 63% of
-out-of-cluster traffic): 0.6 is bag-of-tokens calibration, where same-domain
-text scores ~0.2–0.4; real sentence embeddings put same-domain text ~0.7–0.9, so
-everything clears the bar. Recalibrated to 0.775 the picture is genuinely better
-than v1 — and the **process-independent holdout recovers all three planted
-patterns** with near-perfect purity (`outreach` 8/9, `meetup-prep` 8/8, `venue`
-5/5), versus 0 under v1. At 0.6 the holdout's single "discovery" is a mega-
-cluster dominated by noise (14/41) — a spurious count, not a discovery.
-
-**Honest ceiling:** even at the optimum, only 2/7 strict (4/7 lax) GDG intents
-are recovered. The upgrade improves detection markedly; it does not solve it.
-
-### Consumer 2 — stability / contradiction: it goes fully blind
-
-| figure | v1 | real |
-|---|---|---|
-| divergent pairs, all 7 intents | many | **0** |
-| events band_width | 0.3381 | 0.0000 |
-| events ws_share_pct | 35.5 | 0.0 |
-| events intra_cluster pairs | 3 | 0 |
-| events / newsletter / … unstable | True | False (all) |
-| venue_policy over-flag | True | False *(wrong reason)* |
-
-This is **not a calibration problem — it is the wrong operator.** Cosine
-measures *topical relatedness, not contradiction.* A real semantic embedder
-correctly scores the planted OPPOSING directives at **0.619–0.864** (mean
-0.66–0.74) — "keep the digest short" and "make it long and detailed" *are*
-about the same thing. All sit far above the 0.35 divergence bar, so nothing is
-divergent. v1 only appeared to detect contradictions by accident: opposing
-instructions use different *words*, so lexical overlap was low (0.00–0.47,
-mostly below 0.35). No threshold rescues this — the bar would have to exceed
-0.86, which flags every pair. **Contradiction detection needs a different
-operator (entailment/NLI or a signed direction), not a distance threshold.**
-
-Because the check is unsound here it returns `verdict="unavailable"`. That does
-**not** block candidate birth (it is a safety veto, never a precondition): the
-candidate is born carrying `stability="unavailable"` in its provenance, a
-disclosed gap surfaced on the Births card at the human override gate. Reversing
-the earlier block restored the first pillar from **0** candidates to 6 (GDG) /
-3 (holdout) — see purity next.
-
-### Born-candidate purity (R10) — counts NEVER stand bare
-
-Bare counts are the trap (cf. the holdout 0→1 mega-cluster). Every born
-candidate classified against the planted intents: GENUINE (recall ≥ 0.8 AND
-purity ≥ 0.8), FRAGMENT (purity ≥ 0.8, recall < 0.8 — a pure subset), SPURIOUS
-(purity < 0.8, or no planted intent — noise-dominated).
-
-| fixture | candidates | GENUINE | FRAGMENT | SPURIOUS | stability |
-|---|---|---|---|---|---|
-| GDG | 6 | **2** (`speakers` r0.92/p1.00, `agenda_workshop` r0.89/p1.00) | 2 (`newsletter` r0.19/p1.00, `sponsors` r0.64/p0.90) | 2 (20-ep noise agglomerate p0.45; 3-ep noise recurrence, no intent) | all `unavailable` |
-| holdout | 3 | **2** (`outreach` r0.89/p0.89, `meetup-prep` r0.89/p1.00) | 1 (`venue` r0.56/p1.00) | 0 | all `unavailable` |
-
-So the honest reading of "6 GDG candidates" is **2 genuine, 2 pure fragments, 2
-spurious** — and both spurious ones (a 20-episode agglomerate merging
-`events`+`agenda_meetup`+`venue_policy`, and a 3-episode noise recurrence) would
-reach a human as proposals. That is exactly why the disclosed-gap marker is on
-the Births card. GDG's 2 genuine matches R5's 2/7 strict recovery.
-
-### Threshold sweep (swept at 0.6; 0.775 subsequently APPROVED and applied)
+### Threshold sweep — a clean inverted U
 
 | thr | clusters | recovered (strict) | events_false | events_capture |
 |---|---|---|---|---|
@@ -673,85 +200,167 @@ the Births card. GDG's 2 genuine matches R5's 2/7 strict recovery.
 | 0.850 | 80 | 0 | 0.0247 | 1.0000 |
 | 0.900 | 91 | 0 | 0.0122 | 1.0000 |
 
-A clean inverted U: below ~0.70 purity collapses (recall ~1.0, purity ~0.0);
-above ~0.85 recall collapses (purity 1.0, recall 0.1–0.3).
+Below ~0.70 purity collapses (recall ~1.0, purity ~0.0 — everything merges);
+above ~0.85 recall collapses (purity 1.0, recall 0.1–0.3 — fragmentation).
 
-**APPROVED and applied:** `cluster_similarity_threshold` 0.6 → **0.775**,
-scoped to `embedder_id=google:gemini-embedding-2:768`. 0.6 remains correct for
-`stub:hashed64`. The threshold is a property of the **vector space**, not a
-global default — bag-of-tokens puts same-domain text at ~0.2–0.4, a real
-embedder at ~0.7–0.9, so one number cannot serve both. It therefore travels
-*with* `embedder_id` (`CLUSTER_THRESHOLD_BY_EMBEDDER` in `cle/detect/clusters.py`).
+**Adopted: 0.6 → 0.775**, scoped to `embedder_id` (0.6 stays correct for
+`stub:hashed64`); `CLUSTER_THRESHOLD_BY_EMBEDDER` in `cle/detect/clusters.py`.
 
-**On what that 0.775 actually rests — read this before trusting it.** The GDG
-sweep peak is **in-sample**: 0.775 was *chosen* on the same fixture it is then
-scored against, so the 2/7 figure is not independent evidence and must not be
-cited as such. The credible evidence is the **holdout** — process-independent,
-authored without knowledge of the embedder, and *never consulted to pick the
-threshold* — which at 0.775 births a **pure candidate for all 3 patterns**
-(purity `outreach` 8/9, `meetup-prep` 8/8, `venue` 5/5). Of those, **2 are clean
-recoveries** (recall AND purity ≥ 0.8: outreach, meetup-prep) and **1 is a pure
-fragment** (`venue`, recall 5/9 = 0.56) — R10. That is **a single independent
-confirmation point.** One holdout, one threshold, one embedder. It justifies
-adopting 0.775 over 0.6; it does not establish 0.775 as calibrated in general,
-and a second independent source should move it.
+> **What that 0.775 actually rests on.** The GDG sweep peak is **in-sample** —
+> 0.775 was *chosen* on the fixture it is then scored against, so the 2/7 is not
+> independent evidence. The credible support is the **holdout**:
+> process-independent, authored without knowledge of the embedder, and never
+> consulted to pick the threshold. That is **a single independent confirmation
+> point** — one holdout, one threshold, one embedder. It justifies adopting
+> 0.775 over 0.6; it does not establish 0.775 as calibrated in general.
+> *Now pinned by `test_holdout_discovery.py::test_holdout_discovery_on_the_default_embedder`.*
 
-### world_state verdict — the question is superseded
+### Born-candidate purity — counts NEVER stand bare
+
+A bare count is the trap (cf. the holdout's spurious 0→1). Classification:
+**GENUINE** = recall ≥0.8 and purity ≥0.8; **FRAGMENT** = purity ≥0.8, recall
+<0.8 (a pure subset); **SPURIOUS** = purity <0.8 or no planted intent.
+
+| fixture | born | GENUINE | FRAGMENT | SPURIOUS |
+|---|---|---|---|---|
+| GDG | 6 | **2** — `speakers` r0.92/p1.00, `agenda_workshop` r0.89/p1.00 | 2 — `newsletter` r0.19/p1.00, `sponsors` r0.64/p0.90 | 2 — a 20-episode agglomerate merging events+agenda_meetup+venue_policy (p0.45); a 3-episode noise recurrence (no intent) |
+| holdout | 3 | **2** — `outreach` r0.89/p0.89, `meetup-prep` r0.89/p1.00 | 1 — `venue` r0.56/p1.00 | 0 |
+
+So the honest reading of "6 GDG candidates" is **2 genuine, 2 pure fragments, 2
+spurious** — and both spurious ones would reach a human as proposals. That is
+precisely why the disclosed-gap marker exists on the Births card. GDG's 2
+genuine matches the sweep's 2/7 strict.
+
+Note the holdout wording: earlier drafts said it "recovers 3/3". That
+overstated it — 8/9, 8/8, 5/5 are **purity**; under recall *and* purity it is
+**2 clean + 1 pure fragment**.
+
+### Consumer 2 — stability / contradiction goes fully blind
+
+| figure | v1 | real |
+|---|---|---|
+| divergent pairs, all 7 intents | many | **0** |
+| events band_width | 0.3381 | 0.0000 |
+| events ws_share_pct | 35.5 | 0.0 |
+| events intra_cluster pairs | 3 | 0 |
+| every intent `unstable` | True | False (all) |
+
+Planted **opposing** directive cosines, real vs stub:
+
+| pair | real (min/mean/max) | below 0.35 | stub (mean) | below 0.35 |
+|---|---|---|---|---|
+| newsletter short↔long | 0.619 / 0.657 / 0.699 | **0/4** | 0.251 | 3/4 |
+| venue diy↔ask-approval | 0.666 / 0.739 / 0.864 | **0/12** | 0.239 | 10/12 |
+| events confirm↔reroute | 0.657 / 0.676 / 0.693 | **0/4** | 0.138 | 4/4 |
+
+**This is the wrong operator, not a mis-set threshold.** v1 only appeared to
+detect contradictions by accident: opposing instructions happen to use
+different *words*, so lexical overlap was low. `venue_policy`'s over-flag from
+era B disappears — but for the wrong reason: nothing is flagged at all.
+
+Because the check is unsound here it returns `verdict="unavailable"`, which
+does **not** block birth (BLUEPRINT §5b). Reversing an earlier block restored
+the first pillar from **0** candidates to 6 (GDG) / 3 (holdout).
+
+### `world_state` — the question is superseded, not answered
 
 Injecting the same moderate contradiction into the tool-bearing `events` intent:
-under v1 the pair scores 0.1140 and is classified `world_state` (absorbed — the
-narrow rule-level blindness). Under the real embedder it scores **0.7197 and is
-not classified at all** — it never registers as divergent, so it never reaches
-the world_state rule. The rule is *unreachable*, not fixed. v1 at least saw
-divergence and mis-attributed some of it; the real embedder sees none.
 
-### What got WORSE (the honest list)
+| embedder | directive cosine | classified as | cluster after injection |
+|---|---|---|---|
+| stub (v1) | 0.1140 | `world_state` (absorbed) | unstable=True, intra=3 |
+| real | **0.7197** | **not divergent at all** | unstable=False, intra=0 |
 
-1. **Contradiction detection: from partial to none.** Zero divergent pairs on
-   every intent; the whole four-type taxonomy is inert under a semantic embedder.
-2. **false_trigger at the unchanged threshold: 0.061 → 0.632** — a 10× regression.
-3. **Over-merging replaces over-fragmenting:** 63 clusters → 2. Both are failures;
-   the new one is harder to notice because capture *rises* (0.50 → 0.81) while
-   the trigger is in fact stealing most out-of-cluster traffic.
-4. **Holdout discovery at 0.6 is spuriously non-zero** (1 noise-dominated
-   mega-cluster) — a number that looks like progress and is not.
-5. **`venue_policy`'s over-flag "fix" is illusory:** it is no longer flagged
-   unstable only because nothing is flagged at all.
-6. **A new calibration coupling:** the clustering threshold is now embedder-
-   specific and must be versioned with `embedder_id`, or centroids and thresholds
-   silently disagree.
+Under v1 the narrow rule-level blindness was real (a moderate flip co-occurring
+with a differing `tool_result` got absorbed). Under the real embedder the pair
+never registers as divergent, so it never reaches the rule: **the rule is
+unreachable, not fixed**. v1 at least saw divergence and mis-attributed some of
+it; the real embedder sees none.
 
-### Process failures in this run (recorded, with their retries)
+### What got WORSE
 
-Two failures worth keeping, because both were caught by luck rather than by a
-check — and both are now guarded:
+1. **Contradiction detection: from partial to none.** The whole four-type
+   taxonomy is inert under a semantic embedder.
+2. **`false_trigger` at the unchanged threshold: 0.061 → 0.632** (10×).
+3. **Over-merging replaces over-fragmenting** — and hides better, because
+   `capture` *rises* (0.50 → 0.81) while the trigger steals most out-of-cluster
+   traffic.
+4. **Holdout 0 → 1 at 0.6 is spuriously non-zero** (a single noise-dominated
+   mega-cluster, purity 14/41) — a number that looks like progress and is not.
+5. **`venue_policy`'s over-flag "fix" is illusory.**
+6. **A new calibration coupling**: the threshold is now embedder-specific and
+   must be versioned with `embedder_id`, or centroids and thresholds silently
+   disagree.
 
-1. **The vector generation silently collapsed 190 texts to 2 vectors.**
+---
+
+## Three data sources, three roles
+
+Evaluating a detector on data generated with that detector's own geometry is a
+consistency check, not a discovery test. So:
+
+| Source | Role | Status |
+|---|---|---|
+| **ground truth** (`make_gdg_fixture.py`) | **recovery** — planted patterns must come back | realistic (era B/C) |
+| **adversarial** (`make_fixture.py`) | **rejection** — a bridge fires, traps do not | **still templated** (era A) |
+| **holdout** (`make_holdout.py`) | **discovery** — unplanted patterns emerge | realistic; imports **nothing** from `cle` |
+
+The holdout is the only one authored without knowledge of the embedder
+geometry, the cosine threshold, or any centroid — which is what makes it the
+confirmation point above.
+
+**Anti-templating guard** (`test_fixture_realism.py`): asserts **data**
+properties grouped by planted intent — ≥8 distinct openers per recurring
+intent, no sentence >15% of messages, timing and turn-gaps not single-valued.
+A fixture regressing to templated text fails the suite instead of being
+discovered three runs later.
+
+---
+
+## Process failures in these runs (kept, with their retries)
+
+Both were caught by luck rather than by a check; both are now guarded.
+
+1. **The vector generation silently collapsed 190 texts into 2 vectors.**
    `gemini-embedding-2` treats a list of `contents` as ONE multi-part document,
-   not a batch, so batching by content-list returned a single embedding per
-   call. Nothing raised; it was caught by eyeballing a 34 KB file that should
-   have been ~3 MB. *Retry:* one content per call (190 calls, 62.7 s).
-   *Now guarded:* `test_vector_cache_has_one_distinct_vector_per_text` asserts
+   not a batch. Nothing raised — it was caught by eyeballing a 34 KB file that
+   should have been ~3 MB. *Retry*: one content per call (190 calls, 62.7 s).
+   *Now guarded*: `test_vector_cache_has_one_distinct_vector_per_text` asserts
    count-matches-texts and that no two distinct texts share a vector.
 2. **The cache-coverage decision was incomplete.** Two consumers embed two
-   *shapes* of text: clustering/replay embed an individual opener, but the
-   stability classifier embeds `_directive_text(episode)` — the follow-ups
-   **joined** into one string, which is no single message. Covering only message
-   texts would have raised `CacheMissError` at R6. Found at R4-prep, later than
-   the "decide it now" instruction intended. *Retry:* cache 190 → 247 vectors.
+   *shapes* of text: clustering/replay embed an opener, but the stability
+   classifier embeds the follow-ups **joined** into one string, which is no
+   single message. Covering only message texts would have raised
+   `CacheMissError` mid-run. *Retry*: cache 190 → 247 vectors.
 
-A third, smaller note: a probe reaching for phrasing-bank strings the generator
-never drew into the fixture raised `CacheMissError` — the guard working as
-designed (loud, no silent recompute), not a defect.
+---
 
-### Centroid provenance (invariant added this run)
+## Honest caveats (apply to every number above)
 
-`TriggerSpec` records `embedder_id`, and `Image.hash` covers the trigger — so two
-images built on different embedders necessarily have different hashes. A centroid
-is only meaningful inside the vector space that produced it, so an embedder swap
-invalidates centroids exactly as a model swap invalidates a `model_fingerprint`,
-one layer deeper — and this one touches agent **identity**. Cross-space centroid
-comparison raises `SpaceMismatchError`, enforced where routing actually compares
-(replay: candidate vs each incumbent). Pinned by `test_embedder_provenance.py`,
-which also asserts the suite default is `CachedEmbedder` and that no test module
-imports the live embedder.
+- Replay tests the **trigger only**, never answer quality, and never the
+  temporal period (`period_tested: false`).
+- A fingerprint delta proves the **substrate changed**, not that the agent is
+  broken.
+- `capture_rate` is relative to the **current topology**, not an absolute.
+- **Silence-demotion** is data-injected in v1; the loop is not closed.
+- Demo closures are **synthetic** CLI sugar; real closures come from the detector.
+- The **adversarial/demo source is still templated**, so every era-A number
+  inherits that bias.
+- `examples/gdg_demo.py`'s 1.000 → 0.600 competition and its 0.143 false-trigger
+  are a **constructed window** with a **deliberately planted** bridge —
+  engineered to show the machinery fires, not an emergent result.
+
+---
+
+## Known debt
+
+- **De-template `make_fixture.py`** (and with it `full_loop.sh`, the four agent
+  YAMLs, the dashboard demo). It is the live-demo backbone and is excluded from
+  the realism guard.
+- **A contradiction operator that is not a distance** (signed / entailment).
+  Until then the taxonomy is inert outside `stub:hashed64`.
+- **A second independent confirmation** for the 0.775 threshold.
+- **Fixture debt**: all four labelled `intra_cluster` contradictions live in the
+  tool-**less** newsletter cluster, but world_state masking can only occur on a
+  tool-**bearing** one — so the fixture never exercised the case the classifier
+  was built for.
