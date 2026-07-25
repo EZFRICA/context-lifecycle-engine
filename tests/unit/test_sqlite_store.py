@@ -145,3 +145,58 @@ def test_sqlite_binary_payload_round_trip(tmp_path) -> None:
     h = content_hash(data)
     store.put(h, data)
     assert store.get(h) == data
+
+
+# ── backend selection (open_store) ──────────────────────────────────────────
+# The wiring, not the storage: which backend an entry point gets, and the
+# guarantee that the CLI and the dashboard cannot end up on different ones.
+
+import os  # noqa: E402
+
+import pytest  # noqa: E402
+
+from cle.store.backends import STORE_KINDS, FileStore, open_store  # noqa: E402
+
+
+def test_default_is_filestore_so_existing_state_keeps_working(tmp_path, monkeypatch) -> None:
+    monkeypatch.delenv("CLE_STORE", raising=False)
+    assert isinstance(open_store(tmp_path), FileStore)
+
+
+def test_sqlite_is_opt_in_by_argument_and_by_env(tmp_path, monkeypatch) -> None:
+    monkeypatch.delenv("CLE_STORE", raising=False)
+    assert isinstance(open_store(tmp_path, "sqlite"), SqliteStore)
+    monkeypatch.setenv("CLE_STORE", "sqlite")
+    assert isinstance(open_store(tmp_path), SqliteStore)
+    # An explicit argument beats the environment.
+    assert isinstance(open_store(tmp_path, "file"), FileStore)
+
+
+def test_unknown_kind_raises_instead_of_falling_back(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("CLE_STORE", "weaviate")   # deferred, not implemented
+    with pytest.raises(ValueError) as caught:
+        open_store(tmp_path)
+    assert "weaviate" in str(caught.value)
+    assert all(kind in str(caught.value) for kind in STORE_KINDS)
+
+
+def test_backends_hold_distinct_paths_so_a_switch_is_never_a_partial_read(tmp_path) -> None:
+    # Switching backends must start an empty store, not silently read half of
+    # the other one's data.
+    file_store = open_store(tmp_path, "file")
+    _seed(file_store, "only in the file store", ref="blocks/only_here")
+    sqlite_store = open_store(tmp_path, "sqlite")
+    assert sqlite_store.list_refs("") == []
+    assert (tmp_path / "store").is_dir() and (tmp_path / "store.db").is_file()
+
+
+def test_cli_and_dashboard_resolve_to_the_same_backend(tmp_path, monkeypatch) -> None:
+    """The divergence guard. A CLI writing sqlite while the dashboard reads a
+    FileStore would render an empty store and look like data loss, so both must
+    route through the one factory."""
+    from cle.cli.main import _store as cli_store
+    from dashboard.backend.reads import store as dashboard_store
+
+    for kind in STORE_KINDS:
+        monkeypatch.setenv("CLE_STORE", kind)
+        assert type(cli_store(tmp_path)) is type(dashboard_store(tmp_path))

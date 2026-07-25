@@ -15,20 +15,22 @@ from cle.lifecycle.topology import current_agents, latest_version
 from cle.oplog import OpLog
 from cle.runtime.container import load_containers, load_image
 from cle.runtime.metrics_volume import read_events
-from cle.store.backends import FileStore
+from cle.store.backends import StoreBackend, open_store
 
 _VOID = OpLog(io.StringIO())  # reads never pollute the real oplog
 
 
-def store(state_dir: Path) -> FileStore:
-    return FileStore(state_dir / "store")
+def store(state_dir: Path) -> StoreBackend:
+    # Same factory as the CLI: if the CLI writes sqlite the dashboard must read
+    # sqlite, or it would render an empty store and look like data loss.
+    return open_store(state_dir)
 
 
 def _short(h: str | None) -> str | None:
     return f"{h[:8]}…" if h else None
 
 
-def _image_view(backend: FileStore, image_hash: str) -> dict[str, Any]:
+def _image_view(backend: StoreBackend, image_hash: str) -> dict[str, Any]:
     """Public image facts for a card: pre_evidence, trigger, probe count."""
     try:
         image = load_image(backend, image_hash, _VOID)
@@ -150,7 +152,7 @@ def images(state_dir: Path) -> list[dict[str, Any]]:
     return out
 
 
-def _topology_record(backend: FileStore, version: int) -> dict[str, Any] | None:
+def _topology_record(backend: StoreBackend, version: int) -> dict[str, Any] | None:
     ref = f"topology/v{version}"
     refs = dict(backend.list_refs("topology/v"))
     if ref not in refs:
