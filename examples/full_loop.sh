@@ -26,9 +26,15 @@
 # OFFLINE / deterministic run (e.g. GitHub CI, no key) — force stub substrates:
 #     CLE_MODEL_A=stub-model-a CLE_MODEL_B=stub-model-b bash examples/full_loop.sh
 #
-# Run from the repo root:
+# Run from the repo root (the file is executable, so all three work):
+#     ./examples/full_loop.sh
 #     bash examples/full_loop.sh
-#     uv run bash examples/full_loop.sh   # if using uv
+#     uv run examples/full_loop.sh        # if using uv
+#
+# Backend: FileStore by default. For the sqlite store (one inspectable
+# .cle/store.db instead of .cle/store/), export it so the dashboard agrees:
+#     CLE_STORE=sqlite ./examples/full_loop.sh
+#     cle --store sqlite dashboard        # --store goes BEFORE the subcommand
 #
 # To reset state between runs without re-running the full script:
 #     uv run cle clean   (or rm -rf .cle)
