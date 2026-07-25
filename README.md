@@ -310,7 +310,7 @@ tests/          property/ + unit/ — hypothesis for the invariants
 uv run pytest -q
 ```
 
-**220 tests across 26 files** (+1 opt-in Weaviate integration test, skipped by
+**225 tests across 26 files** (+1 opt-in Weaviate integration test, skipped by
 default). **No test requires Weaviate, an API key, or a network call** — the
 detection embedder is a committed vector cache, a miss is an error rather than a
 live call, and a test asserts that no test module imports the live embedder.
@@ -321,11 +321,11 @@ Classified by what each assertion actually depends on:
 
 | Bucket | Tests | Meaning |
 |---|---|---|
-| **Embedder-agnostic** | **131** | No embedder in the assertion. The invariant core — hashing, store, integrity, evidence types, Goodhart, staged failure, lifecycle, segmentation, signals, fixture data properties. Holds in **any** era. |
+| **Embedder-agnostic** | **136** | No embedder in the assertion. The invariant core — hashing, store, integrity, evidence types, Goodhart, staged failure, lifecycle, segmentation, signals, fixture data properties. Holds in **any** era. |
 | **Stub-as-a-tool** | **58** | Needs *some* deterministic embedder, but the claim is space-independent (two-hash inequality, build determinism, both rates computed, tool gating, provenance). |
 | **Stub-as-the-subject** | **31** | True **only** in `stub:hashed64` — the contradiction taxonomy and the demo's exact rates. These do **not** describe the production system, and every such module carries a SCOPE header saying so. |
 
-The good news is the first row: **131 of 220 assertions are contract-core** and
+The good news is the first row: **136 of 225 assertions are contract-core** and
 independent of which embedder is configured.
 
 ### Three data sources, three roles

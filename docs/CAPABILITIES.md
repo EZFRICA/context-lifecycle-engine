@@ -4,7 +4,7 @@ What the Context Lifecycle Engine does, why, and where each capability is
 demonstrated. Two cardinal pillars — **detection** (agents emerge from usage)
 and **lifecycle** (they earn or lose standing on lived evidence) — over a
 content-addressed store, a runtime, and a live dashboard. Pinned by the
-**220-test** suite unless noted.
+**225-test** suite unless noted.
 
 > ## ⚠ Read this before any number below
 >
@@ -206,7 +206,7 @@ agent.
 
 ---
 
-## Test coverage — 220 tests across 26 files (+1 opt-in integration)
+## Test coverage — 225 tests across 26 files (+1 opt-in integration)
 
 **No test needs a real model, an API key, or the network**: fingerprinters are
 stubbed and the detection embedder is `CachedEmbedder` over committed vectors
@@ -221,11 +221,11 @@ is merely instantiated:
 
 | Bucket | Tests | Meaning |
 |---|---|---|
-| **1. Embedder-agnostic** | **131** | No embedder in the assertion at all. Hashing, store/backends, integrity, resolver, evidence types, Goodhart boundary, staged failure, tag targets, lifecycle, episode segmentation, signals, and the fixture **data** properties. Hold in **any** era. |
+| **1. Embedder-agnostic** | **136** | No embedder in the assertion at all. Hashing, store/backends, integrity, resolver, evidence types, Goodhart boundary, staged failure, tag targets, lifecycle, episode segmentation, signals, and the fixture **data** properties. Hold in **any** era. |
 | **2. Stub-as-a-tool** | **58** | Needs *some* deterministic embedder, but the claim is space-independent: two-hash inequality, build determinism, both rates always computed, tool gating, embedder provenance, runtime/switch cost, holdout structural sanity (both eras). |
 | **3. Stub-as-the-subject** | **31** | True **only** in `stub:hashed64`; these do **not** describe the production system. The contradiction taxonomy, the stability property tests, the adversarial/demo exact rates, the directive-band check. |
 
-**The good news is bucket 1: 131 of 220 assertions are invariant-core** — the
+**The good news is bucket 1: 136 of 225 assertions are invariant-core** — the
 contract itself (two hashes, Goodhart, staged-failure, evidence types,
 integrity) is entirely independent of which embedder is configured. Bucket 2
 adds 58 whose claims survive an embedder swap.
@@ -238,7 +238,7 @@ They are kept, not weakened: they correctly pin v1.
 
 | Area | Files (tests) | What they pin |
 |---|---|---|
-| Hashing & store | `test_content_hash` (6), `test_backends` (6), `test_sqlite_store` (32) | canonical JSON/sha256; Protocol conformance across backends; mobile vs immutable refs |
+| Hashing & store | `test_content_hash` (6), `test_backends` (6), `test_sqlite_store` (37) | canonical JSON/sha256; Protocol conformance across backends; mobile vs immutable refs |
 | Two-hash / tag targets | `test_tag_targets` (5) | source ≠ image namespaces; tags reject non-image |
 | Integrity | `test_integrity` (4), `test_resolver` (5) | corrupt read → log + refetch + raise; resolve fails fast, writes nothing |
 | Evidence types | `test_evidence_types` (6) | PreEvidence/Persistence rejected by the promotion gate at type level |
