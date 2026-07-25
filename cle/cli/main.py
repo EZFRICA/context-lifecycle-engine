@@ -1,6 +1,15 @@
-"""`cle` command-line interface — build | run | ps | tag | log | diff
-(BLUEPRINT §1 CLI surface) plus revalidate (BLUEPRINT §5 / P3: the
-re-validator needs a human-invocable entry point until v2 schedules it).
+"""`cle` command-line interface.
+
+BLUEPRINT §1 surface — build | run | ps | tag | log | diff — plus four
+commands the build needed and the contract did not name:
+- `revalidate` (BLUEPRINT §5 / P3: the re-validator needs a human-invocable
+  entry point until v2 schedules it),
+- `decline` (records a human refusal as one op line, moving no tag — the
+  human/engine divergence must be auditable in both directions),
+- `dashboard` (serves the FastAPI read-mostly view),
+- `clean` (resets the state directory).
+Every command emits exactly one JSON op line per operation (invariant 4);
+upward tag moves carry `evidence`.
 
 State model (decision, documented): the CLI persists on a FileStore under
 --state-dir (default .cle/) — store objects+refs, containers.json,

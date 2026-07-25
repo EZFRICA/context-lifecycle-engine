@@ -40,7 +40,7 @@ all-pinned candidates, registry, cross-host runtime spec.
 cle/
   store/        # objects.py (content_hash, Block), commits.py (SourceSpec,
                 # Image, TriggerSpec, evidence types), backends.py
-                # (Protocol, InMemory, File, Sqlite, Weaviate)
+                # (Protocol, InMemory, File, Sqlite; Weaviate deferred)
   detect/       # episodes.py (segmentation: silence + explicit markers for v1)
                 # clusters.py (incremental intent clustering, per-user baseline)
                 # embedders.py (Embedder impls + provenance + vector cache)
@@ -173,8 +173,10 @@ approvals, and numbers; `cle diff` renders the learned-topology delta.
 - Goodhart: reflection test asserting Container exposes no metrics read path.
 - Replay honesty: type-level test that PreEvidence cannot flow where Evidence
   is required.
-- All tests on InMemoryStore; Weaviate backend behind the same Protocol,
-  integration-tested separately.
+- All invariant tests on InMemoryStore; File and Sqlite backends share the
+  Protocol and its conformance suite. A Weaviate backend remains **planned,
+  not implemented** — the opt-in integration test only smoke-checks the
+  client library.
 - **Offline by construction**: no test may require a key or the network. The
   detection embedder in tests is a committed vector cache; a cache miss is an
   error, never a live call, and a test asserts no test module imports the live

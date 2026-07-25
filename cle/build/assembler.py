@@ -7,6 +7,11 @@ probe set — 12 probes drawn from the cluster's replay window at build
 time, frozen into the image), hash the complete artifact -> Image.
 Invariant 1: image.hash != source.hash (structural via cle_kind).
 Invariant 6: the fingerprint is what lets the re-validator expire proof.
+
+Tools are declarations, not prompt material: components of kind `tool` are
+EXCLUDED from the assembled prompt, and their names are recorded on the
+image as `mounted_tools` (hash-covered, so the mounted capability set is
+part of the artifact's identity).
 """
 
 import json

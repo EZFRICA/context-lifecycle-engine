@@ -7,9 +7,16 @@ Contract (cle-core-contracts):
   (immutable — moving one raises), `topology/<version>`.
 - Semver rule (applied by P3 tagging, recorded here): major = trigger
   changed, minor = component ref swapped, patch = lifecycle thresholds only.
-- `InMemoryStore` is the default and the only test dependency. WeaviateStore
-  (client v4) mirrors the Protocol; integration-tested separately — no unit
-  or property test may import it.
+Implementations, all behind the same Protocol and all exercised by the
+default suite (conformance is parametrized across them):
+- `InMemoryStore` — the default, and the only backend the invariant tests need.
+- `FileStore` — persistent CLI/dashboard state under `--state-dir`.
+- `SqliteStore` — persistent and inspectable; stdlib `sqlite3`, no server.
+
+`WeaviateStore` is **NOT implemented** — it remains the deferred remote
+backend (see the note on `SqliteStore` below). The opt-in integration test
+only asserts that the `weaviate` client library exposes its v4 surface; it
+does not exercise a CLE backend. No unit or property test may depend on it.
 """
 
 import json

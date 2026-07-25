@@ -16,6 +16,18 @@ centroid, competing with the existing topology). A period, when present,
 is carried into the image untested by replay — evaluating temporal fit
 retrospectively needs the v2 scheduler model, and pretending otherwise
 would overstate what replay proved.
+
+Two gates enforced here:
+- PROVENANCE. Routing compares the candidate centroid against every
+  incumbent's, and those cosines only mean something inside ONE vector
+  space, so a cross-space comparison raises `SpaceMismatchError` rather
+  than returning a plausible-looking number.
+- CAPABILITY (stage 2 of the tool gating; stage 1 is in the resolver). An
+  episode that REQUIRED a tool is captured only if the candidate mounts
+  it. Such episodes stay in the DENOMINATOR, so capture drops honestly
+  instead of hiding the capability gap. `tool_result` is read as frozen
+  decor and never scored — asserting it correct would be answer-quality
+  territory (invariant 5).
 """
 
 import statistics

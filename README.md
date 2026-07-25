@@ -253,8 +253,8 @@ be smuggled into a promotion.
 
 ### Store & runtime
 Content-addressed store behind a `Protocol` — `InMemoryStore` (default),
-`FileStore` (persistent CLI state), `SqliteStore`, and an optional
-`WeaviateStore`. `topology.yaml` is written only by `lifecycle/topology.py`;
+`FileStore` (persistent CLI state) and `SqliteStore`. A remote
+`WeaviateStore` is **deferred, not implemented**. `topology.yaml` is written only by `lifecycle/topology.py`;
 every change is a store commit under `topology/v<n>` carrying its cause.
 
 ---
