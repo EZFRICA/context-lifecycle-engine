@@ -3,6 +3,10 @@
 Written against the full three-stage pipeline: same source + same resolved
 components + same fingerprint => same image hash; and the image hash can
 never equal the source hash.
+
+SCOPE — bucket 2 (stub-as-a-tool): the stub embedder is incidental. Two-hash
+inequality and build determinism hold under ANY embedder; the stub is only a
+deterministic way to obtain a centroid.
 """
 
 import io

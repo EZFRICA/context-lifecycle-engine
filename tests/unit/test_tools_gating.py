@@ -2,6 +2,9 @@
 
 Tools are DECLARATIONS (name + capability tag), never runnable code — no
 execution, no API call, no network anywhere in these tests.
+
+SCOPE — bucket 2 (stub-as-a-tool): the stub is incidental. Tool resolution and
+mount gating are independent of the vector space.
 """
 
 import io

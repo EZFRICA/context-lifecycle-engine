@@ -1,4 +1,8 @@
-"""P2 runtime: FileStore conformance, mounts, one-way metrics, switch cost."""
+"""P2 runtime: FileStore conformance, mounts, one-way metrics, switch cost.
+SCOPE — bucket 2 (stub-as-a-tool): the stub only fabricates an image to run;
+the runtime, Goodhart-boundary, mount and switch-cost assertions are
+embedder-independent.
+"""
 
 import io
 import json

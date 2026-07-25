@@ -1,5 +1,10 @@
 """Replay validation properties: determinism, both rates always computed,
 empty-window failure writes nothing (invariant 3).
+
+SCOPE — bucket 2 (stub-as-a-tool): the stub is incidental. The claims — both
+rates always computed, determinism, topology competition lowers capture — are
+space-independent. The exact capture/false VALUES on the inline data are a
+by-product of the stub, not the point.
 """
 
 import io

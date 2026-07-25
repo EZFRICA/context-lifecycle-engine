@@ -2,6 +2,11 @@
 
 If clustering is not deterministic, replay (same window + same candidate
 => same report) cannot be. Property-tested before the implementation.
+
+SCOPE — bucket 2 (stub-as-a-tool): these are Embedder-PROTOCOL properties
+(embed determinism, L2 normalization, cosine bounds) plus two space-independent
+structural claims (identical openers share a cluster; disjoint vocabulary
+separates). They hold for CachedEmbedder too — not stub-only.
 """
 
 from hypothesis import given
