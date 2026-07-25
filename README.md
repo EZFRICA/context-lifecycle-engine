@@ -103,8 +103,7 @@ cp .env.example .env   # then fill in GEMINI_API_KEY
 ```
 
 `.env` is gitignored — never commit real keys. See `.env.example` for every
-recognized variable (LLM provider, Ollama fallback, actor label; the `WCD_*`
-entries are reserved for the deferred Weaviate backend and are read by nothing).
+recognized variable (LLM provider, Ollama fallback, actor label).
 
 The live fingerprint probes run at **temperature 0** (greedy decoding), so the
 same model yields the same footprint and a fingerprint delta means the *model*
@@ -151,9 +150,10 @@ uv run cle revalidate weekly_recap --model-id drifted-model-2
 ### The whole loop in one script
 
 ```bash
-./examples/full_loop.sh          # the file is executable
-bash examples/full_loop.sh       # or explicitly
-uv run examples/full_loop.sh     # or through uv
+./examples/full_loop.sh                          # the file is executable
+bash examples/full_loop.sh                       # or explicitly
+uv run examples/full_loop.sh                     # or through uv
+CLE_STORE=sqlite ./examples/full_loop.sh         # or with sqlite backend
 ```
 
 Runs on **real models by default**; force an offline deterministic run with
@@ -194,8 +194,8 @@ The CLI operates on a persistent state directory (`--state-dir`, default `.cle/`
 **Global option — goes BEFORE the subcommand:**
 
 ```bash
-cle --store sqlite build ...      # or: export CLE_STORE=sqlite
-cle --store sqlite dashboard      # NOT `cle dashboard --store sqlite`
+uv run cle --store sqlite build ...      # or: export CLE_STORE=sqlite
+uv run cle --store sqlite dashboard      # NOT `uv run cle dashboard --store sqlite`
 ```
 
 `--store {file,sqlite}` selects the persistence backend (default `file`, or
@@ -206,16 +206,16 @@ if it is launched with the same setting; that is why the flag is global.
 
 | Command | What it does |
 |---|---|
-| `cle build <src.yaml>` | Resolve → replay-validate → assemble; births the candidate (tag + topology). Replays against the current topology, so incumbents compete. `--replay-window`, `--history`, `--components`, `--model-id`. |
-| `cle run <agent> --workspace <ws>` | Instantiate (or switch) the workspace's container and solicit it. `--prompts N`. |
-| `cle ps` | Containers and their per-container metrics (solicitations, iterations, closures). |
-| `cle tag <agent> <state>` | Move a state tag (`--cost-ratio`, `--occurrences`, `--closures`, `--reason`); the shadow engine judges the same evidence. |
-| `cle log [topology.yaml]` | Op-log tail, or topology history with provenance and numbers. |
-| `cle diff <vA> <vB>` | Learned-topology delta between two versions. |
-| `cle revalidate <agent>` | Replay the frozen probe set; on drift, auto-demote to `trial`. `--model-id`. |
-| `cle decline <agent>` | Refuse a candidate — logs the refusal, moves no tag. `--reason`. |
-| `cle dashboard` | Launch the FastAPI dashboard. `--port`. |
-| `cle clean` | Reset the `.cle/` state directory. |
+| `uv run cle build <src.yaml>` | Resolve → replay-validate → assemble; births the candidate (tag + topology). Replays against the current topology, so incumbents compete. `--replay-window`, `--history`, `--components`, `--model-id`. |
+| `uv run cle run <agent> --workspace <ws>` | Instantiate (or switch) the workspace's container and solicit it. `--prompts N`. |
+| `uv run cle ps` | Containers and their per-container metrics (solicitations, iterations, closures). |
+| `uv run cle tag <agent> <state>` | Move a state tag (`--cost-ratio`, `--occurrences`, `--closures`, `--reason`); the shadow engine judges the same evidence. |
+| `uv run cle log [topology.yaml]` | Op-log tail, or topology history with provenance and numbers. |
+| `uv run cle diff <vA> <vB>` | Learned-topology delta between two versions. |
+| `uv run cle revalidate <agent>` | Replay the frozen probe set; on drift, auto-demote to `trial`. `--model-id`. |
+| `uv run cle decline <agent>` | Refuse a candidate — logs the refusal, moves no tag. `--reason`. |
+| `uv run cle dashboard` | Launch the FastAPI dashboard. `--port`. |
+| `uv run cle clean` | Reset the `.cle/` state directory. |
 
 ---
 
