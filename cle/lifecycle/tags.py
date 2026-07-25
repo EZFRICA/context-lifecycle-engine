@@ -8,8 +8,10 @@ Contract (cle-core-contracts, invariants 1, 4, 5):
   the only proof that can exist before an agent has lived; every move
   into `ephemeral` or `pinned` carries lived Evidence, no exception.
   Downward moves need no proof, only a logged reason.
-- Seven states per the published state machine:
+- FIVE states implemented (STATE_RANK):
   archived(0) -> candidate(1) -> trial(2) -> ephemeral(3) -> pinned(4).
+  The published part-7 machine also names `pattern` and `deprecated`; they
+  are deliberately NOT in v1 — do not reference them as if they existed.
   `ephemeral` = promoted on lived evidence; `pinned` = stable over ≥S
   solicitations / W days (engine rule, defaults 10/30, config).
 - Every tag op logs one JSON line; version refs are write-once
@@ -22,7 +24,7 @@ from cle.oplog import OpLog
 from cle.store.backends import StoreBackend
 from cle.store.commits import Evidence, PreEvidence, assert_tag_target
 
-# Part-7 seven-state ladder. archived sits below candidate: resurrection
+# The v1 ladder (five of the part-7 states). archived sits below candidate: resurrection
 # re-earns trial, never re-enters ephemeral directly.
 STATE_RANK = {"archived": 0, "candidate": 1, "trial": 2, "ephemeral": 3, "pinned": 4}
 

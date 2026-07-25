@@ -235,7 +235,7 @@ layer deeper, and this one touches agent **identity**. Cross-space comparison
 raises. The clustering **threshold travels with `embedder_id`** (0.6 for the
 stub, 0.775 for the real embedder); one number cannot serve both spaces.
 
-### Seven-state ladder
+### Lifecycle ladder — five states in v1
 ```
 archived(0)  ↔  candidate(1)  ↔  trial(2)  ↔  ephemeral(3)  ↔  pinned(4)
 ```
@@ -329,7 +329,7 @@ pinned by a committed test rather than a measurement script.
 
 P1–P3 of the v1 blueprint are implemented: two-hash store, three-stage build
 with replay validation, the minimal detector, the container runtime with
-switch-cost logging, the seven-state lifecycle with a shadow engine, the
+switch-cost logging, the five-state lifecycle with a shadow engine, the
 topology writer, and the re-validator — plus a live Gemini substrate, a real
 embedding substrate behind the Protocol, and the FastAPI dashboard.
 

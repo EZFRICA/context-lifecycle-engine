@@ -102,7 +102,9 @@ content-addressed store, a runtime, and a live dashboard. Pinned by the
   `diff_tokens` (*legacy demo*: Δ 4 blk · 127 tok).
 
 ## 6. Lifecycle — the second pillar (`cle/lifecycle`)
-- **Seven-state ladder** — `archived → candidate → trial → ephemeral → pinned`.
+- **Five-state ladder** — `archived → candidate → trial → ephemeral → pinned`.
+  (The published part-7 machine also names `pattern` and `deprecated`; those
+  are **not** implemented — `STATE_RANK` holds exactly these five.)
 - **Three standards of proof, type-separated** — `PreEvidence` (replay),
   `Evidence` (trial, lived), `Persistence` (drift). The promotion API rejects
   the other two at type level.
