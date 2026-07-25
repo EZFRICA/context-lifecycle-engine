@@ -1,6 +1,7 @@
 """One JSON line per operation — the single emitter for invariant 4.
 
-CLE need: every lifecycle op logs one JSON line (CLAUDE.md invariant 4) and
+CLE need: every lifecycle op logs one JSON line (invariant 4, BLUEPRINT §5)
+and
 those lines are a deliverable (the article-9 raw material). One emitter,
 used by every module, keeps the format from drifting; the format itself is
 specified in the cle-core-contracts skill:

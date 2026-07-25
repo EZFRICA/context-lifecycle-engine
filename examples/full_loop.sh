@@ -26,9 +26,15 @@
 # OFFLINE / deterministic run (e.g. GitHub CI, no key) — force stub substrates:
 #     CLE_MODEL_A=stub-model-a CLE_MODEL_B=stub-model-b bash examples/full_loop.sh
 #
-# Run from the repo root:
+# Run from the repo root (the file is executable, so all three work):
+#     ./examples/full_loop.sh
 #     bash examples/full_loop.sh
-#     uv run bash examples/full_loop.sh   # if using uv
+#     uv run examples/full_loop.sh        # if using uv
+#
+# Backend: FileStore by default. For the sqlite store (one inspectable
+# .cle/store.db instead of .cle/store/), export it so the dashboard agrees:
+#     CLE_STORE=sqlite ./examples/full_loop.sh
+#     cle --store sqlite dashboard        # --store goes BEFORE the subcommand
 #
 # To reset state between runs without re-running the full script:
 #     uv run cle clean   (or rm -rf .cle)
@@ -172,14 +178,30 @@ step "8. integrity violation — tamper a stored image, then read it"
 # ---------------------------------------------------------------------------
 # Verify-on-read: every fetched component is re-hashed; a mismatch logs
 # integrity_violation, refetches once, and raises rather than injecting corrupt bytes.
+# The tamper is deliberately BACKEND-SPECIFIC: corrupting bytes at rest is the
+# one thing the Protocol refuses to do for you (put() re-hashes and rejects
+# mislabeled content), so it must reach past the API — differently per backend.
+# Everything else here goes through open_store, so the demo follows $CLE_STORE.
 $PY - <<'EOF'
 import pathlib
-from cle.store.backends import FileStore
 from cle.lifecycle.topology import current_agents
-s = FileStore(".cle/store"); h = current_agents(s)["incident_triage"]["image"]
-p = pathlib.Path(".cle/store/objects") / h
-p.write_bytes(p.read_bytes() + b"tampered")
-print("corrupted incident_triage image", h[:8])
+from cle.store.backends import FileStore, SqliteStore, open_store
+
+store = open_store(".cle")
+image_hash = current_agents(store)["incident_triage"]["image"]
+if isinstance(store, SqliteStore):
+    import sqlite3
+    db = sqlite3.connect(".cle/store.db")
+    row = db.execute("SELECT data FROM objects WHERE hash = ?", (image_hash,)).fetchone()
+    db.execute("UPDATE objects SET data = ? WHERE hash = ?",
+               (bytes(row[0]) + b"tampered", image_hash))
+    db.commit()
+elif isinstance(store, FileStore):
+    blob = pathlib.Path(".cle/store/objects") / image_hash
+    blob.write_bytes(blob.read_bytes() + b"tampered")
+else:
+    raise SystemExit(f"tamper step does not know how to corrupt {type(store).__name__}")
+print("corrupted incident_triage image", image_hash[:8])
 EOF
 $CLE run incident_triage --workspace gamma --prompts 1 >/dev/null 2>&1 || true
 echo "--- integrity_violation fired on the corrupt read ---"

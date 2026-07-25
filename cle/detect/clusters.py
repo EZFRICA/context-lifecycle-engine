@@ -2,15 +2,26 @@
 
 Contract (replay-validation skill, BLUEPRINT §9 decision 2 as adopted in
 the approved P1 plan):
-- Embed the episode opener with a dedicated small embedder behind an
-  `Embedder` Protocol — centroids must survive agent-model swaps, so the
-  embedder is never the agents' model. P1 ships a deterministic local
-  embedder (hashed token buckets) so tests and the synthetic fixture run
-  offline; a real small-model embedder is a config swap behind the same
-  Protocol.
+- Embed the episode opener with a dedicated embedder behind an `Embedder`
+  Protocol — centroids must survive agent-model swaps, so the embedder is
+  never the agents' model. Two substrates ship: the deterministic local
+  `HashedTokenEmbedder` (hashed token buckets, offline) and a real
+  embedding model read from a committed vector cache
+  (`cle/detect/embedders.py`).
 - Incremental clustering: an opener joins the nearest centroid above the
   similarity threshold or founds a new cluster; centroids are running
   means, renormalized.
+- The similarity THRESHOLD is a property of the vector space, not a global
+  constant (`CLUSTER_THRESHOLD_BY_EMBEDDER`): bag-of-tokens puts
+  same-domain text at ~0.2-0.4, a real sentence embedder at ~0.7-0.9, so
+  one number cannot serve both. It travels with `embedder_id`, and an
+  unmapped embedder falls back to the config value (sweep before trusting).
+
+MEASURED, so no reader repeats the original assumption: swapping the
+embedder is NOT "a config swap behind the same Protocol". It changes agent
+identity (centroids are only meaningful in the space that produced them —
+hence `TriggerSpec.embedder_id`), it requires its own threshold, and it
+makes the cosine-based contradiction check unsound. See docs/METRICS.md.
 - Per-user baseline: median iterations across the user's episodes,
   excluding abandoned closures (anti-Goodhart guard).
 """

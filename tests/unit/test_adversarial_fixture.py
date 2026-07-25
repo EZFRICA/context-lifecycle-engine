@@ -4,6 +4,14 @@ false_trigger_rate — the demo may not only ever show 0.000.
 Consumes the COMMITTED history artifacts (not the make_fixture generator), so
 there is no import from examples/ (which a static analyzer can't resolve) and
 the test runs on exactly the data that ships.
+
+SCOPE — `stub:hashed64` ONLY. These assertions describe the v1
+bag-of-tokens mechanism, not the production embedder. In a semantic space
+(`google:gemini-embedding-2:768`) they do not hold: capture/false_trigger are
+lexical outcomes of the templated era-A fixture — the bridge fires because it
+SHARES TOKENS, not because it is semantically close.
+They stay because they correctly pin v1; they are not general invariants.
+See docs/METRICS.md (embedder upgrade run).
 """
 
 import io

@@ -10,6 +10,13 @@ approved P1 plan):
 - Cold start: <14 days of history or <20 episodes => no candidates; the
   detector observes silently and logs {"op":"detector_observing",...}.
 
+`Message` carries two optional capability fields, both pure decor the
+detector may READ but never act on: `requires_tool` (the capability the
+task needed) and `tool_result` (the frozen environmental outcome, e.g.
+"no_slot"). No code path executes a tool or asserts a result correct —
+tool output is answer-quality territory, which replay never validates
+(invariant 5).
+
 PROVISIONAL — closure completion. The skill's two labels are contradictory
 on the no-marker cells (success is "explicit marker / no return" while
 abandoned is "no marker AND no return to cluster": a silent non-returning

@@ -6,7 +6,13 @@ __pycache__/
 .DS_Store
 dist/
 *.egg-info/
-.claude/
+# .claude/ holds BOTH shared project context and personal local state.
+# The skills and the reviewer agent are part of the repo — a clone without
+# them gets a different reviewer and different contracts. settings.local.json
+# is per-developer (accumulated permission grants) and stays out.
+.claude/*
+!.claude/agents/
+!.claude/skills/
 .cle/
 .env
 .env.*

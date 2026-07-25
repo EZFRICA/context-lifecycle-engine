@@ -7,12 +7,20 @@ Contract (cle-core-contracts):
   (immutable — moving one raises), `topology/<version>`.
 - Semver rule (applied by P3 tagging, recorded here): major = trigger
   changed, minor = component ref swapped, patch = lifecycle thresholds only.
-- `InMemoryStore` is the default and the only test dependency. WeaviateStore
-  (client v4) mirrors the Protocol; integration-tested separately — no unit
-  or property test may import it.
+Implementations, all behind the same Protocol and all exercised by the
+default suite (conformance is parametrized across them):
+- `InMemoryStore` — the default, and the only backend the invariant tests need.
+- `FileStore` — persistent CLI/dashboard state under `--state-dir`.
+- `SqliteStore` — persistent and inspectable; stdlib `sqlite3`, no server.
+
+`WeaviateStore` is **NOT implemented** — it remains the deferred remote
+backend (see the note on `SqliteStore` below). The opt-in integration test
+only asserts that the `weaviate` client library exposes its v4 surface; it
+does not exercise a CLE backend. No unit or property test may depend on it.
 """
 
 import json
+import os
 import re
 import sqlite3
 from pathlib import Path
@@ -139,10 +147,15 @@ class SqliteStore:
     """SQLite-backed store — determinism beyond InMemory, one inspectable file.
 
     CLE need: the lifecycle persists across processes and must be
-    INSPECTABLE (the GDG use case and full_loop run on it); stdlib
-    sqlite3, zero network, deterministic — eligible for the default test
-    suite. Weaviate remains the deferred remote/vector backend behind the
-    integration marker. Same Protocol, same shared ref rule.
+    INSPECTABLE — one file you can open with any sqlite client, instead of a
+    tree of hash-named blobs. stdlib sqlite3, zero network, deterministic, so
+    it is eligible for the default test suite. Weaviate remains the deferred
+    remote/vector backend. Same Protocol, same shared ref rule.
+
+    Selected at runtime via `open_store` (CLE_STORE=sqlite / `--store sqlite`);
+    `FileStore` stays the default. Single-writer by design: one commit per
+    operation, no WAL and no busy-timeout, so concurrent writers are out of
+    scope (the CLI writes, the dashboard reads).
     """
 
     def __init__(self, path: Path | str) -> None:
@@ -192,3 +205,29 @@ class SqliteStore:
 
     def close(self) -> None:
         self._db.close()
+
+
+# ── backend selection ────────────────────────────────────────────────────────
+# ONE factory, used by every entry point (CLI and dashboard). They must never
+# construct a backend independently: a CLI writing sqlite while the dashboard
+# reads a FileStore would diverge silently, and the divergence would look like
+# data loss rather than a config mistake.
+STORE_KINDS = ("file", "sqlite")
+
+
+def open_store(state_dir: Path | str, kind: str | None = None) -> StoreBackend:
+    """Open the persistent store for a state directory.
+
+    `kind` defaults to $CLE_STORE, itself defaulting to "file" — so existing
+    state and existing invocations keep working untouched. The two backends
+    hold DIFFERENT paths under the same state dir (`store/` vs `store.db`), so
+    switching does not read the other's data: it starts an empty one, which is
+    honest rather than a silent partial read.
+    """
+    state_dir = Path(state_dir)
+    kind = (kind or os.getenv("CLE_STORE") or "file").lower()
+    if kind == "file":
+        return FileStore(state_dir / "store")
+    if kind == "sqlite":
+        return SqliteStore(state_dir / "store.db")
+    raise ValueError(f"unknown store kind {kind!r}; expected one of {STORE_KINDS}")

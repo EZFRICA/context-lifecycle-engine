@@ -3,6 +3,14 @@
 Locks the two numbers the demo publishes: a legitimate incumbent drops
 capture below 1.0, and the planted bridge yields a non-trivial false_trigger.
 Both are trigger-only replay (invariant 5); tool_result is never scored.
+
+SCOPE — `stub:hashed64` ONLY. These assertions describe the v1
+bag-of-tokens mechanism, not the production embedder. In a semantic space
+(`google:gemini-embedding-2:768`) they do not hold: the exact 1.000 / 0.600 /
+0.143 figures come from token overlap in a hand-built window; a semantic
+embedder reroutes that window entirely.
+They stay because they correctly pin v1; they are not general invariants.
+See docs/METRICS.md (embedder upgrade run).
 """
 
 import io

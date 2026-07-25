@@ -1,6 +1,10 @@
 """Replay-time capability gating: capture = centroid match AND tool mount.
 
 tool_result is decor: read, never asserted correct (invariant 5).
+
+SCOPE — bucket 2 (stub-as-a-tool): the stub is incidental. The claim — capture
+requires centroid match AND tool mount, unmounted-tool episodes stay in the
+denominator — is space-independent.
 """
 
 import io

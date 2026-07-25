@@ -6,6 +6,15 @@ environmental, cluster stays stable, candidate still born. Plus the two
 approved adjustments: grey-zone (total partition, unstable by default),
 no-tool-never-world_state, and the ADVERSARIAL world_state case (severe
 directive flip + tool change -> unstable, not excused).
+
+SCOPE — `stub:hashed64` ONLY. These assertions describe the v1
+bag-of-tokens mechanism, not the production embedder. In a semantic space
+(`google:gemini-embedding-2:768`) they do not hold: the classifier returns
+`unavailable` and NO pair is ever divergent, so the whole taxonomy is inert.
+The tests here that explicitly call `default_embedder()` are the ones pinning
+that fact.
+They stay because they correctly pin v1; they are not general invariants.
+See docs/METRICS.md (embedder upgrade run).
 """
 
 import io

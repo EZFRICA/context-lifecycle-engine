@@ -10,6 +10,17 @@ Contract (replay-validation skill):
 
 The recurrence signal carries the PeriodSpec that becomes the temporal
 half of the candidate's TriggerSpec (BLUEPRINT §4).
+
+Two entry points:
+- `detect_signal` — the raw classifier over one cluster's episodes. Takes
+  no embedder and runs no stability check.
+- `detect_signal_gated` — the same, preceded by cluster-stability analysis
+  (BLUEPRINT §5b). An `unstable` cluster is VETOED (no candidate: don't
+  automate a self-contradicting pattern). An `unavailable` verdict does
+  NOT veto — the candidate is born carrying `stability="unavailable"` in
+  its provenance, a disclosed gap surfaced at the human override gate.
+  `Signal.stability` therefore records what the check CONCLUDED, and is
+  never "stable" when the check could not run.
 """
 
 import statistics

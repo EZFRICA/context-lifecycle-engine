@@ -10,6 +10,16 @@ forms cover both authorship paths):
 - `#<64-hex>` — direct content address, as the detector writes it.
 - `#<ref-name>` — a name in the store's ref table, as a human writes it.
 Both resolve to a content hash whose object must exist and verify.
+
+Tool gating (stage 1 of two — the other is capability gating in replay):
+- every name in the source's `tools:` list must resolve under `#tools/<name>`
+  AND be of kind `tool`, else `ResolutionError`;
+- the trigger's `requires_tools` must be a subset of the declared mounts,
+  else `ResolutionError` — a candidate may not claim an intent whose
+  capability it does not mount.
+Tools are DECLARATIONS: nothing here executes one, and no network is
+touched. A gating failure obeys invariant 3 like any other stage-1 failure
+(nothing written but the build log line).
 """
 
 import json

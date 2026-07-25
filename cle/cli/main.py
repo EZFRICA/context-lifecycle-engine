@@ -1,8 +1,18 @@
-"""`cle` command-line interface — build | run | ps | tag | log | diff
-(BLUEPRINT §1 CLI surface) plus revalidate (BLUEPRINT §5 / P3: the
-re-validator needs a human-invocable entry point until v2 schedules it).
+"""`cle` command-line interface.
 
-State model (decision, documented): the CLI persists on a FileStore under
+BLUEPRINT §1 surface — build | run | ps | tag | log | diff — plus four
+commands the build needed and the contract did not name:
+- `revalidate` (BLUEPRINT §5 / P3: the re-validator needs a human-invocable
+  entry point until v2 schedules it),
+- `decline` (records a human refusal as one op line, moving no tag — the
+  human/engine divergence must be auditable in both directions),
+- `dashboard` (serves the FastAPI read-mostly view),
+- `clean` (resets the state directory).
+Every command emits exactly one JSON op line per operation (invariant 4);
+upward tag moves carry `evidence`.
+
+State model (decision, documented): the CLI persists on a store selected by
+`--store` / $CLE_STORE (FileStore by default, SqliteStore opt-in) under
 --state-dir (default .cle/) — store objects+refs, containers.json,
 metrics/, log.jsonl — because the lifecycle outlives any process. The
 visible topology.yaml is written next to the state dir root.
@@ -30,7 +40,7 @@ from cle.oplog import OpLog
 from cle.runtime.container import ensure_container, load_containers, load_image, run_prompts
 from cle.runtime.metrics_volume import read_events
 from cle.runtime.mounts import Mount
-from cle.store.backends import FileStore
+from cle.store.backends import STORE_KINDS, StoreBackend, open_store
 from cle.store.commits import Evidence, SourceSpec
 from cle.store.objects import Block, content_hash
 
@@ -39,11 +49,21 @@ app = typer.Typer(help="CLE — Context Lifecycle Engine.")
 _WINDOW = re.compile(r"^(\d+)([dh])$")
 _HASH = re.compile(r"^[0-9a-f]{64}$")
 STATE_DIR_OPTION = typer.Option(Path(".cle"), "--state-dir", help="Persistent CLE state.")
+STORE_OPTION = typer.Option(
+    None, "--store", help=f"Persistence backend {STORE_KINDS} (default: file, or $CLE_STORE)."
+)
 
 
 @app.callback()
-def cli() -> None:
+def cli(store: str = STORE_OPTION) -> None:
     """The lifecycle CLI: evidence in, tags moved, everything logged."""
+    # Set once, before any command runs, so every _store() call in this process
+    # AND any subprocess (the dashboard) agree on the backend. Selecting it per
+    # command would let two commands in one session write to different stores.
+    if store is not None:
+        if store.lower() not in STORE_KINDS:
+            raise typer.BadParameter(f"--store must be one of {STORE_KINDS}, got {store!r}")
+        os.environ["CLE_STORE"] = store.lower()
 
 
 class StubFingerprinter:
@@ -66,8 +86,10 @@ def _parse_window(label: str) -> timedelta:
     return timedelta(days=value) if unit == "d" else timedelta(hours=value)
 
 
-def _store(state_dir: Path) -> FileStore:
-    return FileStore(state_dir / "store")
+def _store(state_dir: Path) -> StoreBackend:
+    # Never construct a backend directly — open_store is the single selection
+    # point the dashboard also uses (see backends.open_store).
+    return open_store(state_dir)
 
 
 def _oplog(state_dir: Path):
@@ -81,7 +103,7 @@ def _actor() -> str:
     return f"human:{os.getenv('CLE_ACTOR') or getpass.getuser()}"
 
 
-def _resolve_image_hash(backend: FileStore, agent_or_image: str) -> tuple[str, str | None]:
+def _resolve_image_hash(backend: StoreBackend, agent_or_image: str) -> tuple[str, str | None]:
     """Accept a raw image hash or an agent name from the topology."""
     if _HASH.match(agent_or_image):
         return agent_or_image, None
@@ -101,7 +123,7 @@ def _load_history(path: Path) -> list[Message]:
     return sorted(messages, key=lambda m: m.ts)
 
 
-def _seed_components(store: FileStore, components_dir: Path) -> None:
+def _seed_components(store: StoreBackend, components_dir: Path) -> None:
     # Simulates the populated store a running CLE would have.
     for component_file in sorted(components_dir.glob("*.yaml")):
         spec = yaml.safe_load(component_file.read_text())

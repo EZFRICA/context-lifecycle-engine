@@ -17,7 +17,7 @@ import pytest
 
 from cle.detect.clusters import HashedTokenEmbedder, cosine
 from cle.detect.episodes import DetectorConfig, Message, segment
-from cle.detect.stability import _directive_text
+from cle.detect.stability import _directive_text, divergence_check_available
 
 EXAMPLES = Path(__file__).resolve().parent.parent.parent / "examples"
 CFG = DetectorConfig()
@@ -79,19 +79,45 @@ def test_gdg_timing_is_not_single_valued() -> None:
 
 
 def test_tool_bearing_intent_directive_band_is_not_degenerate() -> None:
+    # SCOPE — `stub:hashed64` ONLY (the one test in this module that is not a
+    # pure data property). Under the real embedder this band is 0.0000 again,
+    # for the OPPOSITE reason: not one repeated cosine but NO divergent pair at
+    # all. So it cannot be read as "the fixture is varied" in that space — there
+    # it is the anti-templating DATA checks above that carry the guarantee.
+    #
     # The events intent is tool-bearing; its divergent-pair directive cosines
     # must SPREAD (band_width > the degeneracy floor). A degenerate band means
     # the follow-ups were templated — the exact defect that made moderate-band
     # calibration impossible in the old fixture.
+    # Guard the scope in CODE, not just in prose: this check is only meaningful
+    # where the divergence heuristic is calibrated. Elsewhere "no divergent
+    # pairs" is the measured behaviour of the OPERATOR (cosine does not detect
+    # contradiction), and blaming the fixture for it would be a false accusation.
+    space = getattr(EMB, "embedder_id", None)
+    if not divergence_check_available(space):
+        pytest.skip(
+            f"directive-band check is calibrated for the stub space only; "
+            f"embedder_id={space!r} produces no divergent pairs by construction "
+            f"(operator limitation, not a templated fixture)"
+        )
+
     by = _episodes_by_intent(_load(GDG))
     events = sorted(by["events"], key=lambda e: e.started_at)
     dirs = [EMB.embed(_directive_text(e)) for e in events]
     cosines = [cosine(dirs[i], dirs[j])
                for i in range(len(dirs)) for j in range(i + 1, len(dirs))
                if cosine(dirs[i], dirs[j]) < CFG.directive_divergence_threshold]
-    assert cosines, "no divergent pairs at all — follow-ups collapsed to one point"
+    assert cosines, (
+        f"no divergent pairs under embedder_id={space!r}. In the stub space this "
+        "means the follow-ups collapsed to one point (a TEMPLATED fixture); "
+        "in any other space it would mean the cosine operator cannot separate "
+        "directives at all — hence the skip above."
+    )
     band = max(cosines) - min(cosines)
-    assert band > CFG.degenerate_band_width, f"events directive band {band:.4f} is degenerate"
+    assert band > CFG.degenerate_band_width, (
+        f"events directive band {band:.4f} is degenerate under {space!r} — "
+        "the follow-ups look templated"
+    )
 
 
 # ── the holdout (discovery) fixture ─────────────────────────────────────────

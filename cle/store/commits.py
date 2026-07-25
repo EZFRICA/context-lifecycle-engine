@@ -3,9 +3,17 @@
 Contract (cle-core-contracts, BLUEPRINT §4-§5):
 - `SourceSpec(yaml_raw, hash)` — the candidate's source, hashed as-is.
 - `Image(source_hash, resolved_refs, assembled_prompt, trigger,
-  model_fingerprint, pre_evidence, hash)` — the built artifact; `hash`
-  covers ALL fields. Invariant 1: image.hash != source.hash, always
-  (structural via cle_kind domain separation, see Storable).
+  model_fingerprint, pre_evidence, probe_set, mounted_tools,
+  probe_output_hashes, hash)` — the built artifact; `hash` covers ALL
+  fields. Invariant 1: image.hash != source.hash, always (structural via
+  cle_kind domain separation, see Storable).
+- `TriggerSpec(centroid, embedder_id, period)` — the entrypoint. A centroid
+  is only meaningful inside the vector space that produced it, so its
+  provenance is recorded and covered by `Image.hash`: two images built on
+  different embedders necessarily differ. Comparing centroids across
+  provenance raises `SpaceMismatchError`. There is deliberately NO
+  `model_version` — the embedding API exposes no version signal distinct
+  from the model id, and a placeholder would give false drift assurance.
 - Lifecycle tags attach to Image hashes only; tagging anything else raises
   `TagTargetError` — `assert_tag_target` is the single guard every tagging
   path must route through.

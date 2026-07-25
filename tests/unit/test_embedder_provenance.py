@@ -5,6 +5,10 @@ CachedEmbedder over committed vectors, a cache miss is an error (never a silent
 recompute), and NO test module imports RealEmbedder (the network+key path).
 This is a TEST, not a convention — an untested rule drifts on the first rushed
 session.
+
+SCOPE — bucket 2 (stub-as-a-tool): these pin the embedder-swap CONTRACT
+(provenance, cache-miss-is-error, cross-space comparison raises, cache
+integrity). The contract is not tied to any one vector space.
 """
 
 import json
