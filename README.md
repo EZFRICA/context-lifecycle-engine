@@ -103,8 +103,8 @@ cp .env.example .env   # then fill in GEMINI_API_KEY
 ```
 
 `.env` is gitignored — never commit real keys. See `.env.example` for every
-recognized variable (LLM provider, Ollama fallback, actor label, optional
-Weaviate backend).
+recognized variable (LLM provider, Ollama fallback, actor label; the `WCD_*`
+entries are reserved for the deferred Weaviate backend and are read by nothing).
 
 The live fingerprint probes run at **temperature 0** (greedy decoding), so the
 same model yields the same footprint and a fingerprint delta means the *model*
@@ -151,13 +151,18 @@ uv run cle revalidate weekly_recap --model-id drifted-model-2
 ### The whole loop in one script
 
 ```bash
-bash examples/full_loop.sh
+./examples/full_loop.sh          # the file is executable
+bash examples/full_loop.sh       # or explicitly
+uv run examples/full_loop.sh     # or through uv
 ```
 
 Runs on **real models by default**; force an offline deterministic run with
-`CLE_MODEL_A=stub-model-a CLE_MODEL_B=stub-model-b bash examples/full_loop.sh`
-(what CI does). Twelve steps: regenerate fixtures, build four agents
-(`weekly_recap` lands at capture **0.60** — the `status_report` incumbent owns
+`CLE_MODEL_A=stub-model-a CLE_MODEL_B=stub-model-b ./examples/full_loop.sh`
+(what CI does). Add `CLE_STORE=sqlite` to run the whole loop on the sqlite
+backend instead of the default file store.
+
+Twelve steps: regenerate fixtures, build four agents (`weekly_recap` lands at
+capture **0.60** — the `status_report` incumbent owns
 two of its episodes), replay against a deliberately adversarial window
 (`false_trigger ≈ 0.081` — one bridge fires, four near-miss traps rejected), run
 two workspaces, show a real container **switch** cost (`Δ 4 blocks · 127
@@ -169,7 +174,8 @@ with the test suite. *All era-A figures — the source is templated.*
 ### Live dashboard
 
 ```bash
-uv run cle dashboard --port 8000   # http://localhost:8000
+uv run cle dashboard --port 8000                  # http://localhost:8000
+uv run cle --store sqlite dashboard --port 8000   # if the CLI wrote sqlite
 ```
 
 A single page (HTML + Alpine, no build step) over the persistent `.cle/` state,
@@ -184,6 +190,19 @@ as `human:dashboard`. See `dashboard/README.md`.
 ## CLI reference
 
 The CLI operates on a persistent state directory (`--state-dir`, default `.cle/`).
+
+**Global option — goes BEFORE the subcommand:**
+
+```bash
+cle --store sqlite build ...      # or: export CLE_STORE=sqlite
+cle --store sqlite dashboard      # NOT `cle dashboard --store sqlite`
+```
+
+`--store {file,sqlite}` selects the persistence backend (default `file`, or
+`$CLE_STORE`). The two hold **different paths** under the state dir —
+`.cle/store/` vs `.cle/store.db` — so switching starts an empty store rather
+than half-reading the other. The dashboard reads whatever the CLI wrote only
+if it is launched with the same setting; that is why the flag is global.
 
 | Command | What it does |
 |---|---|
@@ -253,10 +272,13 @@ wants `Evidence` rejects the other two at type level — replay numbers can neve
 be smuggled into a promotion.
 
 ### Store & runtime
-Content-addressed store behind a `Protocol` — `InMemoryStore` (default),
-`FileStore` (persistent CLI state) and `SqliteStore`. A remote
-`WeaviateStore` is **deferred, not implemented**. `topology.yaml` is written only by `lifecycle/topology.py`;
-every change is a store commit under `topology/v<n>` carrying its cause.
+Content-addressed store behind a `Protocol` — `InMemoryStore` (tests),
+`FileStore` (the CLI default) and `SqliteStore` (one inspectable `.cle/store.db`,
+opt-in via `--store sqlite`). Every entry point selects through the single
+`open_store` factory, so the CLI and the dashboard can never end up on
+different backends. A remote `WeaviateStore` is **deferred, not implemented**.
+`topology.yaml` is written only by `lifecycle/topology.py`; every change is a
+store commit under `topology/v<n>` carrying its cause.
 
 ---
 
