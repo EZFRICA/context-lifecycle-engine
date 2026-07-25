@@ -110,8 +110,10 @@ There is deliberately **no `model_version`**: the embedding API exposes no
 version signal distinct from the model id, and storing a placeholder would give
 false assurance about detecting silent provider-side drift.
 
-Invariants: see CLAUDE.md — two hashes, tag targets, Goodhart boundary,
-staged builds consume nothing.
+Invariants (this document is their home): two hashes and tag targets (§4
+above), the Goodhart boundary (§1 runtime scope), staged builds consume
+nothing (§3.1), evidence type separation (§5), a non-measurement is never a
+verdict (§5b), proof expires (§5). CLAUDE.md used to repeat this list.
 
 ## 5. Evidence — three stages, enforced by types
 
