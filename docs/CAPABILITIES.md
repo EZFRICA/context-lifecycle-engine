@@ -18,9 +18,10 @@ content-addressed store, a runtime, and a live dashboard. Pinned by the
 >
 > **2. A real embedding model helps, but is not a drop-in.** At the old 0.6
 > threshold it over-merges into 2 clusters and `false_trigger` jumps
-> 0.061 → 0.632. Recalibrated to **0.775** (scoped to `embedder_id`) it beats
-> v1 — but GDG recovery tops out at **2/7**, and of the 6 candidates it births
-> only **2 are genuine** (2 fragments, 2 spurious).
+> 0.061 → 0.632 (events intent, ideal centroid). Recalibrated to **0.775**
+> (scoped to `embedder_id`) it beats v1 — but GDG recovery tops out at **2/7**,
+> and of the 6 candidates it births only **2 are genuine** (2 fragments,
+> 2 spurious).
 >
 > **3. It breaks contradiction detection.** Cosine measures topical
 > relatedness, not contradiction, so the four-type taxonomy (§10) detects
@@ -255,7 +256,7 @@ They are kept, not weakened: they correctly pin v1.
 | Contradiction taxonomy | `test_contradictions` (23), `test_stability_classifier` (4) | the four types + guards; `unavailable` births a candidate **with a disclosed gap**; `unstable` stays a hard veto; degeneracy diagnostic |
 | Fixture realism | `test_fixture_realism` (14), `test_gdg_fixture` (11) | ≥8 distinct openers per *planted* intent; no sentence >15%; timing not single-valued; labels stay in the sidecar |
 | Adversarial & demo | `test_adversarial_fixture` (1), `test_gdg_demo` (2) | a bridge yields non-trivial false-trigger; incumbent competition drops capture below 1.0 |
-| Holdout discovery | `test_holdout_discovery` (2) | structural sanity in **both** eras (v1 stub, and the real embedder at its scoped threshold). Discovery **count and purity are reported, not gated** |
+| Holdout discovery | `test_holdout_discovery` (2) | structural sanity in **both** eras (v1 stub, and the real embedder at its scoped threshold). Discovery **count and purity are reported, not gated**. Both run the **ungated** `detect_signal`, so no stability check executes and `Signal.stability` keeps its unexamined default — that field carries **no information** here |
 | Runtime & Goodhart | `test_goodhart_boundary` (5), `test_runtime` (6) | Container has no metrics read path; mounts; switch cost carries both diffs |
 | Lifecycle | `test_lifecycle` (6) | proof ladder & gate; shadow decides but never writes; topology chain/diff; revalidate holds then drifts |
 
@@ -270,6 +271,11 @@ They are kept, not weakened: they correctly pin v1.
 - **Silence-demotion** is data-injected in v1 — the loop is not closed.
 - Demo closures are **synthetic** CLI sugar.
 - `capture_rate` is relative to the **current topology**, not an absolute.
+- The holdout tests' `Signal.stability` output is **not a verdict**: they call
+  the ungated `detect_signal`, which never runs the contradiction check, so the
+  field shows its default rather than a measured `stable`. Do not read it
+  against the `unavailable` verdict documented elsewhere — they are different
+  code paths, not a contradiction.
 - **Detection does not recover realistic usage.** At best 2/7 planted intents
   on the GDG fixture (v1: 0/7 at *its* best across a full sweep). The clean
   three-agent result is the legacy templated source only.

@@ -32,10 +32,11 @@ are unflattering. Three measurement runs found:
 2. **A real embedding model helps, but is not a drop-in.** At the old 0.6
    threshold `google:gemini-embedding-2:768` fails the *opposite* way —
    over-merging everything into 2 clusters, with `false_trigger` jumping
-   **0.061 → 0.632**. Recalibrated to **0.775** (scoped to `embedder_id`) it
-   beats v1, but GDG recovery still tops out at **2/7** planted intents, and of
-   the 6 candidates it births only **2 are genuine** (2 pure fragments, 2
-   spurious — including a 20-episode noise agglomerate).
+   **0.061 → 0.632** (events intent, ideal centroid). Recalibrated to
+   **0.775** (scoped to `embedder_id`) it beats v1, but GDG recovery still tops
+   out at **2/7** planted intents, and of the 6 candidates it births only
+   **2 are genuine** (2 pure fragments, 2 spurious — including a 20-episode
+   noise agglomerate).
 
 3. **It breaks contradiction detection outright.** Cosine measures *topical
    relatedness, not contradiction*: the planted **opposing** directives score

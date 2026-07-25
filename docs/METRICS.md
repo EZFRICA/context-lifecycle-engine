@@ -58,7 +58,8 @@ was tuned to soften it.
 Swapping in `google:gemini-embedding-2:768` (frozen vectors, offline):
 
 - at the **unchanged 0.6** threshold it fails the opposite way — **over-merging**
-  everything into **2 clusters**, with `false_trigger` exploding **0.061 → 0.632**;
+  everything into **2 clusters**, with `false_trigger` exploding
+  **0.061 → 0.632** (events intent, ideal centroid);
 - **recalibrated to 0.775** it genuinely beats v1 — but GDG recovery still tops
   out at **2/7** planted intents, and of the 6 candidates it births only **2 are
   genuine** (see *Born-candidate purity*);
@@ -235,6 +236,12 @@ Note the holdout wording: earlier drafts said it "recovers 3/3". That
 overstated it — 8/9, 8/8, 5/5 are **purity**; under recall *and* purity it is
 **2 clean + 1 pure fragment**.
 
+Also note what the holdout companion test does NOT report: it drives the
+**ungated** `detect_signal`, so no stability check runs and the `Signal.stability`
+it prints is an unexamined default (`stable`), not a measurement. It must not be
+read against the `unavailable` verdict below — different code path, not a
+contradiction.
+
 ### Consumer 2 — stability / contradiction goes fully blind
 
 | figure | v1 | real |
@@ -281,7 +288,8 @@ it; the real embedder sees none.
 
 1. **Contradiction detection: from partial to none.** The whole four-type
    taxonomy is inert under a semantic embedder.
-2. **`false_trigger` at the unchanged threshold: 0.061 → 0.632** (10×).
+2. **`false_trigger` at the unchanged threshold: 0.061 → 0.632** (10×; events
+   intent, ideal centroid).
 3. **Over-merging replaces over-fragmenting** — and hides better, because
    `capture` *rises* (0.50 → 0.81) while the trigger steals most out-of-cluster
    traffic.
