@@ -41,12 +41,7 @@ content-addressed store, a runtime, and a live dashboard. Pinned by the
 - **Verify-on-read integrity** — every fetched component is re-hashed; a
   mismatch logs `integrity_violation`, refetches once, and raises rather than
   ever injecting corrupt bytes. *Demo step 8.*
-- **Backends behind a Protocol** — `InMemoryStore` (default), `FileStore`
-  (persistent CLI/dashboard state), `SqliteStore` (persistent, inspectable).
-  `WeaviateStore` is **deferred — not implemented**; the opt-in integration
-  test only checks the `weaviate` client library's v4 surface.
-  Refs: mobile `agents/<name>/<state>`, immutable `agents/<name>/v<semver>`
-  (moving one raises), `topology/v<n>`.
+  
 
 ## 2. Detection — the first pillar (`cle/detect`)
 - **Episode segmentation** — splits history on silence (> 2× the user's median
