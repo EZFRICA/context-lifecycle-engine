@@ -40,9 +40,28 @@
 #     uv run cle clean   (or rm -rf .cle)
 set -euo pipefail
 
-CLE=.venv/bin/cle
 PY=.venv/bin/python
-STATE=.cle
+
+# ISOLATION. Without this, $STATE governs only the `rm -rf` and the greps:
+# none of the ~20 $CLE sites carried --state-dir, so every command fell back to
+# the CLI default of `.cle`. Pointing STATE elsewhere destroyed THAT directory
+# and mutated `.cle` anyway — the exact mechanism that contaminated the
+# operator's live state instead.
+#
+# --state-dir is a PER-COMMAND option, so it must follow the subcommand; the
+# wrapper appends it, which is after the subcommand for every invocation below.
+STATE="${CLE_DEMO_STATE:-.cle-demo}"
+cle() { .venv/bin/cle "$@" --state-dir "$STATE"; }
+CLE=cle
+
+# This script starts with `rm -rf "$STATE"`. It refuses to do that to `.cle`:
+# that directory is the operator's live state AND the only source a population
+# level reads, it is gitignored so git cannot restore it, and `cle clean` is
+# already the deliberate way to reset it. A demo is not a reason to lose it.
+if [ "$(basename "$STATE")" = ".cle" ]; then
+  echo "refusing to run on .cle — set CLE_DEMO_STATE to a scratch directory" >&2
+  exit 1
+fi
 
 # Adversarial window: 40-day window over the adversarial fixture (one genuine
 # false-trigger "bridge" + 4 near-miss rejection traps — see METRICS.md §false_trigger_rate).
@@ -160,7 +179,10 @@ step "7. demote incident_triage on cost regression — a downward move needs a r
 # ---------------------------------------------------------------------------
 $CLE tag incident_triage trial
 $CLE tag incident_triage ephemeral --cost-ratio 0.7 --occurrences 3 --closures success,success,success
-$CLE tag incident_triage trial --reason "cost regressed across the last three incidents"
+# --reason is the closed vocabulary (it crosses into topology.yaml);
+# --note is the human's own prose, which stays in the local oplog.
+$CLE tag incident_triage trial --reason cost_regression \
+     --note "cost regressed across the last three incidents"
 
 # ---------------------------------------------------------------------------
 step "7b. decline — human refuses to promote standup_digest further (article 9 audit)"
@@ -170,7 +192,8 @@ step "7b. decline — human refuses to promote standup_digest further (article 9
 # permanently auditable (article-9 data). The agent MUST exist in the topology.
 # standup_digest is in ephemeral state after step 6 — a plausible proposal to
 # decline further promotion.
-$CLE decline standup_digest --reason "shadow engine already flagged hold; not promoting further"
+$CLE decline standup_digest --reason engine_disagrees \
+     --note "shadow engine already flagged hold; not promoting further"
 grep '"op": "candidate_declined"' "$STATE/log.jsonl" | tail -1
 
 # ---------------------------------------------------------------------------
@@ -182,22 +205,23 @@ step "8. integrity violation — tamper a stored image, then read it"
 # one thing the Protocol refuses to do for you (put() re-hashes and rejects
 # mislabeled content), so it must reach past the API — differently per backend.
 # Everything else here goes through open_store, so the demo follows $CLE_STORE.
-$PY - <<'EOF'
+CLE_DEMO_STATE_RESOLVED="$STATE" $PY - <<'EOF'
+import os
 import pathlib
 from cle.lifecycle.topology import current_agents
 from cle.store.backends import FileStore, SqliteStore, open_store
 
-store = open_store(".cle")
+store = open_store(os.environ["CLE_DEMO_STATE_RESOLVED"])
 image_hash = current_agents(store)["incident_triage"]["image"]
 if isinstance(store, SqliteStore):
     import sqlite3
-    db = sqlite3.connect(".cle/store.db")
+    db = sqlite3.connect(os.environ["CLE_DEMO_STATE_RESOLVED"] + "/store.db")
     row = db.execute("SELECT data FROM objects WHERE hash = ?", (image_hash,)).fetchone()
     db.execute("UPDATE objects SET data = ? WHERE hash = ?",
                (bytes(row[0]) + b"tampered", image_hash))
     db.commit()
 elif isinstance(store, FileStore):
-    blob = pathlib.Path(".cle/store/objects") / image_hash
+    blob = pathlib.Path(os.environ["CLE_DEMO_STATE_RESOLVED"]) / "store/objects" / image_hash
     blob.write_bytes(blob.read_bytes() + b"tampered")
 else:
     raise SystemExit(f"tamper step does not know how to corrupt {type(store).__name__}")
