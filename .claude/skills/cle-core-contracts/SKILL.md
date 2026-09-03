@@ -50,6 +50,43 @@ return a reassuring pass:
 Same principle as `PreEvidence != Evidence` and the `degenerate` resolution
 diagnostic. Never record `stability="stable"` when the check did not run.
 
+## Topology records: two closed contracts
+
+`topology.yaml` is written by `cle/lifecycle/topology.py` and nothing else (a
+property test enforces the single writer). Two fields are constrained by TYPE,
+not by a write-time filter, because a filter is bypassed by the next path
+someone adds:
+
+- **`reason` is a closed vocabulary** (`cle/lifecycle/reasons.py`). Passing
+  `cause["reason"]` raises `FreeTextInTopologyError`; the only route in is
+  `reason=TopologyReason(...)` over a `Literal`. Two axes, deliberately not one
+  field: ENGINE (`substrate_drift`, `silence`) vs HUMAN (`cost_regression`), and
+  DESCENT vs DECLINE (`engine_disagrees`, `defer`). `engine_disagrees` must stay
+  isolable: it is a human who deferred to the engine, and aggregating it as an
+  independent judgement is the Goodhart constraint at population scale. Free
+  user text belongs to the oplog note, which level 2 never reads.
+  A member with no producer gets REMOVED, not kept as a slot: `repeated_harm`
+  went in R36 because no rule emits it.
+- **`embedding` is an aggregation key**, at TOPOLOGY scope, never per agent.
+  `EmbeddingConfig(embedder_id, cluster_threshold, calibration)`, supplied at
+  the first write and inherited afterwards. A write declaring a different space
+  raises `EmbeddingConfigMismatchError`; a first write with none raises
+  `MissingEmbeddingConfigError`. Two instances at different thresholds do not
+  birth the same agents from the same usage, so a report aggregating topologies
+  without grouping on this key measures its own instrumentation.
+
+## Guards against silent failure (`cle/batch_guard.py`)
+
+The recurring failure shape: something returns, and returning is not working.
+
+- `assert_batch_varied` — a batch whose outputs are all identical, or whose
+  error share exceeds 0.2, is a failed batch even though every call returned.
+- `assert_unit_norm` — `cosine` is a raw dot product and is a cosine only on
+  unit vectors. Refuses vectors from a surface that does not normalise.
+- `assert_embeddable` — the only OUTBOUND guard: everything else on the
+  embedding path checks what comes back, so an empty opener used to be billed
+  and then clustered as if it named an intent.
+
 ## Log line format (one per operation, JSON, single line)
 ```json
 {"op":"build|run|switch|tag|revalidate|topology_write|...",
@@ -71,9 +108,8 @@ A PR adding an operation without its log line is rejected.
   exercised by the default suite: `InMemoryStore` (the default, and the only
   one the invariant tests need), `FileStore` (persistent CLI/dashboard state),
   `SqliteStore` (persistent, inspectable, stdlib sqlite3).
-  **`WeaviateStore` is NOT implemented** — deferred. The opt-in integration
-  test only smoke-checks that the `weaviate` client library exposes its v4
-  surface; it does not exercise a CLE backend.
+  Both persistent backends are local and offline; there is no remote
+  backend and no test depends on an external service.
 - Refs: `agents/<name>/<state>` (mobile), `agents/<name>/v<semver>`
   (immutable — moving one raises), `topology/<version>`.
 - Semver rule: major = trigger changed, minor = component ref swapped,
@@ -103,10 +139,19 @@ module (asserted). Fingerprinters are stubbed.
    raises) — centroid provenance is part of agent identity.
 8. `test_vector_cache_has_one_distinct_vector_per_text` — a silent batching
    collapse in the committed cache must fail the suite, not be eyeballed.
+9. One test per RAISE SITE of every guard, not one per exception class. R36
+   mutated each `raise` in turn and found three unenforced: `cosine`'s
+   dimension check had no test at all, and two of the three
+   `SpaceMismatchError` sites were free because the third looked covered. An
+   exception class appearing in a test file proves nothing about the site you
+   care about.
+10. `$CLE_VECTOR_CACHE` is a PATH override, never a SPACE override. A cache
+   declaring a foreign `embedder_id` must still be refused at the topology
+   write, including when someone adds its calibration entry.
 
 ## Scope honesty in tests
 Every test module states the vector space its assertions hold in. Three buckets
-(counts in docs/CAPABILITIES.md): **embedder-agnostic** (the invariant core),
+(counts in docs/TESTING.md): **embedder-agnostic** (the invariant core),
 **stub-as-a-tool** (stub incidental, claim space-independent), and
 **stub-as-the-subject** (true ONLY in `stub:hashed64`). A bucket-3 module must
 carry a SCOPE header and must not read as a general invariant — property tests

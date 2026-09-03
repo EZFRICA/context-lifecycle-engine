@@ -28,7 +28,10 @@ will grow; the dashboard must not crash on new event types.
   if available, else parse run/switch ops from the log).
 - `GET /state/candidates` — images in candidate state + their PreEvidence.
 - `GET /state/images` — all images with current lifecycle tag and version.
-- `GET /state/topology?v=` — one topology version, parsed.
+- `GET /state/topology?v=` — one topology version, parsed. The payload MUST
+  carry `embedding` (the vector space the history was born in). It is built as
+  an explicit whitelist, which is how the field went missing until R36: the
+  reader could not tell which space the states in front of them came from.
 - `GET /state/topology/diff?a=&b=` — the delta with per-entry evidence.
 - `POST /actions/approve {agent}` → runs `cle tag <agent> trial`,
   env actor=human:dashboard. `POST /actions/decline {agent}` → runs
