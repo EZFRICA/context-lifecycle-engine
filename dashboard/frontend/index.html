@@ -40,18 +40,49 @@
 
   <!-- PULSE -->
   <div class="pulse">
-    <div class="eyebrow">Pulse · live oplog</div>
-    <template x-for="l in pulse" :key="l.id">
+    <div class="eyebrow">
+      <span x-text="pulseView === 'live' ? 'Pulse · live oplog' : 'Pulse · decisions only'"></span>
+      <!-- Two READ views over ONE log. The sentence is rendered server-side by
+           the same render_decision() the CLI uses — the frontend only displays,
+           so the audit reading cannot drift between the two surfaces. -->
+      <span class="pulse-toggle">
+        <button class="tab" :class="{ on: pulseView === 'live' }"
+                @click="pulseView = 'live'">live</button>
+        <button class="tab" :class="{ on: pulseView === 'decisions' }"
+                @click="pulseView = 'decisions'; loadDecisions()">decisions</button>
+      </span>
+    </div>
+
+    <template x-if="pulseView === 'decisions'">
       <div>
-        <div class="pulse-band" x-show="l.band" x-text="l.msg"></div>
-        <div class="pulse-line" x-show="!l.band">
-          <span class="op mono" :style="`color:${accentHex(l.accent)}`" x-text="l.op"></span>
-          <span class="msg" x-text="l.msg"></span>
-          <span class="ts" x-text="l.ts"></span>
-        </div>
+        <template x-for="d in decisions" :key="d.ts + d.sentence">
+          <div class="pulse-line">
+            <span class="op mono" :class="{ unclassified: d.unclassified }" x-text="d.op"></span>
+            <span class="msg" x-text="d.sentence"></span>
+            <span class="ts" x-text="d.ts.slice(11, 19)"></span>
+          </div>
+        </template>
+        <div class="faint mono" x-show="decisions.length === 0">no decisions logged yet</div>
       </div>
     </template>
-    <div class="faint mono" x-show="pulse.length === 0">waiting for events…</div>
+
+    <!-- Alpine forbids x-for and x-if on the same <template>; the view guard
+         wraps the loop instead of sharing its tag. -->
+    <template x-if="pulseView === 'live'">
+      <div>
+        <template x-for="l in pulse" :key="l.id">
+          <div>
+            <div class="pulse-band" x-show="l.band" x-text="l.msg"></div>
+            <div class="pulse-line" x-show="!l.band">
+              <span class="op mono" :style="`color:${accentHex(l.accent)}`" x-text="l.op"></span>
+              <span class="msg" x-text="l.msg"></span>
+              <span class="ts" x-text="l.ts"></span>
+            </div>
+          </div>
+        </template>
+      </div>
+    </template>
+    <div class="faint mono" x-show="pulseView === 'live' && pulse.length === 0">waiting for events…</div>
   </div>
 
   <!-- ZONES -->

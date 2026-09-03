@@ -14,6 +14,8 @@ from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from cle.lifecycle.reasons import HumanDeclineReason
+
 from . import reads
 from .demo import DemoRunner
 from .oplog_sse import EventBus, event_stream, tail_log_forever
@@ -79,6 +81,12 @@ def state_image(hash: str):
     return reads.image_detail(STATE_DIR, hash)
 
 
+@app.get("/state/decisions")
+def state_decisions():
+    """Read-only second view over the same log — no new write path."""
+    return reads.decisions(STATE_DIR)
+
+
 @app.get("/state/topology")
 def state_topology(v: int | None = None):
     return reads.topology(STATE_DIR, v)
@@ -106,7 +114,10 @@ class AgentBody(BaseModel):
 
 class DeclineBody(BaseModel):
     agent: str
-    reason: str | None = None
+    # Closed vocabulary, not prose. The CLI would refuse free text anyway
+    # (UnknownReasonError), but refusing it at the HTTP edge means the boundary
+    # is a type on every surface rather than a check on one of them.
+    reason: HumanDeclineReason | None = None
 
 
 @app.post("/actions/approve")

@@ -31,6 +31,7 @@ function cleDashboard() {
   return {
     connected: false, replayDone: false,
     pulse: [], candidates: [], images: [], ps: [],
+    pulseView: 'live', decisions: [],
     topology: { version: 0, nodes: [], agents: {} }, versions: [],
     switches: [], shadowPairs: [], lastHumanTag: {},
     drift: null,
@@ -45,6 +46,11 @@ function cleDashboard() {
       // Forward-compatibility + self-heal: periodic snapshot refresh keeps the
       // zones correct even if a novel op appears that PULSE doesn't route.
       setInterval(() => this.refresh(), 5000);
+    },
+
+    async loadDecisions() {
+      // Sentences come rendered from the server (cle.oplog.render_decision).
+      this.decisions = await fetch("/state/decisions").then(r => r.json());
     },
 
     async refresh() {
@@ -102,6 +108,8 @@ function cleDashboard() {
 
     summarize(op, data) {
       const img = data.image ? short(data.image) : "";
+      if (op === "demo_step")  return data.title ?? "";
+      if (op === "demo_error") return data.title ?? "script error";
       if (op === "build") return `${img} pre_evidence capture=${pct(data.pre_evidence?.capture_rate ?? 0)} false=${pct(data.pre_evidence?.false_trigger_rate ?? 0)}`;
       if (op === "closure_distribution") return `closures success=${data.success ?? 0} reformulated=${data.reformulated ?? 0} abandoned=${data.abandoned ?? 0}`;
       if (op === "run") return `${data.workspace ?? ""} ${data.solicitations ?? "?"} solicitation(s) on ${img}`;
@@ -117,6 +125,7 @@ function cleDashboard() {
       if (op === "detector_observing") return `detector observing (${data.episodes ?? "?"} episodes)`;
       return JSON.stringify(data).slice(0, 120);
     },
+
 
     onSwitch(data) {
       this.switches.unshift({ id: Math.random(), image: short(data.image),
@@ -179,22 +188,56 @@ function cleDashboard() {
     },
     async abortDemo() { await fetch("/demo/abort", { method: "POST" }); },
 
-    async initSystem() {
-      this.pushPulse("demo_step", { title: "Initializing fixtures and candidate agent", step: 1, total: 3, ts: new Date().toISOString() });
-      await fetch("/actions/init", { method: "POST" });
+    // Shared POST helper: fires the request, reads the JSON result, then pushes
+    // the outcome to the pulse so the user always sees stdout/stderr/exit code.
+    async _postAction(url, pulseTitle, step) {
+      const ts = new Date().toISOString();
+      this.pushPulse("demo_step", { title: pulseTitle, step, total: 3, ts });
+      this.demo.running = true;
+      let result;
+      try {
+        const r = await fetch(url, { method: "POST" });
+        result = await r.json();
+      } catch (err) {
+        this.pushPulse("demo_error", { title: `Network error: ${err.message}`, ts: new Date().toISOString() });
+        this.demo.running = false;
+        this.refresh();
+        return;
+      }
+      const ok = result.code === 0;
+      const op = ok ? "demo_step" : "demo_error";
+      // Show last 8 non-empty lines of stdout (or stderr on failure).
+      const raw = ok ? (result.stdout || "") : (result.stderr || result.stdout || "");
+      const tail = raw.split("\n").map(l => l.trim()).filter(Boolean).slice(-8).join(" · ");
+      const label = ok
+        ? `✓ ${pulseTitle} — exit 0${tail ? " | " + tail : ""}`
+        : `✗ ${pulseTitle} — exit ${result.code}${tail ? " | " + tail : ""}`;
+      this.pushPulse(op, { title: label, step, total: 3, ts: new Date().toISOString() });
+      this.demo.running = false;
       this.refresh();
+    },
+
+    async initSystem() {
+      await this._postAction("/actions/init", "Initializing fixtures and candidate agent", 1);
     },
 
     async runSolicitations() {
-      this.pushPulse("demo_step", { title: "Running full loop simulation script (full_loop.sh)", step: 2, total: 3, ts: new Date().toISOString() });
-      await fetch("/actions/run_workspaces", { method: "POST" });
-      this.refresh();
+      await this._postAction("/actions/run_workspaces", "Running full loop (full_loop.sh)", 2);
     },
 
     async reinitSystem() {
-      this.pushPulse("demo_step", { title: "Cleaning local CLE state", step: 3, total: 3, ts: new Date().toISOString() });
-      await fetch("/actions/clean", { method: "POST" });
-      this.refresh();
+      // `cle clean` is rmtree on a gitignored directory: git cannot restore it,
+      // and the dashboard's state dir is whatever the operator launched it
+      // against, which may well be the live one. The CLI confirms, but this
+      // action reaches it through a subprocess with no tty, so the confirmation
+      // belongs here.
+      // The path is deliberately not named here: the frontend does not know it,
+      // and adding an endpoint to publish it would be a feature, not a cleanup.
+      // The CLI prints the resolved path in the action output.
+      if (!window.confirm("Delete all persistent CLE state?\n\nThis is the only copy: the state directory is gitignored, so git cannot restore it.")) {
+        return;
+      }
+      await this._postAction("/actions/clean", "Cleaning local CLE state", 3);
     },
 
     // --- agent detail modal ---

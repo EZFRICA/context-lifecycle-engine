@@ -12,7 +12,7 @@ from typing import Any
 
 from cle.detect.stability import divergence_check_available
 from cle.lifecycle.topology import current_agents, latest_version
-from cle.oplog import OpLog
+from cle.oplog import OpLog, UnclassifiedOpError, classify_op, render_decision
 from cle.runtime.container import load_containers, load_image
 from cle.runtime.metrics_volume import read_events
 from cle.store.backends import StoreBackend, open_store
@@ -173,24 +173,35 @@ def topology(state_dir: Path, version: int | None = None) -> dict[str, Any]:
     else:
         record = _topology_record(backend, version)
         version_number = version
-    if not record:
-        return {"version": 0, "agents": {}, "nodes": [], "edges": []}
+    # ONE construction for both the populated and the empty case. Two separate
+    # return statements is how `embedding` came to exist on one path and not the
+    # other: the field was added where the data was, and the empty branch kept
+    # the shape it had before the key existed. A caller then sees a payload whose
+    # KEYS depend on whether the store happened to have anything in it, which is
+    # a contract that cannot be relied on and fails as a KeyError rather than as
+    # a readable value.
+    record = record or {}
     agents = record.get("agents", {})
-    nodes = [
-        {
-            "agent": name,
-            "state": entry.get("state"),
-            "image_short": _short(entry.get("image")),
-            "cause_kind": _cause_kind(entry.get("cause", {})),
-        }
-        for name, entry in sorted(agents.items())
-    ]
     return {
-        "version": version_number,
+        "version": version_number if record else 0,
         "parent": record.get("parent"),
         "actor": record.get("actor"),
+        # This payload is a whitelist, so every field the topology record gains
+        # has to be added here too. `embedding` names the vector space the
+        # history was born in: without it a reader cannot tell which space the
+        # states in front of them belong to, which is the comparison the key
+        # exists to make possible. Pinned by tests/unit/test_dashboard_matches_disk.
+        "embedding": record.get("embedding"),
         "agents": agents,
-        "nodes": nodes,
+        "nodes": [
+            {
+                "agent": name,
+                "state": entry.get("state"),
+                "image_short": _short(entry.get("image")),
+                "cause_kind": _cause_kind(entry.get("cause", {})),
+            }
+            for name, entry in sorted(agents.items())
+        ],
     }
 
 
@@ -228,3 +239,37 @@ def topology_diff(state_dir: Path, a: int, b: int) -> dict[str, Any]:
                  "cause": eb.get("cause", {})}
             )
     return {"a": a, "b": b, "changes": changes}
+
+
+def decisions(state_dir: Path, limit: int = 50) -> list[dict[str, Any]]:
+    """The Pulse zone's second view: only the lines where something was
+    DECIDED, already rendered as sentences.
+
+    Rendered HERE, in Python, by the same `render_decision` the CLI uses —
+    re-implementing the sentence in JavaScript would give the audit view two
+    sources of truth that drift apart. The frontend only displays.
+    """
+    log_path = state_dir / "log.jsonl"
+    if not log_path.exists():
+        return []
+    out: list[dict[str, Any]] = []
+    for line in log_path.read_text().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        try:
+            if classify_op(record.get("op", "")) != "decision":
+                continue
+        except UnclassifiedOpError:
+            # An op nobody classified must be visible, not silently dropped.
+            out.append({"op": record.get("op", "?"), "ts": record.get("ts", ""),
+                        "sentence": f"[UNCLASSIFIED OP] {record.get('op', '?')}",
+                        "unclassified": True})
+            continue
+        out.append({"op": record["op"], "ts": record.get("ts", ""),
+                    "sentence": render_decision(record), "unclassified": False})
+    return out[-limit:]
