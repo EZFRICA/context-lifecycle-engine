@@ -12,6 +12,7 @@ signal that the substrate is not fixed.
 """
 
 import logging
+import os
 from typing import Any, Sequence
 
 from cle.llm_provider import get_fingerprint_llm
@@ -67,8 +68,14 @@ class LiveModelFingerprinter:
                 output_hashes.append(content_hash(response_text(response.content)))
             except Exception as error:
                 logger.error("probe call failed for %r: %s", probe, error)
-                # Stable fallback so a transient failure doesn't crash the
-                # build; NB this hashes the probe, not the model, so a
-                # failed call reads as "no signal", never as false drift.
+                if os.environ.get("CLE_FORCE_REAL_MODEL"):
+                    # Hard failure: the caller explicitly demanded a live model.
+                    # Re-raise so the build fails immediately and visibly rather
+                    # than producing a fake fingerprint that looks like success.
+                    raise RuntimeError(
+                        f"Real-model probe failed (CLE_FORCE_REAL_MODEL=1): {error}"
+                    ) from error
+                # Stable fallback for CI / offline runs — hashes the probe, not
+                # the model, so a failed call reads as "no signal", never drift.
                 output_hashes.append(content_hash(f"probe-call-failed:{probe}"))
         return tuple(output_hashes)

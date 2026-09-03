@@ -31,12 +31,14 @@ import yaml
 
 from cle.build import build_image
 from cle.detect.clusters import HashedTokenEmbedder
+from cle.detect.embedders import EMBEDDER_KINDS, open_embedder, embedding_config_for
 from cle.detect.episodes import DetectorConfig, Message
 from cle.lifecycle.engine import EngineThresholds, shadow_decide
 from cle.lifecycle.revalidator import revalidate as run_revalidation
-from cle.lifecycle.tags import move_state_tag
+from cle.lifecycle.tags import STATE_RANK, move_state_tag
+from cle.lifecycle.reasons import TopologyReason, validate_reason
 from cle.lifecycle.topology import current_agents, render_diff, render_log, write_topology
-from cle.oplog import OpLog
+from cle.oplog import OpLog, UnclassifiedOpError, classify_op, render_decision
 from cle.runtime.container import ensure_container, load_containers, load_image, run_prompts
 from cle.runtime.metrics_volume import read_events
 from cle.runtime.mounts import Mount
@@ -54,8 +56,16 @@ STORE_OPTION = typer.Option(
 )
 
 
+EMBEDDER_OPTION = typer.Option(
+    None, "--embedder",
+    help=f"Detection vector space {EMBEDDER_KINDS} (default: stub, or $CLE_EMBEDDER). "
+         "'cached' = real gemini-embedding-2 geometry, offline and free; "
+         "'real' = live calls, costs money.",
+)
+
+
 @app.callback()
-def cli(store: str = STORE_OPTION) -> None:
+def cli(store: str = STORE_OPTION, embedder: str = EMBEDDER_OPTION) -> None:
     """The lifecycle CLI: evidence in, tags moved, everything logged."""
     # Set once, before any command runs, so every _store() call in this process
     # AND any subprocess (the dashboard) agree on the backend. Selecting it per
@@ -64,6 +74,16 @@ def cli(store: str = STORE_OPTION) -> None:
         if store.lower() not in STORE_KINDS:
             raise typer.BadParameter(f"--store must be one of {STORE_KINDS}, got {store!r}")
         os.environ["CLE_STORE"] = store.lower()
+    # Same discipline for the vector space, and for a sharper reason: two
+    # commands in one session detecting in different spaces would write
+    # centroids that cannot be compared, into one topology that claims one
+    # embedding config.
+    if embedder is not None:
+        if embedder.lower() not in EMBEDDER_KINDS:
+            raise typer.BadParameter(
+                f"--embedder must be one of {EMBEDDER_KINDS}, got {embedder!r}"
+            )
+        os.environ["CLE_EMBEDDER"] = embedder.lower()
 
 
 class StubFingerprinter:
@@ -84,6 +104,15 @@ def _parse_window(label: str) -> timedelta:
         raise typer.BadParameter(f"window must look like 30d or 48h, got {label!r}")
     value, unit = int(match.group(1)), match.group(2)
     return timedelta(days=value) if unit == "d" else timedelta(hours=value)
+
+
+def _configured_embedder():
+    """The embedder this instance runs on — ONE source of truth.
+
+    Every topology write declares it, so an inherited configuration that no
+    longer matches raises instead of quietly asserting the original.
+    """
+    return open_embedder()
 
 
 def _store(state_dir: Path) -> StoreBackend:
@@ -182,19 +211,28 @@ def build(
         image = build_image(
             source=source, backend=store, messages=window_messages,
             window_label=replay_window, existing_triggers=existing_triggers,
-            embedder=HashedTokenEmbedder(), fingerprinter=fingerprinter,
+            embedder=_configured_embedder(), fingerprinter=fingerprinter,
             config=DetectorConfig(), oplog=oplog, actor=_actor(),
         )
         # Birth: the candidate tag and its topology entry, both carrying
-        # the replay's pre_evidence (never more than that at birth).
+        # the replay's pre_evidence (never more than that at birth) AND the
+        # provenance of WHOSE usage produced the detection — the history's own
+        # user, not the operator who happened to run the build.
+        detected_for = all_messages[0].user_id
         move_state_tag(
             backend=store, agent=agent_name, image_hash=image.hash, from_state=None,
             to_state="candidate", pre_evidence=image.pre_evidence, oplog=oplog, actor=_actor(),
+            on_behalf_of=detected_for,
         )
         write_topology(
             backend=store, path=state_dir / "topology.yaml", agent=agent_name,
             state="candidate", image_hash=image.hash,
             cause={"pre_evidence": image.pre_evidence.model_dump()}, oplog=oplog, actor=_actor(),
+            on_behalf_of=detected_for,
+            # First write of this topology: it is the only one that KNOWS the
+            # vector space, so it is the one that records it. Later writes
+            # inherit it from the parent record.
+            embedding=embedding_config_for(_configured_embedder()),
         )
     except Exception as error:
         typer.echo(f"build failed: {error}", err=True)
@@ -273,7 +311,15 @@ def tag(
     cost_ratio: float | None = typer.Option(None),
     occurrences: int | None = typer.Option(None),
     closures: str | None = typer.Option(None, help="Comma-separated closure tags."),
-    reason: str | None = typer.Option(None),
+    reason: str | None = typer.Option(
+        None,
+        help="Closed vocabulary (crosses into topology.yaml): "
+             "substrate_drift | silence | cost_regression.",
+    ),
+    note: str | None = typer.Option(
+        None,
+        help="Free text. Logged locally, NEVER written to topology.yaml.",
+    ),
     state_dir: Path = STATE_DIR_OPTION,
 ) -> None:
     """Move an agent's state tag (humans only; the engine shadows you)."""
@@ -294,23 +340,44 @@ def tag(
     pre_evidence = None
     oplog, sink = _oplog(state_dir)
     try:
-        if evidence is None and to_state in ("trial", "candidate"):
+        # DIRECTION, not destination. Testing only `to_state` would make a
+        # DESCENT into `trial` or `candidate` load the image's birth
+        # pre_evidence and record THAT as the cause, so a demotion would reach
+        # topology labelled "caused by the replay proof of its own birth" while
+        # the closed-vocabulary reason was dropped. A false field, not a
+        # missing one.
+        #
+        # `from_state` is known here (read from current_agents above), so the
+        # direction is computable at write time rather than derived later from
+        # the chain diff.
+        upward = STATE_RANK[to_state] > STATE_RANK[from_state]
+        if evidence is None and upward and to_state in ("trial", "candidate"):
             pre_evidence = load_image(store, image_hash, oplog).pre_evidence
         move_state_tag(
             backend=store, agent=agent, image_hash=image_hash, from_state=from_state,
             to_state=to_state, evidence=evidence, pre_evidence=pre_evidence,
-            reason=reason, oplog=oplog, actor=_actor(),
+            reason=reason, note=note, oplog=oplog, actor=_actor(),
         )
         cause: dict = {}
+        topology_reason = None
         if evidence is not None:
             cause["evidence"] = evidence.model_dump()
         elif pre_evidence is not None:
             cause["pre_evidence"] = pre_evidence.model_dump()
-        else:  # downward move: accountability, not proof
-            cause["reason"] = reason
+        else:
+            # Downward move: accountability, not proof. The reason crosses the
+            # boundary as a closed-vocabulary VALUE — `note` stays local, in the
+            # oplog, which level 2 never reads.
+            # `reason` cannot be None here: a downward move without one is
+            # refused earlier ("downward moves must state a reason"), verified by
+            # running it. The checker cannot see that guard from this branch.
+            # pyrefly: ignore[bad-argument-type]
+            topology_reason = TopologyReason(reason=reason)
         write_topology(
             backend=store, path=state_dir / "topology.yaml", agent=agent,
             state=to_state, image_hash=image_hash, cause=cause, oplog=oplog, actor=_actor(),
+            embedding=embedding_config_for(_configured_embedder()),
+            reason=topology_reason,
         )
         # The shadow engine judges the same evidence and logs its own call
         # — the divergence log is the article-9 deliverable.
@@ -333,9 +400,19 @@ def tag(
 def log(
     target: str | None = typer.Argument(None, help="'topology.yaml' for topology history."),
     tail: int = typer.Option(20, "--tail"),
+    decisions_only: bool = typer.Option(
+        False, "--decisions-only",
+        help="Only the lines where something was DECIDED, as sentences.",
+    ),
     state_dir: Path = STATE_DIR_OPTION,
 ) -> None:
-    """Op log (default) or topology history with provenance."""
+    """Op log (default) or topology history with provenance.
+
+    Two READ views over the one write path: the default prints every line as
+    raw JSON (the operator's view), `--decisions-only` prints just the
+    decision-classified lines as sentences (the audit view). Nothing is
+    written differently for either — see cle/oplog.py.
+    """
     if target == "topology.yaml":
         typer.echo(render_log(_store(state_dir)))
         return
@@ -343,8 +420,30 @@ def log(
     if not log_path.exists():
         typer.echo("(no log)")
         return
-    for line in log_path.read_text().splitlines()[-tail:]:
-        typer.echo(line)
+    lines = log_path.read_text().splitlines()
+    if not decisions_only:
+        for line in lines[-tail:]:
+            typer.echo(line)
+        return
+    rendered = []
+    for line in lines:
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        # An op nobody classified must not vanish from the audit view.
+        try:
+            if classify_op(record.get("op", "")) != "decision":
+                continue
+        except UnclassifiedOpError as unknown:
+            rendered.append(f"[UNCLASSIFIED] {unknown}")
+            continue
+        rendered.append(render_decision(record))
+    if not rendered:
+        typer.echo("(no decisions logged)")
+        return
+    for sentence in rendered[-tail:]:
+        typer.echo(sentence)
 
 
 @app.command()
@@ -407,13 +506,32 @@ def revalidate(
             return
         probe_total = len(load_image(store, image_hash, oplog).probe_set)
         typer.echo(f"DRIFT: {len(persistence.probe_deltas)}/{probe_total} probes moved")
-        if agent is not None:
+        # The live path may NOT write topology. A served model is not
+        # deterministic at temperature 0 (measured: 3/3 runs produced distinct
+        # fingerprints on an identical probe set), so every live revalidation
+        # reports drift on an UNCHANGED substrate. Writing that would put a
+        # `Persistence`, one of the three type-separated standards of proof,
+        # into the single channel a population level reads. A fabricated proof
+        # is worse than a missing one.
+        #
+        # The drift is still REPORTED: the operator sees it, and the oplog keeps
+        # the technical line. Only the write and the demotion are withheld. The
+        # stub path — everything the suite exercises — is untouched, and the
+        # noise-floor measurement will lift or confirm this.
+        if agent is not None and model_id in ("current", "live"):
+            typer.echo(
+                "live substrate: drift NOT written to topology and no demotion "
+                "(this model is non-deterministic at temperature 0, so drift "
+                "here is not evidence of substrate change)"
+            )
+        elif agent is not None:
             entry = current_agents(store)[agent]
             if entry["state"] in ("ephemeral", "pinned"):
                 move_state_tag(
                     backend=store, agent=agent, image_hash=image_hash,
                     from_state=entry["state"], to_state="trial",
-                    reason=f"fingerprint drift under {model_id}",
+                    reason="substrate_drift",
+                    note=f"fingerprint drift under {model_id}",
                     oplog=oplog, actor="engine:revalidator",
                 )
                 write_topology(
@@ -421,6 +539,7 @@ def revalidate(
                     state="trial", image_hash=image_hash,
                     cause={"persistence": persistence.model_dump()},
                     oplog=oplog, actor="engine:revalidator",
+                    embedding=embedding_config_for(_configured_embedder()),
                 )
                 typer.echo(f"{agent}: {entry['state']} -> trial (auto-demoted)")
     finally:
@@ -430,7 +549,10 @@ def revalidate(
 @app.command()
 def decline(
     agent: str = typer.Argument(..., help="Candidate agent to refuse."),
-    reason: str | None = typer.Option(None, help="Optional human reason (logged)."),
+    reason: str | None = typer.Option(
+        None, help="Closed vocabulary: engine_disagrees | defer."
+    ),
+    note: str | None = typer.Option(None, help="Free text, logged locally."),
     state_dir: Path = STATE_DIR_OPTION,
 ) -> None:
     """Refuse a candidate — the human 'Decline' on the proposal menu.
@@ -454,7 +576,13 @@ def decline(
             image=entry["image"],
             agent=agent,
             from_state=entry["state"],
-            **({"reason": reason} if reason else {}),
+            # Same conditional unpack as `move_state_tag`: omitting the key is
+            # the point, so a checker that cannot see the dict's keys reports a
+            # possible mismatch on every named parameter of `emit`.
+            # pyrefly: ignore[bad-argument-type]
+            **({"reason": validate_reason(reason)} if reason else {}),
+            # pyrefly: ignore[bad-argument-type]
+            **({"note": note} if note else {}),
         )
         typer.echo(f"declined {agent} (was {entry['state']})")
     finally:
@@ -464,14 +592,40 @@ def decline(
 @app.command()
 def clean(
     state_dir: Path = STATE_DIR_OPTION,
+    yes: bool = typer.Option(
+        False, "--yes", "-y", help="Skip the confirmation (for scripts and CI)."
+    ),
 ) -> None:
-    """Reset the CLE state directory (deletes all persistent state)."""
+    """Reset the CLE state directory (deletes all persistent state).
+
+    `shutil.rmtree` on a directory that is gitignored, so git cannot restore it,
+    and that holds the only copy of the oplog, the store and the topology
+    history.
+
+    The confirmation names the RESOLVED path and what is in it, because the
+    failure it prevents is not "meant to type something else" but "believed this
+    path was the throwaway one". Note that `$CLE_STATE_DIR` does not redirect
+    the CLI; only `--state-dir` does. `--yes` keeps `full_loop.sh`, the
+    dashboard action and
+    the demo working unattended.
+    """
     import shutil
-    if state_dir.exists():
-        shutil.rmtree(state_dir)
-        typer.echo(f"CLE state directory {state_dir} has been reset.")
-    else:
+
+    if not state_dir.exists():
         typer.echo(f"CLE state directory {state_dir} does not exist.")
+        return
+
+    files = sum(1 for p in state_dir.rglob("*") if p.is_file())
+    target = state_dir.resolve()
+    if not yes:
+        typer.echo(f"About to delete {target} ({files} files).")
+        typer.echo("This is the only copy: the directory is gitignored, so git cannot restore it.")
+        if not typer.confirm("Delete it?", default=False):
+            typer.echo("Aborted. Nothing was deleted.")
+            raise typer.Exit(code=1)
+
+    shutil.rmtree(state_dir)
+    typer.echo(f"CLE state directory {target} has been reset ({files} files deleted).")
 
 
 if __name__ == "__main__":

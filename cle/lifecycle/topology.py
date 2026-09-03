@@ -12,6 +12,31 @@ version object records its parent hash, so the chain is walkable without
 trusting ref order.
 """
 
+from cle.detect.embedders import EmbeddingConfig  # noqa: E402  (type + record)
+from cle.lifecycle.reasons import (  # noqa: E402
+    FreeTextInTopologyError,
+    TopologyReason,
+)
+
+
+class EmbeddingConfigMismatchError(Exception):
+    """The topology inherited one vector space but is being written in another.
+
+    Distinct from MissingEmbeddingConfigError on purpose: an ABSENT key and a
+    LYING key are different failures. A key that lies is worse than one that is
+    missing — a missing key excludes the history from an aggregate, a lying key
+    puts it in the wrong bucket while looking accounted for.
+    """
+
+
+class MissingEmbeddingConfigError(Exception):
+    """A topology write named no vector space and had no parent to inherit one.
+
+    Loud on purpose: the embedding configuration is an AGGREGATION KEY, not
+    metadata. A history missing it is comparable to no other history.
+    """
+
+
 import json
 import time
 from datetime import datetime, timezone
@@ -57,6 +82,9 @@ def write_topology(
     cause: dict[str, Any],
     oplog: OpLog,
     actor: str,
+    on_behalf_of: str | None = None,
+    embedding: "EmbeddingConfig | None" = None,
+    reason: "TopologyReason | None" = None,
 ) -> str:
     """Record one agent change as a new topology version + file rewrite.
 
@@ -67,6 +95,19 @@ def write_topology(
     started = time.monotonic()
     # Decision (documented): downward moves may carry a bare human reason
     # — evidence justifies gains; losses need accountability, not proof.
+    # STRUCTURAL BOUNDARY. A topology cause may carry proof, or a
+    # closed-vocabulary reason — never prose. Callers pass `reason` as a typed
+    # TopologyReason; stuffing a raw string into cause["reason"] is refused, so
+    # the leak has no route rather than being sanitised on the way out.
+    if "reason" in cause:
+        raise FreeTextInTopologyError(
+            "cause['reason'] is not a writable key: pass reason=TopologyReason(...) "
+            "so the value is constrained to the closed vocabulary. Free user text "
+            "belongs to the oplog note, which level 2 never reads."
+        )
+    if reason is not None:
+        cause = {**cause, "reason": reason.reason}
+
     if not cause or not any(
         k in cause for k in ("evidence", "pre_evidence", "persistence", "reason")
     ):
@@ -81,9 +122,38 @@ def write_topology(
         "since": datetime.now(timezone.utc).isoformat(),
         "cause": cause,
     }
+    # Embedding configuration is TOPOLOGY-scope, never per agent: it names the
+    # vector space this whole history was produced in, and is therefore the key
+    # any population-level aggregation must group by. Supplied at the first
+    # write (the candidate birth, which knows the embedder) and INHERITED from
+    # the parent record afterwards — a later tag move does not re-derive it.
+    inherited = (latest or {}).get("embedding")
+    declared = embedding.model_dump() if embedding is not None else None
+    # A caller that DECLARES its vector space must agree with the one this
+    # topology was born in. Inheritance without this check would let a config
+    # change mid-life propagate the original silently, and the field would
+    # assert something false — the one failure worse than having no key.
+    if declared is not None and inherited is not None and declared != inherited:
+        raise EmbeddingConfigMismatchError(
+            f"topology was born under {inherited.get('embedder_id')!r} at threshold "
+            f"{inherited.get('cluster_threshold')} but this write declares "
+            f"{declared.get('embedder_id')!r} at {declared.get('cluster_threshold')}; "
+            "a topology cannot change vector space in place — start a new history"
+        )
+    embedding_record = declared if declared is not None else inherited
+    if embedding_record is None:
+        # No silent fallback. A topology with no recorded vector space cannot be
+        # compared with any other, and a report that aggregated it anyway would
+        # measure its instrumentation instead of its population.
+        raise MissingEmbeddingConfigError(
+            "topology write has no embedding config and no parent to inherit one "
+            "from; the first write must supply it (embedding_config_for(embedder))"
+        )
+
     record = {
         "cle_kind": "topology",
         "version": version_number + 1,
+        "embedding": embedding_record,
         "parent": (
             dict(backend.list_refs(f"topology/v{version_number}")).get(
                 f"topology/v{version_number}"
@@ -103,7 +173,8 @@ def write_topology(
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         yaml.safe_dump(
-            {"version": record["version"], "agents": agents}, sort_keys=True, width=100
+            {"version": record["version"], "embedding": embedding_record, "agents": agents},
+            sort_keys=True, width=100
         )
     )
     # diff_size compares the durable half of the entry (state/image/cause);
@@ -115,6 +186,7 @@ def write_topology(
     oplog.emit(
         "topology_write",
         actor=actor,
+        on_behalf_of=on_behalf_of,
         image=image_hash,
         to_state=state,
         diff_size=diff_size,

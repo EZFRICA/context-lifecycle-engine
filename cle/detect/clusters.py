@@ -67,9 +67,31 @@ class HashedTokenEmbedder:
         return tuple(value / norm for value in buckets)
 
 
+class DimensionMismatchError(ValueError):
+    """Two vectors of different length were compared.
+
+    `zip` truncates to the shorter sequence, so without this check a 64-d stub
+    centroid compared against a 768-d real embedding returns a plausible number
+    computed over the first 64 components. Measured: -0.012148, silently, which
+    then reads as a `capture_rate` of 0.000 and looks like a finding about the
+    detector.
+
+    This is the cheap half of the contract. The load-bearing half is IDENTITY
+    (`TriggerSpec.require_same_space`): two different real spaces of the same
+    dimension would pass a length check and mean nothing.
+    """
+
+
 def cosine(a: Vector, b: Vector) -> float:
-    # Embeddings are L2-normalized (or zero), so the dot product is the
-    # cosine; a zero vector never matches anything.
+    # The name asserts a cosine, and it is one: both shipped embedders return
+    # vectors of norm exactly 1.0 (measured, n=200 each), so the dot product IS
+    # the cosine and the 0.6 / 0.775 thresholds share one scale.
+    # A zero vector never matches anything.
+    if len(a) != len(b):
+        raise DimensionMismatchError(
+            f"cannot compare vectors of length {len(a)} and {len(b)}; "
+            "zip would truncate to the shorter one and return a meaningless number"
+        )
     return sum(x * y for x, y in zip(a, b))
 
 
@@ -97,6 +119,9 @@ class IntentClusterer:
 
     def __init__(self, embedder: Embedder, config: DetectorConfig) -> None:
         self._embedder = embedder
+        #: The space this clusterer's centroids live in. Public because a caller
+        #: comparing them against anything else must be able to check it.
+        self.embedder_id = getattr(embedder, "embedder_id", None)
         self._threshold = cluster_threshold_for(
             getattr(embedder, "embedder_id", None), config.cluster_similarity_threshold
         )

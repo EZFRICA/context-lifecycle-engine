@@ -40,6 +40,7 @@ from cle.detect.clusters import Embedder, IntentClusterer, cosine, returned_to_c
 from cle.detect.episodes import DetectorConfig, Episode, Message, classify_closure, segment
 from cle.oplog import OpLog
 from cle.store.commits import PreEvidence, TriggerSpec
+from cle.detect.embedders import SpaceMismatchError
 
 
 class ReplayError(Exception):
@@ -62,6 +63,26 @@ class ReplayOutcome(BaseModel, frozen=True):
     closure_counts: dict[str, int]
 
 
+def _require_operand_space(operand_space: str | None, trigger, what: str) -> None:
+    """Refuse a comparison whose two operands come from different vector spaces.
+
+    Placed AT each comparison, not only at the function entry. The entry gate
+    checks the embedder handed in, which covers the three sites below only
+    because every centroid reaching them happens to come from it today — a
+    property of the current flow, not of the code. These read the provenance of
+    the operand actually being compared, so they survive a new path being added.
+
+    Cost: three string comparisons per episode, against a 768-dimension dot
+    product measured at ~21 us. Immeasurable by comparison.
+    """
+    if operand_space != trigger.embedder_id:
+        raise SpaceMismatchError(
+            f"{what} comes from {operand_space!r} but the trigger centroid comes "
+            f"from {trigger.embedder_id!r}; a cosine across two spaces returns a "
+            "number that looks fine and means nothing"
+        )
+
+
 def replay_validate(
     *,
     trigger: TriggerSpec,
@@ -82,6 +103,10 @@ def replay_validate(
         outcome = _replay(
             trigger, messages, window_label, existing_triggers, embedder, config, mounted_tools
         )
+        # Closure counts are `dict[str, int]` whose keys are closure tags, not
+        # parameter names; the checker has to assume an `int` could land on a
+        # named parameter of `emit`. Runtime-correct.
+        # pyrefly: ignore[bad-argument-type]
         oplog.emit("closure_distribution", actor=actor, **outcome.closure_counts)
         return outcome
     except ReplayError:
@@ -111,6 +136,23 @@ def _replay(
     for incumbent in existing_triggers:
         trigger.require_same_space(incumbent)
 
+    # The gate above compares two STORED centroids and cannot see the embedder
+    # actually running, which is the gap this check closes: under a different
+    # --embedder, `embedder.embed(...)` below produces vectors from one space
+    # while `trigger.centroid` comes from another, and every cosine in this
+    # function would cross them silently (selecting target_cluster, computing
+    # capture, and beating incumbents — three sites, not one).
+    #
+    # Guard on IDENTITY, not on dimension: two distinct real spaces of equal
+    # width would pass a length check and mean nothing.
+    runtime_space = getattr(embedder, "embedder_id", None)
+    if runtime_space != trigger.embedder_id:
+        raise SpaceMismatchError(
+            f"replay runs on embedder {runtime_space!r} but the trigger centroid "
+            f"comes from {trigger.embedder_id!r}; a centroid is only meaningful in "
+            "the space that produced it — rebuild the spec under this embedder"
+        )
+
     episodes = segment(list(messages), config)
     if not episodes:
         raise ReplayError("replay window contains no episodes")
@@ -119,6 +161,11 @@ def _replay(
     # centroid sits closest to the trigger centroid.
     clusterer = IntentClusterer(embedder, config)
     assignments = [clusterer.assign(episode) for episode in episodes]
+    # Site 1 of 3. The entry gate checks the embedder passed IN; this checks the
+    # provenance of the OPERAND actually compared. They differ the day a centroid
+    # reaches this function by another path — which is exactly why the entry gate
+    # alone is a property of the current flow, not of the code.
+    _require_operand_space(clusterer.embedder_id, trigger, "clusterer centroid")
     target_cluster = max(
         range(len(clusterer.centroids)),
         key=lambda cluster_id: cosine(clusterer.centroids[cluster_id], trigger.centroid),
@@ -138,10 +185,17 @@ def _replay(
         # hiding the capability gap.
         if episode.required_tool is not None and episode.required_tool not in mounted_tools:
             return False
+        # Site 2 of 3: the freshly embedded opener, checked against the centroid.
+        _require_operand_space(
+            getattr(embedder, "embedder_id", None), trigger, "opener embedding"
+        )
         opener_embedding = embedder.embed(episode.opener)
         candidate_similarity = cosine(opener_embedding, trigger.centroid)
         if candidate_similarity < config.cluster_similarity_threshold:
             return False
+        # Site 3 of 3: each incumbent centroid carries its own provenance.
+        for incumbent in existing_triggers:
+            _require_operand_space(incumbent.embedder_id, trigger, "incumbent centroid")
         return all(
             candidate_similarity > cosine(opener_embedding, incumbent.centroid)
             for incumbent in existing_triggers

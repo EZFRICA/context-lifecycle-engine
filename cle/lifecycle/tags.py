@@ -20,6 +20,7 @@ Contract (cle-core-contracts, invariants 1, 4, 5):
 
 import time
 
+from cle.lifecycle.reasons import validate_reason
 from cle.oplog import OpLog
 from cle.store.backends import StoreBackend
 from cle.store.commits import Evidence, PreEvidence, assert_tag_target
@@ -59,10 +60,16 @@ def move_state_tag(
     evidence: Evidence | None = None,
     pre_evidence: PreEvidence | None = None,
     reason: str | None = None,
+    note: str | None = None,
     oplog: OpLog,
     actor: str,
+    on_behalf_of: str | None = None,
 ) -> None:
-    """Move an agent's mobile state tag, enforcing the proof ladder."""
+    """Move an agent's mobile state tag, enforcing the proof ladder.
+
+    `on_behalf_of` is provenance, not authorization: it records the workspace
+    or user whose usage this move is for, so an audit can answer "for whom did
+    this happen" and not merely "who clicked"."""
     started = time.monotonic()
     if to_state not in STATE_RANK:
         raise TagMoveError(f"unknown state {to_state!r}; ladder is {sorted(STATE_RANK)}")
@@ -83,18 +90,32 @@ def move_state_tag(
             raise TagMoveError(f"upward move to {to_state} requires pre_evidence (or evidence)")
     elif reason is None:
         raise TagMoveError("downward moves must state a reason (it is logged)")
+    if reason is not None:
+        validate_reason(reason)  # raises on anything outside the closed vocabulary
 
     backend.move_ref(f"agents/{agent}/{to_state}", image_hash)
     oplog.emit(
         "tag",
         actor=actor,
+        on_behalf_of=on_behalf_of,
         image=image_hash,
         from_state=from_state,
         to_state=to_state,
         evidence=evidence.model_dump() if evidence else None,
         pre_evidence=pre_evidence.model_dump() if pre_evidence else None,
         latency_ms=round((time.monotonic() - started) * 1000, 3),
+        # `reason` is the closed vocabulary; `note` is the user's own prose. Both
+        # are legitimate HERE — the oplog is the local channel. Only `reason`
+        # crosses into topology.yaml (cle/lifecycle/reasons.py).
+        # The conditional unpack OMITS the key when the value is absent, which
+        # `reason=None` would not: it would emit `"reason": null` and change the
+        # op-line format, which invariant 4 fixes. A checker cannot see which
+        # keys the dict holds, so it assumes a `str` could land on any named
+        # parameter of `emit`. Runtime-correct, statically unprovable.
+        # pyrefly: ignore[bad-argument-type]
         **({"reason": reason} if reason else {}),
+        # pyrefly: ignore[bad-argument-type]
+        **({"note": note} if note else {}),
     )
 
 

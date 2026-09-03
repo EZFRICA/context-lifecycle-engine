@@ -13,10 +13,9 @@ default suite (conformance is parametrized across them):
 - `FileStore` — persistent CLI/dashboard state under `--state-dir`.
 - `SqliteStore` — persistent and inspectable; stdlib `sqlite3`, no server.
 
-`WeaviateStore` is **NOT implemented** — it remains the deferred remote
-backend (see the note on `SqliteStore` below). The opt-in integration test
-only asserts that the `weaviate` client library exposes its v4 surface; it
-does not exercise a CLE backend. No unit or property test may depend on it.
+Both shipped backends are local, offline and deterministic, so both are
+eligible for the default suite. There is no remote backend, and no test
+depends on an external service.
 """
 
 import json
@@ -98,8 +97,7 @@ class FileStore:
     CLE need: the lifecycle spans CLI invocations and days — evidence
     accumulates against artifacts that must outlive a process. Same
     Protocol as InMemoryStore; tests use tmp_path, never a server.
-    (P2 decision, documented: this is the persistence the CLI runs on;
-    WeaviateStore remains the deferred remote backend.)
+    (P2 decision, documented: this is the persistence the CLI runs on.)
     """
 
     def __init__(self, root: Path | str) -> None:
@@ -149,8 +147,8 @@ class SqliteStore:
     CLE need: the lifecycle persists across processes and must be
     INSPECTABLE — one file you can open with any sqlite client, instead of a
     tree of hash-named blobs. stdlib sqlite3, zero network, deterministic, so
-    it is eligible for the default test suite. Weaviate remains the deferred
-    remote/vector backend. Same Protocol, same shared ref rule.
+    it is eligible for the default test suite. Same Protocol, same shared
+    ref rule as the other backends.
 
     Selected at runtime via `open_store` (CLE_STORE=sqlite / `--store sqlite`);
     `FileStore` stays the default. Single-writer by design: one commit per
