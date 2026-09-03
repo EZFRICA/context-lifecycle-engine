@@ -118,6 +118,31 @@ def test_mount_validation(tmp_path) -> None:
         validate_mounts([Mount(scope_ref="agents/a/v1.0.0", mode="rw")], store)
 
 
+def test_a_read_only_mount_on_an_absent_content_address_is_refused(tmp_path) -> None:
+    """The fourth `MountError` site, which the case above never reached.
+
+    `validate_mounts` raises in four places. Three are covered by
+    `test_mount_validation`: rw on a content address, rw on an immutable version
+    ref, and a mobile ref with nothing behind it. The fourth is a RO mount on a
+    well-formed content address that is simply not in this store, and it takes a
+    different branch: the raw-hash path, past the rw check, into `backend.get`.
+
+    Left uncovered, a container could be built mounting an object the store does
+    not hold, and the failure would surface later as a `KeyError` from whatever
+    first tried to read it, rather than at validation time with the mount named.
+    """
+    store = FileStore(tmp_path / "store")
+    absent = "0" * 64                      # well-formed address, nothing behind it
+
+    with pytest.raises(MountError, match="not in store"):
+        validate_mounts([Mount(scope_ref=absent, mode="ro")], store)
+
+    # The negative: the same address resolves once the object is actually there,
+    # so this is about presence, not about the shape of the reference.
+    block = _seed_block(store, "notes", "blocks/notes")
+    validate_mounts([Mount(scope_ref=block.hash, mode="ro")], store)
+
+
 # --- metrics volume --------------------------------------------------------
 
 

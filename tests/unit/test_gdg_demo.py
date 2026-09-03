@@ -35,6 +35,11 @@ def test_incumbent_competition_drops_capture_below_one() -> None:
     incumbent = TriggerSpec(centroid=demo.EMB.embed(demo.INCUMBENT_OPENER), embedder_id=demo.EMB.embedder_id)
     clean = _replay([])
     competed = _replay([incumbent])
+    # EXACT VALUES — CONSTRUCTED WINDOW, not realistic usage. 1.000 and 0.600
+    # are token-overlap outcomes of demo.build_window(), a hand-built history
+    # in stub:hashed64. They pin the competition MECHANISM (an incumbent lowers
+    # capture), never a system-wide rate; a semantic embedder reroutes that
+    # window entirely. See docs/METRICS.md, era A.
     assert clean.capture_rate == 1.0            # clean room is the tautology
     assert competed.capture_rate < 1.0          # the incumbent owns the contested episodes
     assert competed.capture_rate == 0.6

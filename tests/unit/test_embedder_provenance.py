@@ -150,9 +150,39 @@ def _image_built_in_space(embedder_id: str):
         "  centroid: [" + ", ".join(str(v) for v in centroid) + "]\n"
         f"  embedder_id: {embedder_id}\n"
     )
+    # The runtime embedder must DECLARE the space the spec claims. Without
+    # this helper ran the stub while labelling the trigger `google:...`, i.e. it
+    # built a knowingly mislabelled spec — tolerated when the label was inert
+    # metadata, and now refused by the identity gate on the capture path
+    # (replay.py). The invariant under test is unchanged: provenance is part of
+    # agent identity, so two spaces give two hashes. Only the lie is gone.
+    class _DeclaredSpace:
+        """Stub arithmetic, declared under the space the spec claims.
+
+        WHY THIS DISSOCIATION IS ALLOWED HERE AND NOWHERE ELSE. Everywhere in
+        `cle/`, declaring a space you did not compute in is the defect the
+        contract exists to stop: the number that comes back looks fine and means
+        nothing. Here the vectors are never compared across spaces — both images
+        are built independently, and the assertion is on their HASHES. What is
+        under test is that provenance participates in agent identity, so the
+        arithmetic is irrelevant and only the label matters.
+
+        Read this as the exception it is, not as the sanctioned pattern. If a
+        future test needs two spaces whose vectors are actually COMPARED, it must
+        use two real embedders — this class would make the comparison silently
+        meaningless, which is precisely what the contract forbids.
+        """
+
+        def __init__(self, declared: str) -> None:
+            self.embedder_id = declared
+
+        def embed(self, text: str):
+            return EMB.embed(text)
+
     return build_image(
         source=SourceSpec(yaml_raw=yaml_raw), backend=store, messages=_history(),
-        window_label="30d", existing_triggers=[], embedder=EMB,
+        window_label="30d", existing_triggers=[],
+        embedder=_DeclaredSpace(embedder_id),
         fingerprinter=_StubFingerprinter(), config=DetectorConfig(),
         oplog=OpLog(io.StringIO()), actor="human:test",
     )
