@@ -83,7 +83,10 @@ def get_fingerprint_llm(model_override: str | None = None):
     MEASURED, and it CONTRADICTS the rationale above:
       T=0.0 → 3/3 runs produced DIFFERENT fingerprints
       (2026-08-30, commit eca74ca, model gemini-3.5-flash-lite,
-       identical probe_set, 4 probes; see temp_run_real.md §3)
+       identical probe_set, 4 probes)
+
+    Reproduce: run `cle revalidate` three times against an unchanged live model
+    and compare the three fingerprints.
 
     A served model is not deterministic at temperature 0 — batching, routing
     and hardware make identical prompts return different text. Temperature is
@@ -94,9 +97,10 @@ def get_fingerprint_llm(model_override: str | None = None):
 
     An earlier version of this docstring cited an experiment script as proof of
     the opposite result. That script has never existed in this repository — not
-    in the tree, not in git history (see temp_run_real.md §0.4). It is not named
-    here: a docstring must not cite a file that does not exist, which is exactly
-    what tests/property/test_structural_guards.py now enforces. The remedy — tolerance band,
+    in the tree, not in git history; `git log --all --diff-filter=A --name-only`
+    finds no such addition. It is not named here: a docstring must not cite a
+    file that does not exist, which is exactly what
+    tests/property/test_structural_guards.py now enforces. The remedy — tolerance band,
     embedding distance, semantic judge, or dropping drift as a demotion trigger
     on live substrates — is an open decision, not a settled one.
 

@@ -18,7 +18,9 @@ written to fix the drift.
 
 ---
 
-## Test coverage: **388 tests** across 43 files, 0 skipped
+## Test coverage: **384 tests** across 42 files, 1 skipped
+
+Five more run only where the private WildChat corpus is present, so they are not counted here: a suite size a reader cannot reproduce is not a suite size. The skip is that corpus-gated module.
 
 **No test needs a real model, an API key, or the network**: fingerprinters are
 stubbed and the detection embedder is `CachedEmbedder` over committed vectors
@@ -115,7 +117,7 @@ is merely instantiated:
 | **2. Stub-as-a-tool** | **60** | Needs *some* deterministic embedder, but the claim is space-independent: two-hash inequality, build determinism, both rates always computed, tool gating, embedder provenance, runtime/switch cost, holdout structural sanity (both eras). |
 | **3. Stub-as-the-subject** | **31** | True **only** in `stub:hashed64`; these do **not** describe the production system. The contradiction taxonomy, the stability property tests, the adversarial/demo exact rates, the directive-band check. |
 
-**The good news is bucket 1: 161 of 388 assertions are invariant-core**: the
+**The good news is bucket 1: 161 of 384 assertions are invariant-core**: the
 contract itself (two hashes, Goodhart, staged-failure, evidence types,
 integrity) is entirely independent of which embedder is configured. Bucket 2
 adds 60 whose claims survive an embedder swap.

@@ -96,6 +96,19 @@ _NOT_A_PATH = {
     # entirely when the state dir uses SqliteStore — so its absence says which
     # backend last ran, not that the docstring lies.
     "refs.json",
+    # The rest of the state directory, on the same rule. These are files the
+    # engine WRITES — `cle init` and the lifecycle create them — so they exist on
+    # a machine that has run the CLI and are absent in a fresh clone. Docstrings
+    # must be able to name them: `topology.yaml` is the single-writer invariant's
+    # subject, and `log.jsonl` is the oplog the dashboard tails.
+    #
+    # This guard used to pass on my machine and fail in CI for exactly that
+    # reason, which made it a guard on my working directory rather than on the
+    # repository. Exempting them is what makes it check the same thing in both.
+    "topology.yaml",
+    "log.jsonl",
+    ".cle/log.jsonl",
+    "containers.json",
 }
 
 
@@ -163,14 +176,51 @@ DOCS_WITH_COUNTS = (
 _COUNT = re.compile(r"\*\*(\d+)[ -]tests?\b|\*\*(\d+) tests across (\d+) files")
 
 
+#: Test modules that skip at MODULE level when private corpus data is absent,
+#: so they collect on a machine holding that corpus and not in a fresh clone.
+#: The published count excludes them, because a count that depends on private
+#: data is a count only its author can check: it read 388 here and 383 in CI,
+#: and the number in the docs was the one no reader could reproduce.
+#:
+#: This list is load-bearing in a dangerous direction — anything named here
+#: leaves the published total — so `test_corpus_gated_modules_really_are_gated`
+#: keeps it honest.
+CORPUS_GATED = ("tests/unit/test_real_state_regression.py",)
+
+
 def _collected() -> tuple[int, int]:
-    """(tests, files) straight from pytest's own collector."""
+    """(tests, files) from pytest's own collector, minus the corpus-gated modules.
+
+    The subtraction is done on the collector's OUTPUT rather than by passing
+    `--ignore`: the count then comes out the same whether or not the corpus is
+    on this machine, which is the whole point.
+    """
     out = subprocess.run(
         [sys.executable, "-m", "pytest", "--collect-only", "-q", "-p", "no:cacheprovider"],
         cwd=ROOT, capture_output=True, text=True,
     ).stdout
-    rows = re.findall(r"^(tests/\S+\.py): (\d+)$", out, re.M)
+    rows = [r for r in re.findall(r"^(tests/\S+\.py): (\d+)$", out, re.M)
+            if r[0] not in CORPUS_GATED]
     return sum(int(n) for _, n in rows), len(rows)
+
+
+@pytest.mark.parametrize("module", CORPUS_GATED)
+def test_corpus_gated_modules_really_are_gated(module: str) -> None:
+    """Guards the guard: `CORPUS_GATED` must not become a place to hide tests.
+
+    Without this, dropping any inconvenient module into that tuple would remove
+    it from the published total while it still runs, and the docs would
+    understate the suite with a green suite to back them up. A module earns its
+    place there only by declaring a module-level skip.
+    """
+    path = ROOT / module
+    assert path.exists(), f"{module} is listed in CORPUS_GATED but does not exist"
+    source = path.read_text()
+    assert "allow_module_level=True" in source, (
+        f"{module} is excluded from the published test count but does not skip at "
+        "module level, so it runs everywhere and belongs in the total. Remove it "
+        "from CORPUS_GATED."
+    )
 
 
 @pytest.mark.parametrize("doc", DOCS_WITH_COUNTS)

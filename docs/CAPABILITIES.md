@@ -4,7 +4,7 @@ What the Context Lifecycle Engine does, why, and where each capability is
 demonstrated. Two cardinal pillars, **detection** (agents emerge from usage)
 and **lifecycle** (they earn or lose standing on lived evidence), over a
 content-addressed store, a runtime, and a live dashboard. Pinned by the
-**388-test** suite unless noted.
+**384-test** suite unless noted.
 
 > ## ⚠ Read this before any number below
 >
