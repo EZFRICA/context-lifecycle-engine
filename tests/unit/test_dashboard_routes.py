@@ -410,3 +410,34 @@ def test_health_and_the_action_cannot_disagree(tmp_path: Path) -> None:
         if not advertised:
             result = asyncio.run(actions.run_workspaces(state))
             assert result["code"] == 1, f"/health blocks {name} but the action ran it"
+
+
+def test_every_button_colour_class_has_a_rule() -> None:
+    """A button asking for a colour that no rule defines renders grey.
+
+    `btn violet` was on two buttons — "demo" and "2. Run test" — with no
+    `.btn.violet` rule anywhere, so both fell back to the default border. Grey is
+    also how this stylesheet renders `:disabled`, so an enabled button read as a
+    blocked one, and the operator reported the run button as blocked when it was
+    clickable the whole time.
+
+    Nothing in the page fails when a class is missing: CSS ignores what it does
+    not know. That is why this is a test and not something you notice.
+    """
+    import re
+
+    frontend = Path(__file__).resolve().parents[2] / "dashboard/frontend"
+    html = (frontend / "index.html").read_text()
+    css = (frontend / "styles.css").read_text()
+
+    used = set()
+    for value in re.findall(r'class="btn ([^"]+)"', html):
+        used.update(value.split())
+
+    defined = set(re.findall(r"\.btn\.([\w-]+)\s*\{", css))
+    missing = sorted(used - defined)
+    assert not missing, (
+        f"buttons use colour classes with no rule: {missing}. Defined: "
+        f"{sorted(defined)}. They render with the default border, which is also "
+        "what a disabled button looks like."
+    )

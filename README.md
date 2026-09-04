@@ -286,7 +286,7 @@ tests/          property/ + unit/, hypothesis for the invariants
 python -m pytest -q
 ```
 
-**393 tests across 42 files**, fully offline. Five more run only where the private WildChat corpus is present, so they are not counted here: a suite size a reader cannot reproduce is not a suite size. A green suite pins the
+**394 tests across 42 files**, fully offline. Five more run only where the private WildChat corpus is present, so they are not counted here: a suite size a reader cannot reproduce is not a suite size. A green suite pins the
 **contract**, not the production vector space: 161 assertions are embedder
 agnostic and hold in any era, while 31 pin the v1 stub mechanism only and do not
 describe the production system. Details in `docs/TESTING.md`.
