@@ -69,13 +69,30 @@ async def tail_log_forever(log_path: Path, bus: EventBus) -> None:
     Starts at end-of-file so existing history is served only via the
     connect-time replay, not double-counted on the live stream.
     """
-    offset = log_path.stat().st_size if log_path.exists() else 0
+    stat = log_path.stat() if log_path.exists() else None
+    offset = stat.st_size if stat else 0
+    inode = stat.st_ino if stat else None
     while True:
         try:
             if log_path.exists():
-                size = log_path.stat().st_size
-                if size < offset:  # truncated (e.g. `cle clean`) -> restart
+                stat = log_path.stat()
+                size = stat.st_size
+                # Two different events look alike from here and only one used to
+                # be handled. `cle clean` TRUNCATES: same file, smaller. But
+                # `full_loop.sh` starts with `rm -rf`, so the next log.jsonl is a
+                # NEW FILE at the same path — and if it happens to reach a size
+                # at or above the old offset before the next poll, `size < offset`
+                # is false and the tailer reads from a byte offset that belongs to
+                # a file that no longer exists. What it splices out of the middle
+                # of a line is usually unparseable or empty, so the first events
+                # of a fresh run vanish with no error anywhere: the board simply
+                # starts partway through.
+                #
+                # The inode is what actually distinguishes the two, so that is
+                # what is compared.
+                if stat.st_ino != inode or size < offset:
                     offset = 0
+                    inode = stat.st_ino
                 if size > offset:
                     with log_path.open("r", encoding="utf-8") as handle:
                         handle.seek(offset)

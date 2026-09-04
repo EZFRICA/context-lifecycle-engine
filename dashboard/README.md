@@ -40,10 +40,16 @@ The refusal is deliberate. `.cle` holds the only copy of the operator's oplog,
 store and topology history, it is gitignored so git cannot restore it, and a
 demo is not a reason to lose it.
 
-The button now passes `CLE_STATE_DIR` through to the script as
-`CLE_DEMO_STATE`, so the script writes exactly where the board is reading and
-the PULSE stream moves while the run is in progress. Launch the dashboard on
-`.cle` and the script refuses, visibly, in the action output.
+The button passes `CLE_STATE_DIR` through to the script as `CLE_DEMO_STATE`,
+so the script writes exactly where the board is reading and the PULSE stream
+moves while the run is in progress.
+
+Launch the dashboard on `.cle` and the button refuses before spawning anything,
+with the command to relaunch on a scratch state. It does not simply forward the
+script's own message: that one says to set `CLE_DEMO_STATE`, which is true in a
+shell and unusable in a browser, because the dashboard's directory is fixed at
+launch by `CLE_STATE_DIR` and nothing in the page can change it. The symptom
+that replaced was a button that ran for 11 ms and stopped.
 
 That is a change from the earlier behaviour, which is worth stating because
 anyone who used the dashboard before will have seen it: the button used to

@@ -83,7 +83,35 @@ async def run_workspaces(state_dir: Path) -> dict[str, Any]:
     dashboard launched on the live state gets an explicit refusal here rather
     than a run whose output lands somewhere it is not watching. A loud stop
     beats a silent success in the wrong place.
+
+    That refusal is caught HERE rather than left to the script, for one reason:
+    the script's own message says to set `CLE_DEMO_STATE`, which is true from a
+    shell and useless from a browser. An operator reading it in the action panel
+    cannot act on it — the dashboard's directory is fixed at launch by
+    `CLE_STATE_DIR`, and nothing in the page can change it. So the check runs
+    before the subprocess and names the variable the operator can actually set.
+
+    The symptom this replaces: the button ran for 11 ms and stopped, with a
+    message about a variable the operator had never heard of.
     """
+    if state_dir.name == ".cle":
+        return {
+            "argv": [],
+            "code": 1,
+            "stdout": "",
+            "stderr": (
+                f"This dashboard is running on {state_dir}, the live state.\n\n"
+                "full_loop.sh begins by deleting the state directory it is given, "
+                "and it refuses to do that to `.cle`: that directory holds the only "
+                "copy of your oplog, store and topology history, it is gitignored, "
+                "so git cannot restore it, and a demo is not a reason to lose it.\n\n"
+                "Relaunch the dashboard on a scratch state to use this button:\n"
+                "  CLE_STATE_DIR=.cle-demo uv run uvicorn dashboard.backend.app:app "
+                "--port 8000\n\n"
+                "Your `.cle` is untouched."
+            ),
+        }
+
     from dotenv import load_dotenv
     load_dotenv()  # ensure .env is loaded into os.environ for this process
 

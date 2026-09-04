@@ -202,3 +202,117 @@ def test_every_action_routes_its_state_dir_somewhere() -> None:
         "other directory than the one the dashboard reads, and reports exit 0 for "
         "doing so."
     )
+
+
+def test_run_test_on_the_live_state_refuses_with_an_actionable_message() -> None:
+    """The Run test button on `.cle` must explain what the operator can change.
+
+    `full_loop.sh` starts with `rm -rf` on the directory it is handed, so it
+    refuses `.cle`. Left to the script, that refusal reaches the browser as
+    "set CLE_DEMO_STATE to a scratch directory" after an 11 ms run — advice that
+    is correct in a shell and unusable in a page, because the dashboard's state
+    directory is fixed at launch by a DIFFERENT variable, `CLE_STATE_DIR`.
+
+    What the operator saw was a button that flashed and stopped.
+    """
+    import asyncio
+    from pathlib import Path as _Path
+
+    from dashboard.backend import actions
+
+    result = asyncio.run(actions.run_workspaces(_Path("/somewhere/.cle")))
+
+    assert result["code"] == 1
+    assert "CLE_STATE_DIR" in result["stderr"], (
+        "the refusal must name the variable the operator can actually set"
+    )
+    assert result["argv"] == [], "nothing should have been spawned"
+
+
+def test_run_test_on_a_scratch_state_is_not_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Guards the guard: a check that refused everything would pass the test
+    above while breaking the button outright."""
+    import asyncio
+    from pathlib import Path as _Path
+
+    from dashboard.backend import actions
+
+    captured: dict = {}
+
+    class _Fake:
+        returncode = 0
+
+        async def communicate(self):
+            return (b"", b"")
+
+    async def _fake_exec(*argv, **kw):
+        captured["env"] = kw.get("env", {})
+        return _Fake()
+
+    # monkeypatch, not os.environ: conftest clears the ambient credentials for
+    # the whole session on purpose, and a test that sets one globally hands the
+    # next test an environment it did not ask for.
+    monkeypatch.setattr(actions.asyncio, "create_subprocess_exec", _fake_exec)
+    monkeypatch.setenv("GEMINI_API_KEY", "test-only-not-a-real-key")
+    asyncio.run(actions.run_workspaces(_Path("/somewhere/.cle-demo")))
+
+    assert captured["env"]["CLE_DEMO_STATE"] == "/somewhere/.cle-demo", (
+        "the script must be pointed at the directory the board reads"
+    )
+
+
+def test_the_live_stream_survives_the_state_directory_being_replaced() -> None:
+    """`full_loop.sh` begins with `rm -rf`, so the log it then writes is a NEW
+    file at the same path.
+
+    The tailer used to detect only truncation, by comparing sizes. A replacement
+    file that reaches the old offset before the next poll passes that check, and
+    the tailer reads from a byte position belonging to a file that no longer
+    exists — splicing out the middle of a line, which parses to nothing. The
+    opening events of a fresh run then disappear with no error raised anywhere,
+    and the board starts partway through the run it is supposed to be showing.
+
+    Measured before the fix: of three lines written after the wipe, the first was
+    lost and the other two arrived.
+    """
+    import asyncio
+    import json
+    import shutil
+    import tempfile
+
+    from dashboard.backend.oplog_sse import EventBus, tail_log_forever
+
+    root = Path(tempfile.mkdtemp()) / "state"
+    root.mkdir(parents=True)
+    log = root / "log.jsonl"
+    log.write_text(json.dumps({"op": "before_wipe"}) + "\n")
+
+    async def scenario() -> list[str]:
+        bus, seen = EventBus(), []
+        queue = bus.subscribe()
+        tailer = asyncio.create_task(tail_log_forever(log, bus))
+
+        async def drain() -> None:
+            while True:
+                seen.append((await queue.get())["op"])
+
+        drainer = asyncio.create_task(drain())
+        await asyncio.sleep(0.6)
+        shutil.rmtree(root)               # what full_loop.sh does first
+        await asyncio.sleep(0.6)
+        root.mkdir(parents=True)
+        for i in range(3):
+            with log.open("a") as handle:
+                handle.write(json.dumps({"op": f"after_wipe_{i}"}) + "\n")
+            await asyncio.sleep(0.6)
+        await asyncio.sleep(0.6)
+        tailer.cancel()
+        drainer.cancel()
+        return seen
+
+    seen = asyncio.run(scenario())
+    assert seen == ["after_wipe_0", "after_wipe_1", "after_wipe_2"], (
+        f"events after the wipe: {seen}. Every line written to the replacement "
+        "file must reach the stream; a missing first event is the board starting "
+        "partway through a run."
+    )
