@@ -362,3 +362,51 @@ def test_the_command_the_refusal_teaches_actually_exists() -> None:
         f"the refusal teaches {sorted(flags)}, but `cle dashboard` declares "
         f"{sorted(f for f in declared if f.startswith('--'))}. Unknown: {missing}"
     )
+
+
+@pytest.mark.parametrize(
+    "state_name, runnable",
+    [(".cle", False), (".cle-demo", True), ("scratch", True)],
+)
+def test_health_tells_the_page_whether_the_demo_run_is_possible(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, state_name: str, runnable: bool
+) -> None:
+    """The page must be able to grey the button out before anyone clicks it.
+
+    Without this the only way to learn that "2. Run test" cannot work here is to
+    press it and read the failure — which is how the operator found it: the
+    button flashed for 11 ms and stopped.
+    """
+    import importlib
+
+    from fastapi.testclient import TestClient
+
+    state = tmp_path / state_name
+    state.mkdir()
+    monkeypatch.setenv("CLE_STATE_DIR", str(state))
+
+    from dashboard.backend import app as app_module
+
+    reloaded = importlib.reload(app_module)
+    payload = TestClient(reloaded.app).get("/health").json()
+
+    assert payload["demo_runnable"] is runnable
+    assert (payload["demo_blocked"] is None) is runnable, (
+        "a blocked run must carry its reason, and a runnable one must carry none"
+    )
+
+
+def test_health_and_the_action_cannot_disagree(tmp_path: Path) -> None:
+    """Guards the guard: /health advertising a run the action would refuse is
+    worse than no advertisement, because the operator then trusts the button."""
+    import asyncio
+
+    from dashboard.backend import actions
+
+    for name in (".cle", ".cle-demo", "scratch"):
+        state = tmp_path / name
+        state.mkdir()
+        advertised = actions.demo_run_refusal(state) is None
+        if not advertised:
+            result = asyncio.run(actions.run_workspaces(state))
+            assert result["code"] == 1, f"/health blocks {name} but the action ran it"

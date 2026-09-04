@@ -186,7 +186,18 @@ def demo_abort():
 
 @app.get("/health")
 def health():
-    return {"ok": True, "state_dir": str(STATE_DIR), "log_exists": LOG_PATH.exists()}
+    # `demo_blocked` comes from the same predicate the action itself uses, so the
+    # page can never offer a button the backend would refuse.
+    from .actions import demo_run_refusal
+
+    blocked = demo_run_refusal(STATE_DIR)
+    return {
+        "ok": True,
+        "state_dir": str(STATE_DIR),
+        "log_exists": LOG_PATH.exists(),
+        "demo_runnable": blocked is None,
+        "demo_blocked": blocked,
+    }
 
 
 # Static frontend LAST so explicit API routes above take precedence.

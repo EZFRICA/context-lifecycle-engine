@@ -44,8 +44,12 @@ The button passes `CLE_STATE_DIR` through to the script as `CLE_DEMO_STATE`,
 so the script writes exactly where the board is reading and the PULSE stream
 moves while the run is in progress.
 
-Launch the dashboard on `.cle` and the button refuses before spawning anything,
-with the command to relaunch on a scratch state. It does not simply forward the
+Launch the dashboard on `.cle` and the button is greyed out from the first
+paint: the page asks `GET /health`, which answers with `demo_runnable` computed
+by the same predicate the action uses, so the page cannot offer a run the
+backend would refuse. Hovering gives the command to relaunch on a scratch
+state, and pressing it — if anything ever bypasses the page — still refuses
+before spawning. It does not simply forward the
 script's own message: that one says to set `CLE_DEMO_STATE`, which is true in a
 shell and unusable in a browser, because the dashboard's directory is fixed at
 launch by `CLE_STATE_DIR` and nothing in the page can change it. The symptom

@@ -64,6 +64,29 @@ async def init_system(state_dir: Path) -> dict[str, Any]:
     ], state_dir)
 
 
+def demo_run_refusal(state_dir: Path) -> str | None:
+    """Why the demo run cannot execute here, or None if it can.
+
+    One predicate, two callers: `run_workspaces` refuses with it, and `/health`
+    publishes it so the page can grey the button out BEFORE anyone clicks. That
+    is the point of extracting it — an operator should not have to press a button
+    to be told it was never going to work, and two copies of the same rule drift
+    until the panel and the page disagree about what is possible.
+    """
+    if state_dir.name == ".cle":
+        return (
+            f"This dashboard is running on {state_dir}, the live state.\n\n"
+            "full_loop.sh begins by deleting the state directory it is given, and "
+            "it refuses to do that to `.cle`: that directory holds the only copy "
+            "of your oplog, store and topology history, it is gitignored, so git "
+            "cannot restore it, and a demo is not a reason to lose it.\n\n"
+            "Relaunch the dashboard on a scratch state to use this button:\n"
+            "  uv run cle dashboard --state-dir .cle-demo --port 8000\n\n"
+            "Your `.cle` is untouched."
+        )
+    return None
+
+
 async def run_workspaces(state_dir: Path) -> dict[str, Any]:
     """Execute the full demo loop script bash examples/full_loop.sh.
 
@@ -94,22 +117,9 @@ async def run_workspaces(state_dir: Path) -> dict[str, Any]:
     The symptom this replaces: the button ran for 11 ms and stopped, with a
     message naming a variable the operator had no way to use.
     """
-    if state_dir.name == ".cle":
-        return {
-            "argv": [],
-            "code": 1,
-            "stdout": "",
-            "stderr": (
-                f"This dashboard is running on {state_dir}, the live state.\n\n"
-                "full_loop.sh begins by deleting the state directory it is given, "
-                "and it refuses to do that to `.cle`: that directory holds the only "
-                "copy of your oplog, store and topology history, it is gitignored, "
-                "so git cannot restore it, and a demo is not a reason to lose it.\n\n"
-                "Relaunch the dashboard on a scratch state to use this button:\n"
-                "  uv run cle dashboard --state-dir .cle-demo --port 8000\n\n"
-                "Your `.cle` is untouched."
-            ),
-        }
+    blocked = demo_run_refusal(state_dir)
+    if blocked:
+        return {"argv": [], "code": 1, "stdout": "", "stderr": blocked}
 
     from dotenv import load_dotenv
     load_dotenv()  # ensure .env is loaded into os.environ for this process

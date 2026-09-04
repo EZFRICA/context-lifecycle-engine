@@ -18,7 +18,7 @@ numbers**. Read the era label before the figure.
   mechanics, not measured reality.
 * A number with no era and no test name should be distrusted.
 
-Suite: **389 tests across 42 files**, `python -m pytest -q`. Five more run only where the private WildChat corpus is present, so they are not counted here: a suite size a reader cannot reproduce is not a suite size. See
+Suite: **393 tests across 42 files**, `python -m pytest -q`. Five more run only where the private WildChat corpus is present, so they are not counted here: a suite size a reader cannot reproduce is not a suite size. See
 `docs/TESTING.md`.
 
 ---

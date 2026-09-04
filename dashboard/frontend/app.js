@@ -40,7 +40,20 @@ function cleDashboard() {
     flash: { births: false, lives: false, topology: false },
     modal: { open: false, loading: false, agent: null, state: null, data: null },
 
+    health: { runnable: true, blocked: "" },
+
     async init() {
+      // Ask the backend whether the demo run is possible HERE before offering it.
+      // The rule lives server-side (actions.demo_run_refusal) so the page cannot
+      // offer a button the backend would refuse.
+      try {
+        const h = await fetch("/health").then(r => r.json());
+        this.health = { runnable: h.demo_runnable !== false, blocked: h.demo_blocked || "" };
+      } catch (err) {
+        // A dashboard that cannot reach its own /health should not silently
+        // disable a working button; assume runnable and let the action answer.
+        this.health = { runnable: true, blocked: "" };
+      }
       await this.refresh();
       this.connect();
       // Forward-compatibility + self-heal: periodic snapshot refresh keeps the
