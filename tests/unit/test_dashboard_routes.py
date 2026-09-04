@@ -223,10 +223,13 @@ def test_run_test_on_the_live_state_refuses_with_an_actionable_message() -> None
     result = asyncio.run(actions.run_workspaces(_Path("/somewhere/.cle")))
 
     assert result["code"] == 1
-    assert "CLE_STATE_DIR" in result["stderr"], (
-        "the refusal must name the variable the operator can actually set"
-    )
     assert result["argv"] == [], "nothing should have been spawned"
+    # The message must hand back a command the operator can paste, and it must be
+    # the one the README teaches — an error that invents its own launch syntax
+    # sends the reader somewhere the docs do not go.
+    assert "cle dashboard --state-dir" in result["stderr"], (
+        f"the refusal must name the documented launch command; got: {result['stderr']!r}"
+    )
 
 
 def test_run_test_on_a_scratch_state_is_not_refused(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -315,4 +318,47 @@ def test_the_live_stream_survives_the_state_directory_being_replaced() -> None:
         f"events after the wipe: {seen}. Every line written to the replacement "
         "file must reach the stream; a missing first event is the board starting "
         "partway through a run."
+    )
+
+
+def test_the_command_the_refusal_teaches_actually_exists() -> None:
+    """The refusal hands the operator a command to paste. This checks the CLI
+    really accepts it.
+
+    Asserting the message merely CONTAINS the right string proves only that two
+    pieces of prose agree. If `cle dashboard` ever loses `--state-dir`, or the
+    subcommand is renamed, the message keeps its text and starts teaching a
+    command that fails — and the test above stays green while the operator is
+    stuck exactly where they were.
+    """
+    import asyncio
+
+    from cle.cli import main as cli
+    from dashboard.backend import actions
+
+    message = asyncio.run(actions.run_workspaces(Path("/somewhere/.cle")))["stderr"]
+
+    command = next(
+        (line.strip() for line in message.splitlines() if "cle dashboard" in line), ""
+    )
+    assert command, "the refusal no longer contains a launch command"
+
+    # Everything after the subcommand name, keeping only the flags.
+    flags = {word for word in command.split() if word.startswith("--")}
+
+    registered = {info.name or info.callback.__name__: info for info in cli.app.registered_commands}
+    assert "dashboard" in registered, "the CLI has no `dashboard` command to launch"
+
+    import inspect
+
+    params = inspect.signature(registered["dashboard"].callback).parameters
+    declared = set()
+    for name, param in params.items():
+        option = getattr(param.default, "param_decls", None)
+        declared.update(option or [f"--{name.replace('_', '-')}"])
+
+    missing = sorted(flags - declared)
+    assert not missing, (
+        f"the refusal teaches {sorted(flags)}, but `cle dashboard` declares "
+        f"{sorted(f for f in declared if f.startswith('--'))}. Unknown: {missing}"
     )

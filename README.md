@@ -166,9 +166,15 @@ deterministic run CI uses. Isolate any of them with
 ### Live dashboard
 
 ```bash
-uv run cle dashboard --port 8000                  # http://localhost:8000
+uv run cle dashboard --port 8000                  # http://localhost:8000, on .cle
 uv run cle --store sqlite dashboard --port 8000   # if the CLI wrote sqlite
+uv run cle dashboard --state-dir .cle-demo --port 8000   # to use "2. Run test"
 ```
+
+The third form is not a variant of the first: **"2. Run test" runs
+`full_loop.sh`, which deletes and rebuilds the state directory it is given**, so
+it refuses `.cle` and the button reports that instead of running. Point the
+dashboard at a scratch directory when you want that button.
 
 One page (HTML + Alpine, no build step) over the persistent `.cle/` state, served
 by FastAPI. Four zones: **Pulse** (live oplog over SSE), **Births** (candidate
@@ -275,7 +281,7 @@ tests/          property/ + unit/, hypothesis for the invariants
 python -m pytest -q
 ```
 
-**388 tests across 42 files**, fully offline. Five more run only where the private WildChat corpus is present, so they are not counted here: a suite size a reader cannot reproduce is not a suite size. A green suite pins the
+**389 tests across 42 files**, fully offline. Five more run only where the private WildChat corpus is present, so they are not counted here: a suite size a reader cannot reproduce is not a suite size. A green suite pins the
 **contract**, not the production vector space: 161 assertions are embedder
 agnostic and hold in any era, while 31 pin the v1 stub mechanism only and do not
 describe the production system. Details in `docs/TESTING.md`.

@@ -87,12 +87,12 @@ async def run_workspaces(state_dir: Path) -> dict[str, Any]:
     That refusal is caught HERE rather than left to the script, for one reason:
     the script's own message says to set `CLE_DEMO_STATE`, which is true from a
     shell and useless from a browser. An operator reading it in the action panel
-    cannot act on it — the dashboard's directory is fixed at launch by
-    `CLE_STATE_DIR`, and nothing in the page can change it. So the check runs
-    before the subprocess and names the variable the operator can actually set.
+    cannot act on it — the dashboard's directory is fixed when it is launched,
+    and nothing in the page can change it. So the check runs before the
+    subprocess and hands back the launch command from the README instead.
 
     The symptom this replaces: the button ran for 11 ms and stopped, with a
-    message about a variable the operator had never heard of.
+    message naming a variable the operator had no way to use.
     """
     if state_dir.name == ".cle":
         return {
@@ -106,8 +106,7 @@ async def run_workspaces(state_dir: Path) -> dict[str, Any]:
                 "copy of your oplog, store and topology history, it is gitignored, "
                 "so git cannot restore it, and a demo is not a reason to lose it.\n\n"
                 "Relaunch the dashboard on a scratch state to use this button:\n"
-                "  CLE_STATE_DIR=.cle-demo uv run uvicorn dashboard.backend.app:app "
-                "--port 8000\n\n"
+                "  uv run cle dashboard --state-dir .cle-demo --port 8000\n\n"
                 "Your `.cle` is untouched."
             ),
         }

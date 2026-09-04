@@ -21,7 +21,7 @@ the API table.
 ## Run
 ```bash
 uv pip install fastapi "uvicorn[standard]"        # one-time (already in the venv)
-CLE_STATE_DIR=.cle-demo uv run uvicorn dashboard.backend.app:app --port 8000
+uv run cle dashboard --state-dir .cle-demo --port 8000
 # open http://localhost:8000
 ```
 

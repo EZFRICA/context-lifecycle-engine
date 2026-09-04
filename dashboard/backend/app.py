@@ -1,7 +1,15 @@
 """FastAPI app — SSE + snapshot REST + the one write path + demo runner.
 
-Run:  uvicorn dashboard.backend.app:app --port 8000
-State dir via CLE_STATE_DIR (default .cle/). Serves the Alpine frontend at /.
+Run:  cle dashboard --state-dir .cle-demo --port 8000
+
+That subcommand exports CLE_STATE_DIR and calls uvicorn on this module, so
+running uvicorn directly works too — but then the state directory comes from
+the ambient CLE_STATE_DIR (default `.cle/`) rather than from a flag, which is
+the reading everything else in the docs assumes. Serves the Alpine frontend
+at /.
+
+Use a scratch directory, not `.cle`, if you intend to press "2. Run test":
+that button deletes and rebuilds the state it runs on, and refuses `.cle`.
 """
 
 import os
