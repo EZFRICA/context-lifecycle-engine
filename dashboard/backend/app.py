@@ -200,6 +200,32 @@ def health():
     }
 
 
+class _RevalidatingStaticFiles(StaticFiles):
+    """StaticFiles that asks the browser to revalidate instead of guessing.
+
+    `StaticFiles` sends `etag` and `last-modified` but no `Cache-Control`, so a
+    browser falls back to HEURISTIC freshness: it may reuse a cached copy for a
+    while without asking. The asset URLs carry no version, so there is nothing to
+    invalidate them either.
+
+    The visible consequence, and the reason this exists: a stylesheet fix shipped,
+    the server served it, and an operator with the page already open kept seeing
+    the old rendering — a button that read as disabled. Nothing was wrong on
+    either side; the fix simply never crossed.
+
+    `no-cache` does not mean "do not cache". It means "revalidate before use", so
+    the etag still turns almost every load into a 304. That is the right trade
+    for a dashboard whose frontend is edited while it runs.
+    """
+
+    def file_response(self, *args, **kwargs):  # type: ignore[override]
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 # Static frontend LAST so explicit API routes above take precedence.
 if FRONTEND_DIR.exists():
-    app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
+    app.mount(
+        "/", _RevalidatingStaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend"
+    )

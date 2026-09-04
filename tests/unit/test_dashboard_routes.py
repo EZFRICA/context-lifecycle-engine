@@ -489,3 +489,35 @@ def test_the_live_stream_survives_a_replacement_that_keeps_the_inode() -> None:
         f"events after the in-place replacement: {seen}. The first line of the new "
         "log must reach the stream; losing it is the board starting partway through."
     )
+
+
+def test_the_frontend_is_served_with_revalidation() -> None:
+    """A stylesheet fix must reach a browser that already has the page open.
+
+    `StaticFiles` sends `etag` and `last-modified` but no `Cache-Control`, and
+    the asset URLs carry no version, so a browser falls back to heuristic
+    freshness and may keep serving its cached copy without asking. That is not a
+    theory: a fix to `.btn.violet` shipped, the server served it, and the page
+    kept rendering the old grey button — the operator reported the button as
+    blocked twice, on a server that already had the fix.
+
+    `no-cache` means "revalidate", not "do not store", so the etag still answers
+    almost every load with a 304.
+    """
+    from fastapi.testclient import TestClient
+
+    from dashboard.backend.app import app
+
+    client = TestClient(app)
+    for asset in ("/styles.css", "/app.js", "/index.html"):
+        response = client.get(asset)
+        assert response.status_code == 200, f"{asset} -> {response.status_code}"
+        assert response.headers.get("cache-control") == "no-cache", (
+            f"{asset} is served with cache-control="
+            f"{response.headers.get('cache-control')!r}; a browser may then keep a "
+            "stale copy and never see a frontend fix"
+        )
+
+    # The etag must still short-circuit, or revalidation costs a full download.
+    etag = client.get("/styles.css").headers["etag"]
+    assert client.get("/styles.css", headers={"If-None-Match": etag}).status_code == 304
