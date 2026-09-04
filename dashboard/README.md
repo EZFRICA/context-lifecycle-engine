@@ -27,27 +27,38 @@ CLE_STATE_DIR=.cle-demo uv run uvicorn dashboard.backend.app:app --port 8000
 
 ### Why `.cle-demo` and not `.cle`
 
-Because of the **2. Run test** button, and this is a constraint on the operator
-that no code enforces.
+Because of the **2. Run test** button, which runs `bash examples/full_loop.sh`
+— and that script begins with `rm -rf` on the state directory it is given.
 
-That button runs `bash examples/full_loop.sh`, and the script writes to
-`${CLE_DEMO_STATE:-.cle-demo}`. It also refuses outright to run on `.cle`:
+It refuses to do that to `.cle`:
 
 ```
 refusing to run on .cle - set CLE_DEMO_STATE to a scratch directory
 ```
 
-That refusal is deliberate. `.cle` holds the only copy of the operator's oplog,
+The refusal is deliberate. `.cle` holds the only copy of the operator's oplog,
 store and topology history, it is gitignored so git cannot restore it, and a
 demo is not a reason to lose it.
 
-The consequence is a mismatch nothing warns about. The live PULSE stream tails
-`$CLE_STATE_DIR/log.jsonl`. With the dashboard on `.cle` the script writes 52 op
-lines into `.cle-demo/log.jsonl` instead, exits 0, and **the board shows
-nothing**: the script worked, it simply wrote somewhere the dashboard is not
-watching. Silence, not an error.
+The button now passes `CLE_STATE_DIR` through to the script as
+`CLE_DEMO_STATE`, so the script writes exactly where the board is reading and
+the PULSE stream moves while the run is in progress. Launch the dashboard on
+`.cle` and the script refuses, visibly, in the action output.
 
-So point the dashboard at the same directory the script uses. `GET /health`
+That is a change from the earlier behaviour, which is worth stating because
+anyone who used the dashboard before will have seen it: the button used to
+ignore the dashboard's state directory entirely and write to its own default
+`.cle-demo`. It exited 0, wrote its 52 oplog lines, and the board showed
+nothing — the run had succeeded somewhere nobody was watching. It looked like a
+frozen dashboard and was a directory mismatch.
+
+One thing has not changed: **the run is synchronous**. The button stays
+disabled from the click until the script exits — around 26 s with stub models,
+longer with real ones — because the action awaits the subprocess. The board
+updates live throughout, so progress is visible even though the controls are
+not clickable.
+
+`GET /health`
 reports which one it is (`state_dir`, `log_exists`) when the board looks empty
 and you want to know why.
 Populate some state first (`bash examples/full_loop.sh`, or `uv run python

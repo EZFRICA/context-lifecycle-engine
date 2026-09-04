@@ -167,3 +167,38 @@ def test_the_topology_payload_carries_the_vector_space(tmp_path) -> None:
     )
     assert payload["embedding"]["embedder_id"] == born_in.embedder_id
     assert payload["embedding"]["cluster_threshold"] == born_in.cluster_threshold
+
+
+def test_every_action_routes_its_state_dir_somewhere() -> None:
+    """An action that accepts `state_dir` and never reads it writes to the wrong
+    place while reporting success.
+
+    That is not hypothetical: `run_workspaces` took the parameter and dropped it,
+    so `full_loop.sh` wrote its 52 oplog lines into its own default `.cle-demo`
+    while the dashboard tailed `$CLE_STATE_DIR/log.jsonl`. The script exited 0.
+    The board never moved. Nothing in the suite noticed, because every assertion
+    about the run was true — of a directory nobody was watching.
+
+    An unused parameter is the readable symptom, so that is what this checks.
+    """
+    import ast
+    from pathlib import Path as _Path
+
+    source = _Path(__file__).resolve().parents[2] / "dashboard/backend/actions.py"
+    tree = ast.parse(source.read_text())
+
+    deaf = []
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)):
+            continue
+        if "state_dir" not in {a.arg for a in node.args.args}:
+            continue
+        used = {n.id for n in ast.walk(node) if isinstance(n, ast.Name)}
+        if "state_dir" not in used:
+            deaf.append(node.name)
+
+    assert not deaf, (
+        f"actions accept state_dir and ignore it: {deaf}. Each one acts on some "
+        "other directory than the one the dashboard reads, and reports exit 0 for "
+        "doing so."
+    )

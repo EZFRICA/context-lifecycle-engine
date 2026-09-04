@@ -70,6 +70,19 @@ async def run_workspaces(state_dir: Path) -> dict[str, Any]:
     Forces real Gemini model usage: validates GEMINI_API_KEY is present and
     injects CLE_FORCE_REAL_MODEL=1 so fingerprinter.py raises immediately on
     any API failure instead of silently falling back to stub hashes.
+
+    `state_dir` reaches the script as CLE_DEMO_STATE, and that is the whole
+    reason the board moves while this runs. Every other action here appends
+    `--state-dir`; this one used to accept the parameter and ignore it, so the
+    script wrote to its own default (`.cle-demo`) while the dashboard tailed the
+    oplog under `$CLE_STATE_DIR`. Nothing failed — the script exited 0, wrote its
+    52 oplog lines, and the operator watched a board that never moved, because
+    the two were looking at different directories.
+
+    The script refuses to run on `.cle` (it starts with `rm -rf`), so a
+    dashboard launched on the live state gets an explicit refusal here rather
+    than a run whose output lands somewhere it is not watching. A loud stop
+    beats a silent success in the wrong place.
     """
     from dotenv import load_dotenv
     load_dotenv()  # ensure .env is loaded into os.environ for this process
@@ -92,7 +105,7 @@ async def run_workspaces(state_dir: Path) -> dict[str, Any]:
         "bash", "examples/full_loop.sh",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
-        env={**force_env, "CLE_ACTOR": "dashboard"},
+        env={**force_env, "CLE_ACTOR": "dashboard", "CLE_DEMO_STATE": str(state_dir)},
         cwd=str(Path.cwd()),
     )
     out, err = await proc.communicate()
