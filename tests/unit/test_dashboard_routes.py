@@ -441,3 +441,51 @@ def test_every_button_colour_class_has_a_rule() -> None:
         f"{sorted(defined)}. They render with the default border, which is also "
         "what a disabled button looks like."
     )
+
+
+def test_the_live_stream_survives_a_replacement_that_keeps_the_inode() -> None:
+    """The case CI hit, which the previous fix did not cover.
+
+    That fix compared inode numbers. A filesystem is free to give a replacement
+    file the inode it has just freed, and Linux commonly does — so on CI the
+    wipe-and-recreate looked like the same file, the offset survived, and the
+    first line of the new log was spliced in half and lost. The same check passed
+    on APFS, where reuse is rarer. A test that only wipes a directory therefore
+    passes or fails by filesystem.
+
+    This reproduces the shape directly and without depending on inode luck: the
+    file is REWRITTEN in place — same inode by construction — with different,
+    longer content, so neither the inode check nor the size check fires.
+    """
+    import asyncio
+    import json
+    import tempfile
+
+    from dashboard.backend.oplog_sse import EventBus, tail_log_forever
+
+    log = Path(tempfile.mkdtemp()) / "log.jsonl"
+    log.write_text(json.dumps({"op": "old_run"}) + "\n")
+
+    async def scenario() -> list[str]:
+        bus, seen = EventBus(), []
+        queue = bus.subscribe()
+        tailer = asyncio.create_task(tail_log_forever(log, bus))
+
+        async def drain() -> None:
+            while True:
+                seen.append((await queue.get())["op"])
+
+        drainer = asyncio.create_task(drain())
+        await asyncio.sleep(0.6)
+        # Same path, same inode, content replaced and LONGER than the old offset.
+        log.write_text(json.dumps({"op": "new_run_first_event_padded"}) + "\n")
+        await asyncio.sleep(0.8)
+        tailer.cancel()
+        drainer.cancel()
+        return seen
+
+    seen = asyncio.run(scenario())
+    assert seen == ["new_run_first_event_padded"], (
+        f"events after the in-place replacement: {seen}. The first line of the new "
+        "log must reach the stream; losing it is the board starting partway through."
+    )
