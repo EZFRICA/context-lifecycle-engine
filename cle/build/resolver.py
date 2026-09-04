@@ -132,7 +132,7 @@ def _resolve_refs(source: SourceSpec, backend: StoreBackend, oplog: OpLog) -> di
             # Dangling ref: name exists, object gone. (On InMemoryStore a
             # KeyError can only come from the first get; a backend where
             # the refetch can also miss — concurrent deletion — would be
-            # misclassified here and needs tightening when Weaviate lands.)
+            # misclassified here and needs tightening if a remote backend lands.)
             missing.append(ref)
             continue
         resolved[ref] = target_hash

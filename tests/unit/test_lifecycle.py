@@ -9,6 +9,8 @@ import pytest
 from cle.lifecycle.engine import EngineThresholds, shadow_decide
 from cle.lifecycle.revalidator import revalidate
 from cle.lifecycle.tags import TagMoveError, move_state_tag, tag_version
+from cle.detect.clusters import HashedTokenEmbedder
+from cle.detect.embedders import embedding_config_for
 from cle.lifecycle.topology import current_agents, render_diff, render_log, write_topology
 from cle.oplog import OpLog
 from cle.store.backends import ImmutableRefError, InMemoryStore
@@ -79,7 +81,7 @@ def test_tag_ladder_proof_requirements(tmp_path) -> None:
         )
     move_state_tag(
         backend=store, agent="recap", image_hash=image.hash, from_state="pinned",
-        to_state="trial", reason="fingerprint drift", oplog=oplog, actor="human:t",
+        to_state="trial", reason="substrate_drift", oplog=oplog, actor="human:t",
     )
     ops = [json.loads(line) for line in sink.getvalue().splitlines() if '"op": "tag"' in line]
     assert [o.get("to") for o in ops] == ["candidate", "trial", "ephemeral", "pinned", "trial"]
@@ -173,9 +175,12 @@ def test_topology_chain_diff_and_log(tmp_path) -> None:
             backend=store, path=topo, agent="recap", state="trial", image_hash=image.hash,
             cause={}, oplog=oplog, actor="human:t",
         )
+    # The FIRST write of a topology names the vector space it was produced in;
+    # every later write inherits it from the parent record (topology scope).
     ref1 = write_topology(
         backend=store, path=topo, agent="recap", state="trial", image_hash=image.hash,
         cause={"pre_evidence": _pre().model_dump()}, oplog=oplog, actor="human:t",
+        embedding=embedding_config_for(HashedTokenEmbedder()),
     )
     ref2 = write_topology(
         backend=store, path=topo, agent="recap", state="ephemeral", image_hash=image.hash,

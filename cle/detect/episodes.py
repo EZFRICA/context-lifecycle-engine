@@ -65,10 +65,29 @@ class DetectorConfig(BaseModel, frozen=True):
     # Clustering: minimum cosine similarity between an opener embedding
     # and a centroid to join the cluster rather than found a new one.
     cluster_similarity_threshold: float = 0.6
-    # Signals (replay-validation skill): >=3 occurrences for either
-    # signal; a period is "stable" when the coefficient of variation of
-    # the inter-arrival times stays within this tolerance.
+    # >=3 occurrences for either signal. PROVENANCE: this value comes from the
+    # published specification, not from a sweep. It governs when a signal exists
+    # at all, so it is worth knowing that it was chosen rather than measured.
+    #
+    # A period is "stable" when the coefficient of variation of the
+    # inter-arrival times stays within this tolerance.
     min_signal_occurrences: int = 3
+    # Above this share of ZERO inter-message gaps, `segment` raises rather than
+    # returning a plausible-looking split.
+    #
+    # MEASURED on the 6,161-user WildChat cohort against the GDG fixture:
+    #   WildChat  p05=0.00  p25=0.51  p50=0.67  p75=0.78  p95=0.89
+    #   GDG                                                    0.00
+    # At 0.5 the bar catches 76% of WildChat users and 0% of GDG. It is NOT a
+    # clean separation: the property is graded, and the bottom quartile of
+    # WildChat has genuinely mixed timestamps because those users spread
+    # single-turn conversations over time. Those pass, and segmentation is
+    # partially meaningful for them.
+    #
+    # An earlier version of this comment justified 0.5 by claiming WildChat sits
+    # "at ~1.0". That was written before the distribution was measured, and it
+    # was wrong. The numbers above are the measurement.
+    max_zero_gap_share: float = 0.5
     recurrence_tolerance: float = 0.25
     # Cluster-stability taxonomy (GDG run). Directives more dissimilar
     # than this are a divergent pair; below the SEVERE bar the divergence
@@ -158,6 +177,11 @@ def silence_threshold(gaps: Sequence[timedelta], config: DetectorConfig) -> time
     """
     if len(gaps) < config.min_gaps_for_median:
         return config.silence_floor
+    # `statistics.median` over timedeltas works (it sorts, and averages the two
+    # middle values for an even count, both defined on timedelta). The stubs
+    # constrain the type variable to float/Decimal/Fraction, so this reads as an
+    # error while being exactly what the function is for.
+    # pyrefly: ignore[bad-specialization]
     return max(config.silence_multiplier * statistics.median(gaps), config.silence_floor)
 
 
@@ -168,6 +192,15 @@ def _contains_success_marker(text: str, config: DetectorConfig) -> bool:
     return any(
         re.search(rf"\b{re.escape(marker)}\b", lowered) for marker in config.success_markers
     )
+
+
+class CoarseTimestampError(ValueError):
+    """Timestamps are coarser than the events they order.
+
+    Loud on purpose. A silence-based segmenter fed zero gaps does not fail — it
+    returns a segmentation that looks right, which is how a corpus can be
+    processed for a whole campaign before anyone notices the rule never fired.
+    """
 
 
 def segment(messages: Sequence[Message], config: DetectorConfig) -> list[Episode]:
@@ -187,6 +220,26 @@ def segment(messages: Sequence[Message], config: DetectorConfig) -> list[Episode
         raise ValueError("segment() expects chronologically sorted messages")
 
     gaps = [later - earlier for earlier, later in zip(timestamps, timestamps[1:])]
+
+    # A corpus whose timestamps are too coarse makes silence-based segmentation
+    # INERT, and inert in the worst way: it still returns episodes and they still
+    # look plausible. WildChat is the observed case, where every turn of a
+    # conversation carries the conversation's timestamp: intra-thread gaps are
+    # all zero, the silence rule cannot cut, and the segmenter degenerates to
+    # thread boundaries while appearing to work.
+    #
+    # Not an error, a degraded behaviour indistinguishable from the normal one.
+    # Raise instead of segmenting.
+    if len(gaps) >= config.min_gaps_for_median:
+        zero_share = sum(1 for g in gaps if g.total_seconds() == 0) / len(gaps)
+        if zero_share >= config.max_zero_gap_share:
+            raise CoarseTimestampError(
+                f"{zero_share:.0%} of inter-message gaps are zero (bar: "
+                f"{config.max_zero_gap_share:.0%}); silence-based segmentation "
+                "cannot cut on this history. The timestamps are coarser than the "
+                "events — segment on an explicit boundary instead."
+            )
+
     threshold = silence_threshold(gaps, config)
 
     episodes: list[Episode] = []

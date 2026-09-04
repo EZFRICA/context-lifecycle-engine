@@ -7,7 +7,6 @@ dependencies = [
     "pydantic>=2.7",
     "typer>=0.12",
     "pyyaml>=6.0",
-    "langchain>=1.3.14",
     "langchain-google-genai>=4.2.7",
     "langchain-ollama>=1.1.0",
     "python-dotenv>=1.2.2",
@@ -23,6 +22,34 @@ dev = [
     "hypothesis>=6.100",
 ]
 
+# R36 task 1.e. Three groups of imports were undeclared. They are split by who
+# needs them, not merged into the core list, because the core list is what a
+# reader installs to run the engine and every line added there is a claim that
+# the engine needs it.
+#
+#   dashboard — `cle dashboard` (cle/cli/main.py:451) imports uvicorn, and the
+#     FastAPI backend imports fastapi. Undeclared, so `pip install -e .` gave a
+#     CLE whose dashboard command crashed on import.
+#   measure   — the exploratory scripts under examples/bigquery/. Every figure
+#     the README publishes carries the command that reproduces it, and a command
+#     whose dependencies are not installable is not a reproduction. That is the
+#     whole reason this group exists rather than a line in the README saying
+#     "install pandas first".
+#
+# NOT added: `sentence_transformers` and `datasets` pull torch and a model
+# download. They belong to `model_bench.py` (R29) alone, whose verdict R35
+# invalidated anyway; the script names its own requirement in its docstring.
+dashboard = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+]
+measure = [
+    "google-cloud-bigquery>=3.25",
+    "pandas>=2.2",
+    "pyarrow>=17.0",
+    "numpy>=1.26",
+]
+
 [project.scripts]
 cle = "cle.cli.main:app"
 
@@ -35,7 +62,98 @@ packages = ["cle"]
 
 [tool.pytest.ini_options]
 # Tests import the package from the source tree; no install step required in CI.
+#
+# `examples/bigquery` is deliberately NOT here, though it is a real import root
+# (see `tool.ty.environment` below). Putting it on pytest's path makes
+# `bqconfig` importable during a test session, and `bqconfig` calls
+# `load_dotenv()` at module scope: importing it would repopulate
+# `CLE_FORCE_REAL_MODEL` and `GEMINI_API_KEY` from `.env`, undoing the isolation
+# `tests/conftest.py` installs and turning the suite intermittently red. No test
+# imports it, so the path buys nothing and costs that.
 pythonpath = [".", "examples"]
 testpaths = ["tests"]
 addopts = "-q --strict-markers"
-markers = ["integration: opt-in tests needing external services (skipped by default)"]
+
+# The repository has THREE first-party import roots, not one, and only the first
+# was ever written down:
+#
+#   .                   the `cle` and `dashboard` packages
+#   examples            `phrasing`, `gdg_demo`, `make_gdg_fixture`, `make_multiuser`
+#   examples/bigquery   `bqconfig`, `make_facets`
+#
+# The last two work at runtime by accident of how the code is entered: pytest
+# injects `examples` via `pythonpath`, and `python examples/bigquery/foo.py`
+# puts that script's own directory on `sys.path` as a side effect of being run
+# directly. Neither is visible to anything that reads the project rather than
+# running it, so a type checker reports `bqconfig` and friends as missing while
+# the tests pass and the scripts work.
+#
+# Declared HERE and not in `pythonpath` on purpose: a type checker reading the
+# layout needs the roots, a test session importing from them does not, and the
+# note above says what that import would cost.
+[tool.pyrefly]
+search-path = ["examples", "examples/bigquery"]
+
+[tool.pyright]
+extraPaths = ["examples", "examples/bigquery"]
+
+[tool.ty.environment]
+extra-paths = ["examples", "examples/bigquery"]
+
+# `examples/` is exploratory tooling, not the engine, and it is typed like it:
+# pandas frames, heterogeneous dicts, BigQuery job objects whose stubs declare
+# `int | None` for fields that are populated once `.result()` has returned. A
+# checker reads all of that as errors. Every one of the diagnostics these rules
+# silence was triaged and none of them fails at runtime, which the artifacts on
+# disk demonstrate: these scripts produced the corpora the published figures
+# rest on.
+#
+# Silenced BY KIND rather than by excluding the directory, so a NEW kind of
+# diagnostic still surfaces here instead of the whole tree going dark.
+#
+# What still protects this directory:
+#   - `tests/property/test_scripts_resolve.py` fails CI on any module-level name
+#     that is read without being bound, which is the class that actually bit
+#     (`space_identity.py` calling `bqconfig.project()` with no import). It is
+#     stricter than the checker here: it resolves module-level `for` and `try`
+#     bindings that the checker reports as possibly-unbound.
+#   - `cle/` and `dashboard/` are NOT covered by this block and stay strict.
+[[tool.pyrefly.sub-config]]
+matches = "examples/**"
+
+[tool.pyrefly.sub-config.errors]
+bad-argument-type = false
+bad-index = false
+bad-assignment = false
+missing-attribute = false
+no-matching-overload = false
+not-iterable = false
+unbound-name = false
+unsupported-operation = false
+
+# `tests/` and `tools/` deliberately pass the wrong types: that is what a
+# negative test IS. `test_pre_evidence_not_evidence` hands a `PreEvidence` to a
+# parameter typed `Evidence` precisely to prove the boundary refuses it, and the
+# closed-vocabulary test hands it free prose where a `Literal` is declared. A
+# checker cannot tell a test that violates a contract on purpose from code that
+# violates it by accident, so these kinds are off here and stay on in `cle/`.
+[[tool.pyrefly.sub-config]]
+matches = "tests/**"
+
+[tool.pyrefly.sub-config.errors]
+bad-argument-type = false
+bad-assignment = false
+bad-specialization = false
+missing-argument = false
+missing-attribute = false
+no-matching-overload = false
+unsupported-operation = false
+
+[[tool.pyrefly.sub-config]]
+matches = "tools/**"
+
+[tool.pyrefly.sub-config.errors]
+bad-argument-type = false
+bad-assignment = false
+missing-attribute = false
+unsupported-operation = false

@@ -206,3 +206,49 @@ def test_mature_history_allows_candidates() -> None:
     now = T0 + timedelta(days=25)
     assert cold_start_is_over(messages, episodes, now, CONFIG, OpLog(sink), actor="human:test")
     assert sink.getvalue() == ""
+
+
+# ── coarse timestamps make silence-based segmentation inert ─────────────────
+
+def test_coarse_timestamps_raise_instead_of_segmenting_plausibly() -> None:
+    """A corpus whose timestamps are coarser than its events does not fail — it
+    returns a segmentation that looks right.
+
+    Observed on WildChat: every turn of a conversation carries the
+    conversation's timestamp, so intra-thread gaps are all zero and the silence
+    rule can never fire. The segmenter still returns episodes. Same family as
+    a stale centroid — a degraded behaviour indistinguishable from the
+    normal one, which is the kind that survives a whole campaign unnoticed.
+
+    Measured across 6,161 WildChat users: p25=0.51, p50=0.67, p95=0.89
+    zero-gap share, against 0.00 for the GDG fixture.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    from cle.detect.episodes import CoarseTimestampError
+
+    config = DetectorConfig()
+    base = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    # 30 messages in 6 bursts of 5: within a burst every timestamp is identical,
+    # which is exactly the WildChat shape.
+    messages = [
+        Message(text=f"m{burst}-{i}", ts=base + timedelta(days=burst),
+                thread_id=f"t{burst}", user_id="u")
+        for burst in range(6) for i in range(5)
+    ]
+    with pytest.raises(CoarseTimestampError, match="gaps are zero"):
+        segment(messages, config)
+
+
+def test_real_timestamps_still_segment() -> None:
+    # Guards the guard: a bar that rejected everything would also pass the test
+    # above. Distinct timestamps must still produce episodes.
+    from datetime import datetime, timedelta, timezone
+
+    config = DetectorConfig()
+    base = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    messages = [
+        Message(text=f"m{i}", ts=base + timedelta(hours=i), thread_id="t", user_id="u")
+        for i in range(30)
+    ]
+    assert segment(messages, config)

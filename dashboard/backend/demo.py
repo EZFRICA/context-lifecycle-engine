@@ -34,7 +34,7 @@ def _steps(state_dir: Path) -> list[dict[str, Any]]:
     win = ["--replay-window", "40d", "--history", "examples/prompt_history_adversarial.jsonl"]
     twelve = ",".join(["success"] * 12)
     return [
-        {"title": "Reset state", "zone": "pulse", "argv": [cle, "clean", *sd]},
+        {"title": "Reset state", "zone": "pulse", "argv": [cle, "clean", "--yes", *sd]},
         {"title": "Detector writes candidates from usage (3 distinct agents)",
          "zone": "births", "argv": [_PY, "examples/make_fixture.py"]},
         {"title": "Build status_report — hand-authored incumbent (owns 'status report')",

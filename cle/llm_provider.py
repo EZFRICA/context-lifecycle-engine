@@ -80,9 +80,29 @@ def get_fingerprint_llm(model_override: str | None = None):
     non-zero, each revalidation would produce a different fingerprint on the
     same model, triggering spurious auto-demotes to trial.
 
-    Experiment proof (temperature_experiment.py):
-      T=0.0 → 3/3 runs identical fingerprint  ✓
-      T=0.7 → 3/3 runs all different          ✗ (false drift)
+    MEASURED, and it CONTRADICTS the rationale above:
+      T=0.0 → 3/3 runs produced DIFFERENT fingerprints
+      (2026-08-30, commit eca74ca, model gemini-3.5-flash-lite,
+       identical probe_set, 4 probes)
+
+    Reproduce: run `cle revalidate` three times against an unchanged live model
+    and compare the three fingerprints.
+
+    A served model is not deterministic at temperature 0 — batching, routing
+    and hardware make identical prompts return different text. Temperature is
+    still pinned at 0 (a non-zero sampler would add a second, avoidable source
+    of variance), but pinning it does NOT deliver the equality the drift
+    comparison assumes. Consequence measured the same day: revalidating against
+    the UNCHANGED model reports `DRIFT: 4/4 probes moved` and auto-demotes.
+
+    An earlier version of this docstring cited an experiment script as proof of
+    the opposite result. That script has never existed in this repository — not
+    in the tree, not in git history; `git log --all --diff-filter=A --name-only`
+    finds no such addition. It is not named here: a docstring must not cite a
+    file that does not exist, which is exactly what
+    tests/property/test_structural_guards.py now enforces. The remedy — tolerance band,
+    embedding distance, semantic judge, or dropping drift as a demotion trigger
+    on live substrates — is an open decision, not a settled one.
 
     `model_override` lets the re-validator probe a DIFFERENT real model to
     enact genuine drift (e.g. gemini-3.5-flash-lite → gemini-3.6-flash).

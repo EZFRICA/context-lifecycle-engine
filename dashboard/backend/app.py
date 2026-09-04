@@ -1,7 +1,15 @@
 """FastAPI app — SSE + snapshot REST + the one write path + demo runner.
 
-Run:  uvicorn dashboard.backend.app:app --port 8000
-State dir via CLE_STATE_DIR (default .cle/). Serves the Alpine frontend at /.
+Run:  cle dashboard --state-dir .cle-demo --port 8000
+
+That subcommand exports CLE_STATE_DIR and calls uvicorn on this module, so
+running uvicorn directly works too — but then the state directory comes from
+the ambient CLE_STATE_DIR (default `.cle/`) rather than from a flag, which is
+the reading everything else in the docs assumes. Serves the Alpine frontend
+at /.
+
+Use a scratch directory, not `.cle`, if you intend to press "2. Run test":
+that button deletes and rebuilds the state it runs on, and refuses `.cle`.
 """
 
 import os
@@ -13,6 +21,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+
+from cle.lifecycle.reasons import HumanDeclineReason
 
 from . import reads
 from .demo import DemoRunner
@@ -79,6 +89,12 @@ def state_image(hash: str):
     return reads.image_detail(STATE_DIR, hash)
 
 
+@app.get("/state/decisions")
+def state_decisions():
+    """Read-only second view over the same log — no new write path."""
+    return reads.decisions(STATE_DIR)
+
+
 @app.get("/state/topology")
 def state_topology(v: int | None = None):
     return reads.topology(STATE_DIR, v)
@@ -106,7 +122,10 @@ class AgentBody(BaseModel):
 
 class DeclineBody(BaseModel):
     agent: str
-    reason: str | None = None
+    # Closed vocabulary, not prose. The CLI would refuse free text anyway
+    # (UnknownReasonError), but refusing it at the HTTP edge means the boundary
+    # is a type on every surface rather than a check on one of them.
+    reason: HumanDeclineReason | None = None
 
 
 @app.post("/actions/approve")
@@ -167,9 +186,46 @@ def demo_abort():
 
 @app.get("/health")
 def health():
-    return {"ok": True, "state_dir": str(STATE_DIR), "log_exists": LOG_PATH.exists()}
+    # `demo_blocked` comes from the same predicate the action itself uses, so the
+    # page can never offer a button the backend would refuse.
+    from .actions import demo_run_refusal
+
+    blocked = demo_run_refusal(STATE_DIR)
+    return {
+        "ok": True,
+        "state_dir": str(STATE_DIR),
+        "log_exists": LOG_PATH.exists(),
+        "demo_runnable": blocked is None,
+        "demo_blocked": blocked,
+    }
+
+
+class _RevalidatingStaticFiles(StaticFiles):
+    """StaticFiles that asks the browser to revalidate instead of guessing.
+
+    `StaticFiles` sends `etag` and `last-modified` but no `Cache-Control`, so a
+    browser falls back to HEURISTIC freshness: it may reuse a cached copy for a
+    while without asking. The asset URLs carry no version, so there is nothing to
+    invalidate them either.
+
+    The visible consequence, and the reason this exists: a stylesheet fix shipped,
+    the server served it, and an operator with the page already open kept seeing
+    the old rendering — a button that read as disabled. Nothing was wrong on
+    either side; the fix simply never crossed.
+
+    `no-cache` does not mean "do not cache". It means "revalidate before use", so
+    the etag still turns almost every load into a 304. That is the right trade
+    for a dashboard whose frontend is edited while it runs.
+    """
+
+    def file_response(self, *args, **kwargs):  # type: ignore[override]
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
 
 
 # Static frontend LAST so explicit API routes above take precedence.
 if FRONTEND_DIR.exists():
-    app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
+    app.mount(
+        "/", _RevalidatingStaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend"
+    )

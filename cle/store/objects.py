@@ -82,7 +82,13 @@ class Block(Storable, frozen=True):
 class _ReadableBackend(Protocol):
     # Structural view of the store Protocol (backends.py, commit 3) — the
     # integrity check only ever needs the read path.
-    def get(self, requested_hash: str) -> bytes: ...
+    #
+    # The parameter is named `object_hash`, matching `StoreBackend.get`, and
+    # that is not cosmetic: a Protocol matches on parameter NAMES as well as
+    # types, because a caller may pass by keyword. Naming it anything else here
+    # means no real backend satisfies this Protocol, so every `fetch_verified`
+    # call is a type error while working perfectly at runtime.
+    def get(self, object_hash: str) -> bytes: ...
 
 
 class IntegrityError(Exception):

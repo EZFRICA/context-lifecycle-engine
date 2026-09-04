@@ -180,10 +180,10 @@ def test_sqlite_is_opt_in_by_argument_and_by_env(tmp_path, monkeypatch) -> None:
 
 
 def test_unknown_kind_raises_instead_of_falling_back(tmp_path, monkeypatch) -> None:
-    monkeypatch.setenv("CLE_STORE", "weaviate")   # deferred, not implemented
+    monkeypatch.setenv("CLE_STORE", "nonesuch")   # a kind that does not exist
     with pytest.raises(ValueError) as caught:
         open_store(tmp_path)
-    assert "weaviate" in str(caught.value)
+    assert "nonesuch" in str(caught.value)
     assert all(kind in str(caught.value) for kind in STORE_KINDS)
 
 

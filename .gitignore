@@ -14,6 +14,10 @@ dist/
 !.claude/agents/
 !.claude/skills/
 .cle/
+# Scratch state directories. `full_loop.sh` defaults to `.cle-demo`, and
+# `run_state.py` to `.cle-r36-<corpus>`; both are throwaway by construction and
+# neither should ever be indexed. `.cle/` alone did not cover them.
+.cle-*/
 .env
 .env.*
 !.env.example
@@ -26,3 +30,65 @@ temp_run.md
 # The prompt_history*.jsonl artifacts stay TRACKED on purpose: the adversarial
 # test consumes the committed data, not the generator.
 examples/*_agent.yaml
+
+# ── Corpus artifacts (R34 task 0, security gate) ────────────────────────────
+# `examples/bigquery/data/` holds 2.3 GB of WildChat material: 1.37M real user
+# prompts (wildchat_cohort_turns), 86 shard chunks, and an identity file with
+# hashed_ip + country + language for 3.2M conversations. WildChat is prompts
+# consented for RESEARCH; redistributing them from a public repository is not a
+# decision this project gets to make. Stack Overflow material is public, but it
+# is derived data that any run regenerates, so it is ignored on the same rule
+# rather than carved out — a narrower rule is one more thing to get right.
+#
+# Nothing here was ever committed. The exposure was that a single `git add -A`
+# would have indexed all of it.
+examples/bigquery/data/
+
+# R36 task 0.b — the same exposure, one directory over. `prepare_states.py`
+# writes the CLI-shaped histories next to the corpus, not inside it, so the
+# rule above did not reach them: `history_wildchat.jsonl` is 3.5 Mo of raw
+# WildChat prompts, untracked and NOT ignored. R34's own audit had certified
+# this area clean by listing `examples/bigquery/data/` and stopping there.
+#
+# The whole directory goes, not just the WildChat file: these are generated
+# states that `prepare_states.py` reproduces, and a rule that enumerates the
+# private one is a rule that misses the next one.
+examples/bigquery/states/
+
+# R36 task 1.b — probe fixtures, GENERATED, not corpus.
+# `make_multiuser.py` partitions the synthetic GDG corpus into N users, one
+# oplog each (R25 task 0, R26 tasks 1a-1c). 68 files, 4.8 Mo, all reproducible
+# by rerunning that script. Committing them would be committing the output of a
+# committed generator.
+#
+# The five hand-built fixtures stay tracked and are NOT matched by these globs:
+# prompt_history.jsonl, prompt_history_adversarial.jsonl, prompt_history_gdg.jsonl,
+# prompt_history_holdout.jsonl, gdg_ground_truth.json.
+examples/sw[0-9]*_user*.jsonl
+examples/sw[0-9]*_manifest.json
+examples/ph[0-9]*_user*.jsonl
+examples/ph[0-9]*_manifest.json
+examples/prompt_history_user[0-9]*.jsonl
+examples/prompt_history_manifest.json
+
+# R36 — working files, not deliverables.
+# The run journals record how each measurement was obtained; the published
+# figures already carry their reproduction command (docs/FINDINGS.md), so a
+# reader reproduces the result instead of reading how it was reached.
+# PRESERVED.md is a transit file for content awaiting a decision.
+temp_run_*.md
+temp_commits*.sh
+PRESERVED.md
+
+# `docs/VALIDATION.md` is a snapshot of one validation pass: a commit hash, a
+# date, a `.cle` digest, a guard ratio, a suite count. Every one of those is
+# stale the next time anything changes, and a document that says "verified" while
+# describing a tree that no longer exists is worse than no document.
+#
+# What was durable in it has been moved into files that are maintained: the
+# frozen defects are pinned by `tests/unit/test_frozen_defects.py` and go red the
+# day they are fixed, and the two limits nothing else stated (no ground truth for
+# demotion, level 2 does not exist) now live in `docs/FINDINGS.md`.
+#
+# Regenerate it for a given pass if you want one; do not ship it.
+docs/VALIDATION.md

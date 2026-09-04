@@ -64,11 +64,102 @@ async def init_system(state_dir: Path) -> dict[str, Any]:
     ], state_dir)
 
 
+def demo_run_refusal(state_dir: Path) -> str | None:
+    """Why the demo run cannot execute here, or None if it can.
+
+    One predicate, two callers: `run_workspaces` refuses with it, and `/health`
+    publishes it so the page can grey the button out BEFORE anyone clicks. That
+    is the point of extracting it — an operator should not have to press a button
+    to be told it was never going to work, and two copies of the same rule drift
+    until the panel and the page disagree about what is possible.
+    """
+    if state_dir.name == ".cle":
+        return (
+            f"This dashboard is running on {state_dir}, the live state.\n\n"
+            "full_loop.sh begins by deleting the state directory it is given, and "
+            "it refuses to do that to `.cle`: that directory holds the only copy "
+            "of your oplog, store and topology history, it is gitignored, so git "
+            "cannot restore it, and a demo is not a reason to lose it.\n\n"
+            "Relaunch the dashboard on a scratch state to use this button:\n"
+            "  uv run cle dashboard --state-dir .cle-demo --port 8000\n\n"
+            "Your `.cle` is untouched."
+        )
+    return None
+
+
 async def run_workspaces(state_dir: Path) -> dict[str, Any]:
-    """Execute the full demo loop script bash examples/full_loop.sh."""
-    return await _run(["bash", "examples/full_loop.sh"], state_dir)
+    """Execute the full demo loop script bash examples/full_loop.sh.
+
+    Forces real Gemini model usage: validates GEMINI_API_KEY is present and
+    injects CLE_FORCE_REAL_MODEL=1 so fingerprinter.py raises immediately on
+    any API failure instead of silently falling back to stub hashes.
+
+    `state_dir` reaches the script as CLE_DEMO_STATE, and that is the whole
+    reason the board moves while this runs. Every other action here appends
+    `--state-dir`; this one used to accept the parameter and ignore it, so the
+    script wrote to its own default (`.cle-demo`) while the dashboard tailed the
+    oplog under `$CLE_STATE_DIR`. Nothing failed — the script exited 0, wrote its
+    52 oplog lines, and the operator watched a board that never moved, because
+    the two were looking at different directories.
+
+    The script refuses to run on `.cle` (it starts with `rm -rf`), so a
+    dashboard launched on the live state gets an explicit refusal here rather
+    than a run whose output lands somewhere it is not watching. A loud stop
+    beats a silent success in the wrong place.
+
+    That refusal is caught HERE rather than left to the script, for one reason:
+    the script's own message says to set `CLE_DEMO_STATE`, which is true from a
+    shell and useless from a browser. An operator reading it in the action panel
+    cannot act on it — the dashboard's directory is fixed when it is launched,
+    and nothing in the page can change it. So the check runs before the
+    subprocess and hands back the launch command from the README instead.
+
+    The symptom this replaces: the button ran for 11 ms and stopped, with a
+    message naming a variable the operator had no way to use.
+    """
+    blocked = demo_run_refusal(state_dir)
+    if blocked:
+        return {"argv": [], "code": 1, "stdout": "", "stderr": blocked}
+
+    from dotenv import load_dotenv
+    load_dotenv()  # ensure .env is loaded into os.environ for this process
+
+    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    if not api_key:
+        return {
+            "argv": [],
+            "code": 1,
+            "stdout": "",
+            "stderr": (
+                "GEMINI_API_KEY is not set. Set it in your .env file and restart "
+                "the dashboard, or export it before launching.\n"
+                "Get a key at https://aistudio.google.com/app/apikey"
+            ),
+        }
+
+    force_env = {**os.environ, "CLE_FORCE_REAL_MODEL": "1"}
+    proc = await asyncio.create_subprocess_exec(
+        "bash", "examples/full_loop.sh",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        env={**force_env, "CLE_ACTOR": "dashboard", "CLE_DEMO_STATE": str(state_dir)},
+        cwd=str(Path.cwd()),
+    )
+    out, err = await proc.communicate()
+    return {
+        "argv": ["bash", "examples/full_loop.sh"],
+        "code": proc.returncode,
+        "stdout": out.decode("utf-8", "replace"),
+        "stderr": err.decode("utf-8", "replace"),
+    }
 
 
 async def clean_system(state_dir: Path) -> dict[str, Any]:
-    """Clean persistent state directory."""
-    return await _run([_cle_bin(), "clean"], state_dir)
+    """Clean persistent state directory.
+
+    `--yes` is required, not a shortcut: this is a subprocess with no tty, so
+    `cle clean`'s confirmation prompt would raise rather than ask. The
+    confirmation therefore happens where the human actually is, in the browser
+    — see `reinitSystem` in dashboard/frontend/app.js.
+    """
+    return await _run([_cle_bin(), "clean", "--yes"], state_dir)

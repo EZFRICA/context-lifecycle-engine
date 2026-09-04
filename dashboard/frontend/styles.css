@@ -6,7 +6,9 @@
   --blue: #5aa9e6; --teal: #3dbf9b; --amber: #e8a33d; --coral: #e8705a; --violet: #9b8cf2;
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --sans: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  /* seven lifecycle states */
+  /* FIVE implemented lifecycle states; --s-deprecated and --s-pattern are
+     reserved for the published part-7 theory and are never rendered (the
+     store cannot hold those states — see docs/CAPABILITIES.md §6). */
   --s-archived: #6b7784; --s-candidate: #5aa9e6; --s-trial: #9b8cf2;
   --s-ephemeral: #3dbf9b; --s-pinned: #e8a33d; --s-deprecated: #e8705a; --s-pattern: #8a97a3;
 }
@@ -54,6 +56,7 @@ a { color: var(--blue); }
 .btn.amber { color: var(--amber); border-color: var(--amber); }
 .btn.coral { color: var(--coral); border-color: var(--coral); }
 .btn.teal { color: var(--teal); border-color: var(--teal); }
+.btn.violet { color: var(--violet); border-color: var(--violet); }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 input.pace { width: 64px; background: var(--bg1); border: 1px solid var(--border);
   color: var(--ink); font-family: var(--mono); font-size: 12px; border-radius: 6px; padding: 5px 6px; }
@@ -210,3 +213,16 @@ select { background: var(--bg1); border: 1px solid var(--border); color: var(--i
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; }
 }
+
+
+/* Pulse view toggle — two READ views over one log. The decision view is
+   the audit reading; the live view stays the operator's raw stream. */
+.pulse-toggle { float: right; display: inline-flex; gap: 4px; }
+.pulse-toggle .tab {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em;
+  background: none; border: 1px solid var(--border); color: var(--ink-faint);
+  border-radius: 3px; padding: 1px 8px; cursor: pointer;
+}
+.pulse-toggle .tab.on { color: var(--violet); border-color: var(--violet); }
+/* An op nobody classified must look wrong, not blend in. */
+.op.unclassified { color: var(--coral); text-decoration: underline dotted; }

@@ -62,5 +62,9 @@ def test_adversarial_window_produces_false_triggers() -> None:
         oplog=OpLog(io.StringIO()),
         actor="human:test",
     )
+    # EXACT VALUE — LEGACY TEMPLATED SOURCE (make_fixture.py, era A). capture
+    # is 1.000 because every recap opener is the SAME string; the bridge fires
+    # on shared tokens, not on meaning. This pins the rejection MECHANISM on
+    # the committed window, never a realistic-usage rate. See docs/METRICS.md.
     assert outcome.pre_evidence.false_trigger_rate > 0.0
     assert outcome.pre_evidence.capture_rate == 1.0

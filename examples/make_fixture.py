@@ -225,12 +225,20 @@ def _baseline(clusters_eps: dict[int, list], config: DetectorConfig) -> float:
     return base if base is not None else 3.0
 
 
+# The vector space these fixtures are produced in. Emitted into every spec as
+# `trigger.embedder_id`, because a centroid is only meaningful in the space that
+# made it: a 64-d stub centroid compared against 768-d real vectors
+# returning -0.012148 instead of raising, and replay now refuses the mismatch.
+# Naming the space is what turns a silent cross-space compare into a loud one.
+FIXTURE_EMBEDDER = HashedTokenEmbedder()
+
+
 def _detect(messages: list[Message], config: DetectorConfig):
     episodes = segment(messages, config)
     oplog = OpLog(io.StringIO())
     assert cold_start_is_over(messages, episodes, messages[-1].ts, config, oplog, actor="human:fixture"), \
         "fixture must clear the cold-start gate"
-    clusterer = IntentClusterer(HashedTokenEmbedder(), config)
+    clusterer = IntentClusterer(FIXTURE_EMBEDDER, config)
     by_cluster: dict[int, list] = {}
     centroids: dict[int, tuple] = {}
     for episode in episodes:
@@ -248,7 +256,10 @@ def _detect(messages: list[Message], config: DetectorConfig):
 
 
 def _write_candidate(spec: Cluster, centroid: tuple, signal) -> Path:
-    trigger = {"centroid": [round(v, 6) for v in centroid]}
+    trigger = {
+        "centroid": [round(v, 6) for v in centroid],
+        "embedder_id": FIXTURE_EMBEDDER.embedder_id,
+    }
     if signal.period:
         trigger["period"] = {"interval": signal.period.interval.total_seconds(),
                              "tolerance": signal.period.tolerance}
@@ -293,12 +304,13 @@ def main() -> None:
     # report" phrasing exactly. Built BEFORE weekly_recap it competes for the
     # 2 reworded recap episodes, so weekly_recap captures 3/5 = 60% (topology
     # competition, BLUEPRINT §3.2) — a non-trivial capture_rate.
-    status_centroid = HashedTokenEmbedder().embed(REWORD)
+    status_centroid = FIXTURE_EMBEDDER.embed(REWORD)
     (EXAMPLES / "status_report_agent.yaml").write_text(yaml.safe_dump({
         "name": "status_report",
         "detected_from": {"authored": "human", "note": "competes with weekly_recap"},
         "components": ["#blocks/recap_format", "#blocks/team_context"],
-        "trigger": {"centroid": [round(v, 6) for v in status_centroid]},
+        "trigger": {"centroid": [round(v, 6) for v in status_centroid],
+                    "embedder_id": FIXTURE_EMBEDDER.embedder_id},
     }, sort_keys=False))
     print("wrote status_report_agent.yaml (hand-authored incumbent for capture competition)")
 

@@ -63,6 +63,20 @@ def read_tail(log_path: Path, count: int) -> list[dict[str, Any]]:
     return out
 
 
+#: How many bytes of the file's head identify it across polls. One oplog line
+#: is comfortably longer than this, so two different logs differ inside it.
+_PREFIX_BYTES = 64
+
+
+def _prefix(log_path: Path) -> bytes:
+    """The first bytes of the file, or b"" if it is not there to read."""
+    try:
+        with log_path.open("rb") as handle:
+            return handle.read(_PREFIX_BYTES)
+    except OSError:
+        return b""
+
+
 async def tail_log_forever(log_path: Path, bus: EventBus) -> None:
     """Publish new oplog lines to the bus as they are appended.
 
@@ -70,12 +84,39 @@ async def tail_log_forever(log_path: Path, bus: EventBus) -> None:
     connect-time replay, not double-counted on the live stream.
     """
     offset = log_path.stat().st_size if log_path.exists() else 0
+    prefix = _prefix(log_path)
     while True:
         try:
-            if log_path.exists():
+            if not log_path.exists():
+                # Seen mid-wipe. The next file at this path is a different file,
+                # so nothing learned from the old one survives.
+                offset, prefix = 0, b""
+            else:
                 size = log_path.stat().st_size
-                if size < offset:  # truncated (e.g. `cle clean`) -> restart
+                # Three events look alike from here, and reading from a stale
+                # offset splices the middle out of a line — which parses to
+                # nothing, so the opening events of a fresh run vanish with no
+                # error anywhere and the board starts partway through.
+                #
+                #   truncated   (`cle clean`)      same file, smaller
+                #   replaced    (`full_loop.sh`)   new file at the same path
+                #   rewritten                      same file, new content
+                #
+                # Only the first is caught by comparing sizes. The second is not
+                # caught by comparing inodes either, which is what this used to
+                # do: a filesystem is free to hand the replacement the inode it
+                # just freed, and Linux commonly does — the check passed on APFS
+                # and failed in CI for exactly that reason.
+                #
+                # What actually identifies an append-only file across polls is
+                # its head: it never changes while the file is only appended to,
+                # and it always changes when the file is replaced by a different
+                # one. So that is what is compared.
+                head = _prefix(log_path)
+                replaced = not (head.startswith(prefix) or prefix.startswith(head))
+                if replaced or size < offset:
                     offset = 0
+                prefix = head
                 if size > offset:
                     with log_path.open("r", encoding="utf-8") as handle:
                         handle.seek(offset)
