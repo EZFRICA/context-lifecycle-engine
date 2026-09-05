@@ -62,11 +62,22 @@ ignore the dashboard's state directory entirely and write to its own default
 nothing — the run had succeeded somewhere nobody was watching. It looked like a
 frozen dashboard and was a directory mismatch.
 
-One thing has not changed: **the run is synchronous**. The button stays
-disabled from the click until the script exits — around 26 s with stub models,
-longer with real ones — because the action awaits the subprocess. The board
-updates live throughout, so progress is visible even though the controls are
-not clickable.
+**The run no longer blocks.** `POST /actions/run_workspaces` starts the script
+as a background task and returns in about 15 ms; the script's own step banners
+reach the PULSE feed as they are printed, and a **stop run** button appears for
+as long as it is in flight. `GET /health` carries `run_in_progress` so a page
+loaded mid-run knows what it is looking at.
+
+Two properties that took a second attempt to get right, and are pinned by tests:
+
+* **One run at a time.** `full_loop.sh` begins with `rm -rf` on its state
+  directory, so two concurrent runs would delete each other's work. The runner
+  holds a single-flight lock and answers `409` to the second caller.
+* **Stopping kills the process group, not just the shell.** `cle` and `pytest`
+  run as children and inherit the stdout pipe, so killing only `bash` leaves the
+  reader blocked on a pipe the grandchildren still hold — measured:
+  `run_in_progress` stayed true three seconds after an abort that reported
+  success. The run gets its own session and the whole group is signalled.
 
 `GET /health`
 reports which one it is (`state_dir`, `log_exists`) when the board looks empty
