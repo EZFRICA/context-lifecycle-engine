@@ -52,7 +52,11 @@ class UnnormalisedVectorError(ValueError):
         HashedTokenEmbedder                1.000000
         CachedEmbedder                     1.000000
         RealEmbedder (calls `_l2`)         1.000000
-        BigQuery `ML.GENERATE_EMBEDDING`   0.58 to 0.60
+        BigQuery `ML.GENERATE_EMBEDDING`   0.57 to 0.60
+
+    The last figure is a range because it is a measurement, not a constant:
+    min 0.572648, max 0.599283 over 20 vectors (`space_identity.py`). An earlier
+    pass wrote "0.58 to 0.60", which excluded its own lower tail.
 
     The last one is not the CLE's space. `ML.GENERATE_EMBEDDING` runs
     `gemini-embedding-001`; the CLE runs `gemini-embedding-2`, on whichever
