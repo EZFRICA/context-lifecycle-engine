@@ -48,6 +48,17 @@ def _neutral_environment():
     around the isolation, it IS the isolation: a suite that claims to be offline
     by construction must not read the operator's credentials file at all, and
     the tests that need a variable set it themselves with monkeypatch.
+
+    CONSEQUENCE, and it surprises people: **the suite cannot be aimed at a live
+    substrate from outside.** `CLE_EMBEDDER=real pytest` is popped here before
+    any test runs, so it produces a run byte-identical to the plain one — same
+    count, same duration — and reports success for a measurement that never
+    happened. There is no flag that makes the suite live, by design.
+
+    Live coverage comes from the CLI and script paths, which DO read these
+    variables: `cle build --embedder real`, `examples/full_loop.sh` with real
+    model ids, `cle revalidate --model-id current`. Those are the surfaces to
+    point at a served model; this one is frozen on purpose.
     """
     import dotenv
 
