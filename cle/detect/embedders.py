@@ -25,11 +25,13 @@ Vectors are L2-normalized (or zero), so `cosine` is the dot product.
 from __future__ import annotations
 
 import hashlib
-import os
 import json
 import math
+import os
+import random
+import time
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Callable, Iterable
 
 from cle.batch_guard import assert_batch_varied, assert_embeddable, assert_unit_norm
 from cle.detect.clusters import HashedTokenEmbedder, Vector
@@ -131,7 +133,8 @@ class CachedEmbedder:
         # place a vector enters the CLE without passing through an embedder that
         # normalises, so a cache built elsewhere would quietly stop `cosine`
         # being a cosine. BigQuery's `ML.GENERATE_EMBEDDING`, for instance,
-        # returns 0.58 to 0.60: it runs `gemini-embedding-001` on Vertex, a
+        # returns 0.57 to 0.60 (measured min 0.572648, max 0.599283 over 20
+        # vectors): it runs `gemini-embedding-001` on Vertex, a
         # different model from `gemini-embedding-2` (cosine between the two
         # spaces on the same texts: 0.040084).
         #
@@ -154,6 +157,61 @@ class CachedEmbedder:
                 f"no committed vector for text under {self.embedder_id!r}: {text!r}. "
                 "Regenerate examples/vectors.*.json (make_vectors.py) or use StubEmbedder."
             ) from None
+
+
+#: Retry policy for the live embedding surface. Three attempts spanning at most
+#: a few seconds: long enough to ride out a burst, short enough that a genuinely
+#: exhausted quota still fails while the operator is watching rather than an
+#: hour later.
+RETRY_ATTEMPTS = 3
+RETRY_BASE_SECONDS = 1.0
+RETRY_MAX_SECONDS = 8.0
+
+
+def _is_rate_limit(error: Exception) -> bool:
+    """True for 429 / RESOURCE_EXHAUSTED, whatever the SDK wraps it in.
+
+    Matched on the message rather than an exception class on purpose: the
+    google-genai SDK raises `ClientError` for every 4xx, so the class says
+    nothing about which one, and pinning a private class here would make the
+    retry silently stop working on an SDK upgrade.
+    """
+    # Underscores are stripped so both spellings match: the SDK writes
+    # `RESOURCE_EXHAUSTED` in the message and google.api_core names the class
+    # `ResourceExhausted`.
+    text = f"{type(error).__name__} {error}".upper().replace("_", "")
+    return "429" in text or "RESOURCEEXHAUSTED" in text
+
+
+def call_with_backoff(call: Callable[[], Any]) -> Any:
+    """Retry a rate-limited call; re-raise anything else immediately.
+
+    Without this the sample size of a live measurement is set by the quota
+    rather than by the operator. Measured: comparing 186 cached vectors against
+    AI Studio lost 32 of them to 429s, and an immediate second pass lost 86 — so
+    the figure that came back described whatever survived the quota, and a rerun
+    described something else.
+
+    Only 429 / RESOURCE_EXHAUSTED is retried. A 400, a 403 or a malformed
+    request fails identically on every attempt, and retrying those turns a clear
+    error into a slow one.
+
+    Module-level and free of any client, for the same reason as
+    `vector_from_response`: no test may import `RealEmbedder`, so a retry loop
+    that lived on the class could only ever be tested against a copy of itself.
+    """
+    delay = RETRY_BASE_SECONDS
+    for attempt in range(RETRY_ATTEMPTS):
+        try:
+            return call()
+        except Exception as error:
+            if not _is_rate_limit(error) or attempt == RETRY_ATTEMPTS - 1:
+                raise
+            # Full jitter: a batch that backs off in lockstep re-collides on
+            # every wave, so each caller waits somewhere in [0, delay].
+            time.sleep(random.uniform(0.0, delay))
+            delay = min(delay * 2, RETRY_MAX_SECONDS)
+    raise AssertionError("unreachable: the loop either returns or raises")
 
 
 class RealEmbedder:
@@ -225,15 +283,18 @@ class RealEmbedder:
         # One content per call: gemini-embedding-2 treats a list of contents as
         # ONE multi-part document (returns a single embedding), not a batch — so
         # batching by content-list silently collapses N texts to 1 vector.
-        result = self._client.models.embed_content(
-            model=self._model, contents=text,
-            config=types.EmbedContentConfig(output_dimensionality=self._dim),
+        result = call_with_backoff(
+            lambda: self._client.models.embed_content(
+                model=self._model, contents=text,
+                config=types.EmbedContentConfig(output_dimensionality=self._dim),
+            )
         )
         # A response can come back shaped correctly and carry no vector, and
         # reaching for `[0].values` then dies on `NoneType` a frame from the
         # call with nothing naming the cause. Same family as the other guards
         # here: the call returned, and returning is not the same as working.
         return _l2(vector_from_response(result, text))
+
 
     def embed_many(self, texts: Iterable[str]) -> list[Vector]:
         vectors = [self.embed(t) for t in texts]

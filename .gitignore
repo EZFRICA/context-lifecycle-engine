@@ -92,3 +92,10 @@ PRESERVED.md
 #
 # Regenerate it for a given pass if you want one; do not ship it.
 docs/VALIDATION.md
+
+# The Medium article and its diagram sources. Drafts of a piece that gets
+# published elsewhere, not part of the engine: they carry figures copied out of
+# `docs/FINDINGS.md`, so tracking them would create a second place for the same
+# numbers to drift. Regenerate or edit them freely; nothing in the repo reads
+# them.
+blog/

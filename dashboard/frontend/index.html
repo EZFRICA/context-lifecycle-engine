@@ -37,6 +37,8 @@
     <button class="btn violet" @click="runSolicitations()"
               :disabled="demo.running || !health.runnable"
               :title="health.runnable ? 'Runs examples/full_loop.sh against this state directory' : health.blocked">2. Run test (full_loop.sh)</button>
+      <button class="btn coral" x-show="demo.running" @click="abortRun()"
+              title="Stop the run in progress">stop run</button>
       <span class="eyebrow" x-show="!health.runnable"
             style="color:var(--coral)">demo run unavailable on the live state — hover the button</span>
     <button class="btn coral" @click="reinitSystem()" :disabled="demo.running">3. Clean / Reinit State</button>

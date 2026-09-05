@@ -46,22 +46,19 @@ window against pairs a year apart: factor **1.08 on the mean**, factor **12.9 on
 the share above cosine 0.7**. Any population level aggregator must therefore be a
 tail mechanism; one reading means would see ~0.55 everywhere and conclude nothing.
 
-`gemini-embedding-2` is **deterministic for embedding**: re embedding the same 200
-texts reproduces the committed cache at **1.000000**. The generation model at T=0
-is not, which is why every facet figure names its frozen generation.
-
 ### Two spaces, and they are not the same model
 
 The engine embeds on `gemini-embedding-2`, through AI Studio by API key or
 through Vertex at location `global` by application-default credentials: the same
-space either way, cosine 1.000000. The corpus benches
-run on BigQuery, which reaches Vertex and cannot host that model, so they run
-`gemini-embedding-001`. **Cosine between the two spaces on the same texts is
-0.040084**, so every bench figure is conditioned on `gemini-embedding-001` and
-says so, and no embedding model has been benchmarked against the engine's own.
+space either way, cosine 1.000000. It is **deterministic for embedding**, so re
+embedding the same 200 texts reproduces the committed cache exactly; the
+generation model at T=0 is not, which is why every facet figure names its frozen
+generation. The corpus benches run on BigQuery, which cannot host
+`gemini-embedding-2`, so they run `gemini-embedding-001`. **Cosine between the
+two spaces on the same texts is 0.040084**, so every bench figure is conditioned
+on `gemini-embedding-001` and says so.
 
-Numbers measured on fixtures rather than on real corpora, which are a weaker
-thing, are in `docs/METRICS.md`.
+Numbers measured on fixtures rather than real corpora are in `docs/METRICS.md`.
 
 ---
 
@@ -98,8 +95,7 @@ uv pip install -e ".[dev,measure]"         # + the corpus measurement scripts
 ```
 
 `cle dashboard` imports uvicorn; the reproduction commands in
-`docs/FINDINGS.md` need pandas and the BigQuery client. Setting up a project to
-run those is `docs/BIGQUERY.md`, and none of it is needed to use the engine.
+`docs/FINDINGS.md` need pandas and the BigQuery client (`docs/BIGQUERY.md`).
 
 ## Configuration
 
@@ -158,10 +154,9 @@ CLE_STORE=sqlite ./examples/full_loop.sh
 CLE_MODEL_A=stub-model-a CLE_MODEL_B=stub-model-b ./examples/full_loop.sh
 ```
 
-Twelve steps, on **real models by default**. The third form is the offline
-deterministic run CI uses. Isolate any of them with
-`CLE_DEMO_STATE=/tmp/scratch` so they never touch `.cle`.
-*All era A figures: the source is templated.*
+Twelve steps, on **real models by default**; the third form is the offline
+deterministic run CI uses. Isolate any of them with `CLE_DEMO_STATE=/tmp/scratch`
+so they never touch `.cle`. All era A figures: the source is templated.
 
 ### Live dashboard
 
@@ -169,23 +164,17 @@ deterministic run CI uses. Isolate any of them with
 uv run cle dashboard --state-dir .cle-demo --port 8000   # http://localhost:8000
 ```
 
-That is the form to start from, and the state directory is the reason. **"2. Run
-test" runs `full_loop.sh`, which deletes and rebuilds the state directory it is
-given**, so it refuses `.cle` — the button greys itself out there rather than
-letting you discover this by pressing it.
+Start on a scratch state. **"2. Run test" runs `full_loop.sh`, which deletes and
+rebuilds the state directory it is given**, so it refuses `.cle` and greys the
+button out rather than letting you find that out by pressing it. Drop
+`--state-dir` to watch your own live state and forgo that button; add
+`--store sqlite` if the CLI wrote sqlite.
 
-To watch your own live state instead, and forgo that button:
-
-```bash
-uv run cle dashboard --port 8000                  # on .cle
-uv run cle --store sqlite dashboard --port 8000   # if the CLI wrote sqlite
-```
-
-One page (HTML + Alpine, no build step) over the persistent `.cle/` state, served
-by FastAPI. Four zones: **Pulse** (live oplog over SSE), **Births** (candidate
-cards with the Approve/Decline gate and the disclosed-gap marker), **Lives**,
-**Topology**. The only write path is Approve/Decline, routed through the CLI and
-logged as `human:dashboard`. See `dashboard/README.md`.
+One page (HTML + Alpine, no build step) served by FastAPI. Four zones: **Pulse**
+(live oplog over SSE), **Births** (candidate cards with the Approve/Decline gate
+and the disclosed-gap marker), **Lives**, **Topology**. The only write path is
+Approve/Decline, routed through the CLI and logged as `human:dashboard`. See
+`dashboard/README.md`.
 
 ---
 
@@ -286,7 +275,7 @@ tests/          property/ + unit/, hypothesis for the invariants
 python -m pytest -q
 ```
 
-**396 tests across 42 files**, fully offline. Five more run only where the private WildChat corpus is present, so they are not counted here: a suite size a reader cannot reproduce is not a suite size. A green suite pins the
+**417 tests across 44 files**, fully offline. Five more run only where the private WildChat corpus is present, so they are not counted here: a suite size a reader cannot reproduce is not a suite size. A green suite pins the
 **contract**, not the production vector space: 161 assertions are embedder
 agnostic and hold in any era, while 31 pin the v1 stub mechanism only and do not
 describe the production system. Details in `docs/TESTING.md`.

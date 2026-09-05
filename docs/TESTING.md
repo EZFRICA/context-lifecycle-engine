@@ -18,7 +18,7 @@ written to fix the drift.
 
 ---
 
-## Test coverage: **396 tests** across 42 files, 1 skipped
+## Test coverage: **417 tests** across 44 files, 1 skipped
 
 Five more run only where the private WildChat corpus is present, so they are not counted here: a suite size a reader cannot reproduce is not a suite size. The skip is that corpus-gated module.
 
@@ -72,6 +72,33 @@ re-checking if a centroid ever entered by another path.
 cross it. The other two were found only by going looking. What an audit
 finds is bounded by the pattern it searches for.
 
+### The suite cannot be aimed at a live model
+
+`CLE_EMBEDDER=real uv run pytest` looks like it works and measures nothing.
+`tests/conftest.py` pops `CLE_EMBEDDER`, `CLE_STORE`, `CLE_VECTOR_CACHE`,
+`CLE_STATE_DIR`, `CLE_ACTOR` and `CLE_FORCE_REAL_MODEL` in a session-scoped
+autouse fixture, and neutralises `dotenv.load_dotenv` so `.env` cannot put them
+back. The run that comes out is byte-identical to the plain one — same count,
+same duration — and reports success for a measurement that never happened.
+
+That is deliberate: a suite that claims to be offline by construction must not
+read the operator's credentials file at all. The consequence is that **there is
+no flag that makes the suite live**, and a green run says nothing about a served
+model.
+
+Point the CLI at a live substrate instead. These read the variables the suite
+refuses:
+
+```bash
+uv run cle build <src.yaml> --embedder real          # live embedding space
+uv run cle revalidate <agent> --model-id current     # live fingerprint probe
+CLE_FORCE_REAL_MODEL=1 ./examples/full_loop.sh       # raises instead of falling back
+```
+
+The last one matters most: `CLE_FORCE_REAL_MODEL=1` makes the fingerprinter raise
+on a failed probe rather than fall back to an offline hash, so a green run there
+cannot be an offline run wearing a live label.
+
 ### `open_embedder`: three vector spaces
 
 | kind | space | cost | reach |
@@ -117,7 +144,7 @@ is merely instantiated:
 | **2. Stub-as-a-tool** | **60** | Needs *some* deterministic embedder, but the claim is space-independent: two-hash inequality, build determinism, both rates always computed, tool gating, embedder provenance, runtime/switch cost, holdout structural sanity (both eras). |
 | **3. Stub-as-the-subject** | **31** | True **only** in `stub:hashed64`; these do **not** describe the production system. The contradiction taxonomy, the stability property tests, the adversarial/demo exact rates, the directive-band check. |
 
-**The good news is bucket 1: 161 of 396 assertions are invariant-core**: the
+**The good news is bucket 1: 161 of 417 assertions are invariant-core**: the
 contract itself (two hashes, Goodhart, staged-failure, evidence types,
 integrity) is entirely independent of which embedder is configured. Bucket 2
 adds 60 whose claims survive an embedder swap.

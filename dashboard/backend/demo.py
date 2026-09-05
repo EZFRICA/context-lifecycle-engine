@@ -11,6 +11,7 @@ not a simulation. Single-flight: a lock prevents two demos at once.
 import asyncio
 import os
 import shutil
+import signal
 import sys
 from pathlib import Path
 from typing import Any, Callable
@@ -130,3 +131,110 @@ class DemoRunner:
                 "argv": argv,
                 "stderr": err.decode("utf-8", "replace")[-400:],
             })
+
+
+class ScriptRunner:
+    """Runs `examples/full_loop.sh` in the background and narrates it live.
+
+    Same shape as `DemoRunner` above, for the same reason: a background task, a
+    single-flight lock, an abort event, and `demo_step` events on the shared bus
+    that the page already knows how to render.
+
+    What this replaces. The Run test button used to `await proc.communicate()`
+    inside the POST handler, so the request did not return until the script had
+    finished — 26 s with stub models, 131 s measured on real ones. The page kept
+    every control disabled for that whole time with no output, which reads as a
+    frozen dashboard rather than as work in progress.
+
+    Streaming line by line rather than buffering is the point: the script's own
+    step banners reach the PULSE feed as they are printed, so the operator can
+    see where a long run has got to, and can stop it.
+    """
+
+    #: Lines the script prints that are worth surfacing on their own. Everything
+    #: else is still captured for the failure report, just not narrated — a
+    #: full-loop run prints hundreds of lines and the feed is for reading.
+    _BANNER = ("=== ", "--- ", "DRIFT", "refusing")
+
+    def __init__(self, bus: EventBus, state_dir: Path) -> None:
+        self._bus = bus
+        self._state_dir = state_dir
+        self._task: asyncio.Task | None = None
+        self._proc: asyncio.subprocess.Process | None = None
+
+    @property
+    def running(self) -> bool:
+        return self._task is not None and not self._task.done()
+
+    def start(self, env: dict[str, str]) -> bool:
+        if self.running:
+            return False  # single-flight lock, as for the paced demo
+        self._task = asyncio.create_task(self._run(env))
+        return True
+
+    def abort(self) -> None:
+        """Kill the script AND everything it spawned.
+
+        Killing only `bash` is not enough and fails in a way that looks like the
+        abort was ignored: `full_loop.sh` runs `cle` and `pytest` as children,
+        they inherit the stdout pipe, and the reader below stays blocked on a
+        pipe those grandchildren still hold open. Measured: `run_in_progress`
+        was still true three seconds after an abort that had "succeeded".
+
+        So the process gets its own session (`start_new_session=True` below) and
+        the whole group is signalled. The task's `finally` still publishes a
+        terminal event either way, so the page never stays stuck on `running`.
+        """
+        proc = self._proc
+        if proc is None or proc.returncode is not None:
+            return
+        try:
+            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            proc.kill()  # the group is already gone, or we may not signal it
+
+    async def _run(self, env: dict[str, str]) -> None:
+        argv = ["bash", "examples/full_loop.sh"]
+        tail: list[str] = []
+        step = 0
+        try:
+            self._bus.publish({"op": "demo_step", "step": 0, "total": 0,
+                               "title": "full_loop.sh started", "zone": "pulse",
+                               "state": "start"})
+            self._proc = await asyncio.create_subprocess_exec(
+                *argv,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                env=env,
+                cwd=str(Path.cwd()),
+                # Its own process group, so `abort` can reach the children too.
+                start_new_session=True,
+            )
+            assert self._proc.stdout is not None
+            async for raw in self._proc.stdout:
+                line = raw.decode("utf-8", "replace").rstrip()
+                if not line:
+                    continue
+                tail.append(line)
+                del tail[:-40]
+                if line.startswith(self._BANNER) or "DRIFT" in line:
+                    step += 1
+                    self._bus.publish({"op": "demo_step", "step": step, "total": 0,
+                                       "title": line[:160], "zone": "pulse",
+                                       "state": "running"})
+            code = await self._proc.wait()
+            if code == 0:
+                self._bus.publish({"op": "demo_step", "step": step, "total": step,
+                                   "title": "full_loop.sh complete (exit 0)",
+                                   "zone": "pulse", "state": "done"})
+            else:
+                self._bus.publish({"op": "demo_error", "argv": argv, "state": "done",
+                                   "title": f"full_loop.sh failed (exit {code})",
+                                   "stderr": "\n".join(tail[-8:])[-600:]})
+        except Exception as error:  # never leave the page stuck on `running`
+            self._bus.publish({"op": "demo_error", "argv": argv, "state": "done",
+                               "title": f"full_loop.sh could not run: {error}",
+                               "stderr": "\n".join(tail[-8:])[-600:]})
+        finally:
+            self._proc = None
+            self._task = None

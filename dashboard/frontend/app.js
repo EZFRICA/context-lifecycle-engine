@@ -235,7 +235,31 @@ function cleDashboard() {
     },
 
     async runSolicitations() {
-      await this._postAction("/actions/run_workspaces", "Running full loop (full_loop.sh)", 2);
+      // NOT _postAction: this one starts a background run and returns at once.
+      // The button is released by the terminal demo_step/demo_error event on the
+      // SSE stream, not by this response — awaiting the script here is what used
+      // to freeze every control for the length of the run.
+      const ts = new Date().toISOString();
+      this.demo.running = true;
+      this.demo.title = "Running full loop (full_loop.sh)";
+      try {
+        const r = await fetch("/actions/run_workspaces", { method: "POST" });
+        const result = await r.json();
+        if (result.code) {          // a refusal: same shape as before, shown as before
+          this.demo.running = false;
+          const tail = (result.stderr || "").split("\n").map(l => l.trim()).filter(Boolean);
+          this.pushPulse("demo_error", { title: `\u2717 ${tail.join(" \u00b7 ")}`, ts });
+          return;
+        }
+        this.pushPulse("demo_step", { title: "full_loop.sh started", step: 0, total: 0, ts });
+      } catch (err) {
+        this.demo.running = false;
+        this.pushPulse("demo_error", { title: `Network error: ${err.message}`, ts });
+      }
+    },
+
+    async abortRun() {
+      await fetch("/actions/abort_run", { method: "POST" }).catch(() => {});
     },
 
     async reinitSystem() {

@@ -87,35 +87,20 @@ def demo_run_refusal(state_dir: Path) -> str | None:
     return None
 
 
-async def run_workspaces(state_dir: Path) -> dict[str, Any]:
-    """Execute the full demo loop script bash examples/full_loop.sh.
+def demo_run_env(state_dir: Path) -> dict[str, Any]:
+    """The environment `full_loop.sh` needs, or a refusal explaining why not.
 
-    Forces real Gemini model usage: validates GEMINI_API_KEY is present and
-    injects CLE_FORCE_REAL_MODEL=1 so fingerprinter.py raises immediately on
-    any API failure instead of silently falling back to stub hashes.
+    Returns either `{"env": {...}}` or a ready-made action result with a non-zero
+    code. Separated from the running so the endpoint can refuse BEFORE starting a
+    background task, and so the refusal reads the same whether it came from the
+    button or from `/health`.
 
-    `state_dir` reaches the script as CLE_DEMO_STATE, and that is the whole
-    reason the board moves while this runs. Every other action here appends
-    `--state-dir`; this one used to accept the parameter and ignore it, so the
-    script wrote to its own default (`.cle-demo`) while the dashboard tailed the
-    oplog under `$CLE_STATE_DIR`. Nothing failed — the script exited 0, wrote its
-    52 oplog lines, and the operator watched a board that never moved, because
-    the two were looking at different directories.
-
-    The script refuses to run on `.cle` (it starts with `rm -rf`), so a
-    dashboard launched on the live state gets an explicit refusal here rather
-    than a run whose output lands somewhere it is not watching. A loud stop
-    beats a silent success in the wrong place.
-
-    That refusal is caught HERE rather than left to the script, for one reason:
-    the script's own message says to set `CLE_DEMO_STATE`, which is true from a
-    shell and useless from a browser. An operator reading it in the action panel
-    cannot act on it — the dashboard's directory is fixed when it is launched,
-    and nothing in the page can change it. So the check runs before the
-    subprocess and hands back the launch command from the README instead.
-
-    The symptom this replaces: the button ran for 11 ms and stopped, with a
-    message naming a variable the operator had no way to use.
+    `state_dir` reaches the script as CLE_DEMO_STATE, and that is why the board
+    moves while it runs. Every other action here appends `--state-dir`; this one
+    used to accept the parameter and ignore it, so the script wrote to its own
+    default (`.cle-demo`) while the dashboard tailed the oplog under
+    `$CLE_STATE_DIR`. Nothing failed — the script exited 0, wrote its 52 oplog
+    lines, and the operator watched a board that never moved.
     """
     blocked = demo_run_refusal(state_dir)
     if blocked:
@@ -137,21 +122,11 @@ async def run_workspaces(state_dir: Path) -> dict[str, Any]:
             ),
         }
 
-    force_env = {**os.environ, "CLE_FORCE_REAL_MODEL": "1"}
-    proc = await asyncio.create_subprocess_exec(
-        "bash", "examples/full_loop.sh",
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-        env={**force_env, "CLE_ACTOR": "dashboard", "CLE_DEMO_STATE": str(state_dir)},
-        cwd=str(Path.cwd()),
-    )
-    out, err = await proc.communicate()
-    return {
-        "argv": ["bash", "examples/full_loop.sh"],
-        "code": proc.returncode,
-        "stdout": out.decode("utf-8", "replace"),
-        "stderr": err.decode("utf-8", "replace"),
-    }
+    # CLE_FORCE_REAL_MODEL=1 makes fingerprinter.py raise on any API failure
+    # instead of silently falling back to stub hashes, so a green run cannot be
+    # an offline run wearing a live label.
+    return {"env": {**os.environ, "CLE_FORCE_REAL_MODEL": "1",
+                    "CLE_ACTOR": "dashboard", "CLE_DEMO_STATE": str(state_dir)}}
 
 
 async def clean_system(state_dir: Path) -> dict[str, Any]:

@@ -220,7 +220,7 @@ def test_run_test_on_the_live_state_refuses_with_an_actionable_message() -> None
 
     from dashboard.backend import actions
 
-    result = asyncio.run(actions.run_workspaces(_Path("/somewhere/.cle")))
+    result = actions.demo_run_env(_Path("/somewhere/.cle"))
 
     assert result["code"] == 1
     assert result["argv"] == [], "nothing should have been spawned"
@@ -235,32 +235,20 @@ def test_run_test_on_the_live_state_refuses_with_an_actionable_message() -> None
 def test_run_test_on_a_scratch_state_is_not_refused(monkeypatch: pytest.MonkeyPatch) -> None:
     """Guards the guard: a check that refused everything would pass the test
     above while breaking the button outright."""
-    import asyncio
-    from pathlib import Path as _Path
-
     from dashboard.backend import actions
-
-    captured: dict = {}
-
-    class _Fake:
-        returncode = 0
-
-        async def communicate(self):
-            return (b"", b"")
-
-    async def _fake_exec(*argv, **kw):
-        captured["env"] = kw.get("env", {})
-        return _Fake()
 
     # monkeypatch, not os.environ: conftest clears the ambient credentials for
     # the whole session on purpose, and a test that sets one globally hands the
     # next test an environment it did not ask for.
-    monkeypatch.setattr(actions.asyncio, "create_subprocess_exec", _fake_exec)
     monkeypatch.setenv("GEMINI_API_KEY", "test-only-not-a-real-key")
-    asyncio.run(actions.run_workspaces(_Path("/somewhere/.cle-demo")))
+    prepared = actions.demo_run_env(Path("/somewhere/.cle-demo"))
 
-    assert captured["env"]["CLE_DEMO_STATE"] == "/somewhere/.cle-demo", (
+    assert "env" in prepared, f"a scratch state must be runnable; got {prepared}"
+    assert prepared["env"]["CLE_DEMO_STATE"] == "/somewhere/.cle-demo", (
         "the script must be pointed at the directory the board reads"
+    )
+    assert prepared["env"]["CLE_FORCE_REAL_MODEL"] == "1", (
+        "a live run must fail loudly rather than fall back to stub hashes"
     )
 
 
@@ -336,7 +324,7 @@ def test_the_command_the_refusal_teaches_actually_exists() -> None:
     from cle.cli import main as cli
     from dashboard.backend import actions
 
-    message = asyncio.run(actions.run_workspaces(Path("/somewhere/.cle")))["stderr"]
+    message = actions.demo_run_env(Path("/somewhere/.cle"))["stderr"]
 
     command = next(
         (line.strip() for line in message.splitlines() if "cle dashboard" in line), ""
@@ -408,8 +396,9 @@ def test_health_and_the_action_cannot_disagree(tmp_path: Path) -> None:
         state.mkdir()
         advertised = actions.demo_run_refusal(state) is None
         if not advertised:
-            result = asyncio.run(actions.run_workspaces(state))
-            assert result["code"] == 1, f"/health blocks {name} but the action ran it"
+            result = actions.demo_run_env(state)
+            assert result.get("code") == 1, f"/health blocks {name} but the action ran it"
+            assert "env" not in result, "a blocked run must not hand back an environment"
 
 
 def test_every_button_colour_class_has_a_rule() -> None:
@@ -521,3 +510,182 @@ def test_the_frontend_is_served_with_revalidation() -> None:
     # The etag must still short-circuit, or revalidation costs a full download.
     etag = client.get("/styles.css").headers["etag"]
     assert client.get("/styles.css", headers={"If-None-Match": etag}).status_code == 304
+
+
+def test_the_demo_run_returns_before_the_script_finishes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The Run test button must not hold the request open for the whole run.
+
+    It used to `await proc.communicate()` inside the handler: 26 s on stub
+    models, 131 s measured on real ones, with every control on the page disabled
+    and nothing printed until the end. That reads as a frozen dashboard rather
+    than as work in progress.
+
+    A started run answers immediately and narrates itself on the SSE bus.
+    """
+    import asyncio
+
+    from dashboard.backend.demo import ScriptRunner
+    from dashboard.backend.oplog_sse import EventBus
+
+    async def scenario() -> tuple[float, list[str]]:
+        bus = EventBus()
+        queue = bus.subscribe()
+        runner = ScriptRunner(bus, tmp_path / ".cle-demo")
+
+        # A stand-in for full_loop.sh that takes clearly longer than the call.
+        async def slow(*argv, **kwargs):
+            class _Proc:
+                returncode = None
+
+                def __init__(self) -> None:
+                    self.stdout = self._lines()
+
+                async def _lines(self):
+                    for text in (b"=== 1. step one\n", b"=== 2. step two\n"):
+                        await asyncio.sleep(0.2)
+                        yield text
+
+                async def wait(self) -> int:
+                    self.returncode = 0
+                    return 0
+
+                def kill(self) -> None:
+                    pass
+
+            return _Proc()
+
+        monkeypatch.setattr(asyncio, "create_subprocess_exec", slow)
+
+        began = asyncio.get_running_loop().time()
+        assert runner.start({"PATH": "/usr/bin"}) is True
+        elapsed = asyncio.get_running_loop().time() - began
+
+        seen: list[str] = []
+        for _ in range(6):
+            await asyncio.sleep(0.15)
+            while not queue.empty():
+                seen.append(queue.get_nowait().get("state", ""))
+            if "done" in seen:
+                break
+        return elapsed, seen
+
+    elapsed, states = asyncio.run(scenario())
+
+    assert elapsed < 0.1, f"start() blocked for {elapsed:.2f}s; it must return at once"
+    assert "start" in states, "the run must announce itself immediately"
+    assert "done" in states, (
+        "the run must publish a terminal event; without one the page stays "
+        "disabled forever"
+    )
+
+
+def test_a_second_run_is_refused_while_one_is_in_flight(tmp_path: Path) -> None:
+    """Guards the guard: a runner that started everything would pass the test
+    above and let two full_loop.sh instances rm -rf the same directory."""
+    import asyncio
+
+    from dashboard.backend.demo import ScriptRunner
+    from dashboard.backend.oplog_sse import EventBus
+
+    async def scenario() -> tuple[bool, bool]:
+        runner = ScriptRunner(EventBus(), tmp_path / ".cle-demo")
+
+        async def never(*argv, **kwargs):
+            class _Proc:
+                returncode = None
+                pid = -1          # abort() reads it; -1 has no process group
+
+                def __init__(self) -> None:
+                    self.stdout = self._lines()
+
+                async def _lines(self):
+                    # Never yields and never ends: the run stays in flight, which
+                    # is the state the lock exists to protect.
+                    await asyncio.sleep(5)
+                    return
+                    yield b""  # pragma: no cover - makes this an async generator
+
+                async def wait(self) -> int:
+                    return 0
+
+                def kill(self) -> None:
+                    pass
+
+            return _Proc()
+
+        asyncio.get_running_loop()
+        import dashboard.backend.demo as demo_mod
+
+        original = demo_mod.asyncio.create_subprocess_exec
+        demo_mod.asyncio.create_subprocess_exec = never
+        try:
+            first = runner.start({})
+            await asyncio.sleep(0.05)
+            second = runner.start({})
+            runner.abort()
+            await asyncio.sleep(0.05)
+        finally:
+            demo_mod.asyncio.create_subprocess_exec = original
+        return first, second
+
+    first, second = asyncio.run(scenario())
+    assert first is True
+    assert second is False, "two concurrent runs would rm -rf the same state dir"
+
+
+def test_abort_reaches_the_children_not_just_the_shell(tmp_path: Path) -> None:
+    """Killing `bash` alone leaves the run apparently in progress.
+
+    `full_loop.sh` runs `cle` and `pytest` as children; they inherit the stdout
+    pipe, so a reader waiting on that pipe stays blocked while any grandchild
+    holds it open. Measured before the fix: `run_in_progress` was still true
+    three seconds after an abort that had reported success, and two child
+    processes were still alive.
+
+    The run therefore gets its own process group and the group is signalled.
+    """
+    import asyncio
+    import os
+    import signal
+
+    from dashboard.backend.demo import ScriptRunner
+    from dashboard.backend.oplog_sse import EventBus
+
+    async def scenario() -> tuple[bool, str]:
+        runner = ScriptRunner(EventBus(), tmp_path / ".cle-demo")
+
+        # A shell that spawns a child holding the same pipe, exactly as the real
+        # script does. Killing only the shell leaves the child, and the reader.
+        proc = await asyncio.create_subprocess_exec(
+            "bash", "-c", "sleep 30 & sleep 30",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            start_new_session=True,
+        )
+        runner._proc = proc  # the state abort() acts on
+        group = os.getpgid(proc.pid)
+
+        # Let bash actually fork its children first. Aborting immediately kills
+        # the shell before the grandchildren exist, and the test then passes
+        # whether or not the group is signalled — which is how an earlier
+        # version of it passed against the very defect it describes.
+        await asyncio.sleep(0.4)
+
+        runner.abort()
+        await asyncio.sleep(0.4)
+
+        try:
+            os.killpg(group, 0)      # signal 0 = "does this group still exist?"
+            alive = True
+        except ProcessLookupError:
+            alive = False
+        proc.kill() if proc.returncode is None else None
+        return alive, "ok"
+
+    alive, _ = asyncio.run(scenario())
+    assert not alive, (
+        "the process group survived abort; the shell was killed and its children "
+        "were not, which is what left the board showing a run in progress"
+    )

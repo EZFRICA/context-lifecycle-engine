@@ -25,7 +25,7 @@ from pydantic import BaseModel
 from cle.lifecycle.reasons import HumanDeclineReason
 
 from . import reads
-from .demo import DemoRunner
+from .demo import DemoRunner, ScriptRunner
 from .oplog_sse import EventBus, event_stream, tail_log_forever
 
 STATE_DIR = Path(os.getenv("CLE_STATE_DIR", ".cle")).resolve()
@@ -34,6 +34,7 @@ LOG_PATH = STATE_DIR / "log.jsonl"
 
 bus = EventBus()
 demo_runner = DemoRunner(bus, STATE_DIR)
+script_runner = ScriptRunner(bus, STATE_DIR)
 
 
 @asynccontextmanager
@@ -151,9 +152,29 @@ async def actions_init():
 
 @app.post("/actions/run_workspaces")
 async def actions_run_workspaces():
-    from .actions import run_workspaces
+    """Start `full_loop.sh` in the background and return at once.
 
-    return await run_workspaces(STATE_DIR)
+    This used to await the subprocess, so the request held open for the whole
+    run — 26 s on stub models, 131 s measured on real ones — with every control
+    on the page disabled and nothing printed until the end. Progress now arrives
+    as `demo_step` events on the same SSE stream the rest of the board reads, and
+    the button is released by the terminal event rather than by the response.
+    """
+    from .actions import demo_run_env
+
+    prepared = demo_run_env(STATE_DIR)
+    if "env" not in prepared:
+        return prepared  # refusal, unchanged in shape and content
+    if not script_runner.start(prepared["env"]):
+        raise HTTPException(status_code=409, detail="a run is already in progress")
+    return {"status": "started", "state_dir": str(STATE_DIR)}
+
+
+@app.post("/actions/abort_run")
+def actions_abort_run():
+    """Stop a run in progress. Idempotent: aborting nothing is not an error."""
+    script_runner.abort()
+    return {"status": "aborting"}
 
 
 @app.post("/actions/clean")
@@ -197,6 +218,7 @@ def health():
         "log_exists": LOG_PATH.exists(),
         "demo_runnable": blocked is None,
         "demo_blocked": blocked,
+        "run_in_progress": script_runner.running,
     }
 
 
