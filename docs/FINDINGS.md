@@ -217,6 +217,80 @@ python examples/bigquery/make_facets.py && python examples/bigquery/intent_bench
 
 ---
 
+## 6b. Facets on the task level 2 actually does, and what they cost there
+
+§6 measures facets on intent components. Level 2's task is different: read many
+independent topologies and decide whether two of them carry the SAME recurring
+intent. The negative is two strangers' unrelated intents, not two questions one
+person asked a week apart — and the negative turns out to decide the answer.
+
+Ground truth by construction: `make_multiuser.py` partitions the GDG corpus into
+12 synthetic users and every message carries its intent in `thread_id`. A
+positive is two DIFFERENT users' clusters of the same planted intent. 46
+clusters, 966 cross-user pairs, 140 positive. Nothing was labelled by hand.
+
+| method | @10.1% FP | @5% FP | @1% FP | AUC |
+|---|---:|---:|---:|---:|
+| text-jaccard, free | 62.9% | 59.3% | **52.1%** | 0.8308 |
+| text-cosine | **90.7%** | **81.4%** | 61.4% | 0.9645 |
+| facet-cosine | 75.7% | 62.1% | 29.3% | 0.9230 |
+| facet-redacted | 75.0% | 62.1% | 32.1% | 0.9271 |
+
+**Raw text beats facets on this task** by 15.0 points at a 10.1% budget and 32.1
+at 1%. The 15 points are not a defect to engineer away: they are the price of the
+property the facet contract exists to buy, which is never storing user text at
+all. `text-cosine` wins by embedding the raw episodes, so a population layer
+built on it reads what people wrote.
+
+**Mechanical redaction is free here.** 75.0% against 75.7%, better at the strict
+budget, and the leak goes from 0.11 proper nouns per facet to 0.00. On the
+within-user task the same redaction cost 2.3 points and finished last: there the
+redacted token was the only thing separating two of one person's questions;
+across users it is incidental. If facets are used, redact.
+
+**UPPER BOUND, NOT AN ESTIMATE, and it is not uniform.** `make_multiuser.py`
+states the bound: one generator, so two users sharing an intent sit closer than
+two real users would. That inflation favours the text methods specifically — raw
+text from one generator shares surface vocabulary, which a facet abstracts away.
+On real users the gap should narrow, by an unmeasured amount.
+
+Pinning key: `(2026-09-06, b9d9556+wt, bigquery:gemini-embedding-001:768,
+gemini-2.5-flash for facet generation)`.
+
+```bash
+python examples/make_multiuser.py --users 12 --prefix ph12
+python examples/bigquery/facet_crossuser_bench.py
+```
+
+---
+
+## 6c. The ranking of methods depends on where the threshold sits
+
+Three independent datasets in this project, one behaviour.
+
+| dataset | free lexical vs the best model, at 10.1% FP | at 1% FP |
+|---|---|---|
+| Stack Overflow duplicate pairs | 11.7 points behind | **4.9 points ahead** |
+| facets, within one user | 0.3 points ahead of the facet pipeline | 4.6 points ahead |
+| intents, across users | 12.8 points behind facets | **22.8 points ahead** |
+
+Same corpus, same pairs, same protocol in each row; only the error budget moves.
+An aggregate rank metric hides this completely — AUC puts the embedding first in
+every one of the three.
+
+The consequence for level 2 is a design order, not a preference: **fix the error
+budget first, then choose the method.** A method chosen at a loose budget and
+deployed at a strict one is not a slightly worse choice, it is sometimes the
+wrong one.
+
+```bash
+python examples/bigquery/model_bench.py          # row 1
+python examples/bigquery/facet_scale_bench.py    # row 2
+python examples/bigquery/facet_crossuser_bench.py  # row 3
+```
+
+---
+
 ## 7. The embedding model is deterministic; the generation model is not
 
 ```
