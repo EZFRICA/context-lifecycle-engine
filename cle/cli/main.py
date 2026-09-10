@@ -36,13 +36,13 @@ from cle.detect.episodes import DetectorConfig, Message
 from cle.lifecycle.engine import EngineThresholds, shadow_decide
 from cle.lifecycle.revalidator import revalidate as run_revalidation
 from cle.lifecycle.tags import STATE_RANK, move_state_tag
-from cle.lifecycle.reasons import TopologyReason, validate_reason
+from cle.lifecycle.reasons import HUMAN_DECLINE_REASONS, TopologyReason, validate_reason
 from cle.lifecycle.topology import current_agents, render_diff, render_log, write_topology
 from cle.oplog import OpLog, UnclassifiedOpError, classify_op, render_decision
 from cle.runtime.container import ensure_container, load_containers, load_image, run_prompts
 from cle.runtime.metrics_volume import read_events
 from cle.runtime.mounts import Mount
-from cle.store.backends import STORE_KINDS, StoreBackend, open_store
+from cle.store.backends import STORE_KINDS, StagedStore, StoreBackend, open_store
 from cle.store.commits import Evidence, SourceSpec
 from cle.store.objects import Block, content_hash
 
@@ -204,7 +204,11 @@ def build(
 
     from cle.build.fingerprinter import LiveModelFingerprinter
     store = _store(state_dir)
-    _seed_components(store, components)
+    # Staged, invariant 3: the seeds are writes, and a build that fails must
+    # leave the store as it found it. They and the build's own objects reach
+    # the store only once the three stages have succeeded.
+    staged = StagedStore(store)
+    _seed_components(staged, components)
     oplog, sink = _oplog(state_dir)
     try:
         if model_id.startswith("stub-") or model_id.startswith("drifted-"):
@@ -227,11 +231,12 @@ def build(
             except Exception:
                 pass
         image = build_image(
-            source=source, backend=store, messages=window_messages,
+            source=source, backend=staged, messages=window_messages,
             window_label=replay_window, existing_triggers=existing_triggers,
             embedder=_configured_embedder(), fingerprinter=fingerprinter,
             config=DetectorConfig(), oplog=oplog, actor=_actor(),
         )
+        staged.commit()
         # Birth: the candidate tag and its topology entry, both carrying
         # the replay's pre_evidence (never more than that at birth) AND the
         # provenance of WHOSE usage produced the detection - the history's own
@@ -666,20 +671,27 @@ def revalidate(
 
 @app.command()
 def decline(
-    agent: str = typer.Argument(..., help="Candidate agent to refuse."),
+    agent: str = typer.Argument(..., help="Agent whose proposed move is refused."),
     reason: str | None = typer.Option(
         None, help="Closed vocabulary: engine_disagrees | defer."
     ),
     note: str | None = typer.Option(None, help="Free text, logged locally."),
     state_dir: Path = STATE_DIR_OPTION,
 ) -> None:
-    """Refuse a candidate - the human 'Decline' on the proposal menu.
+    """Refuse what the system proposes for an agent - the human 'Decline'.
 
+    The proposal is a candidate's birth on the dashboard, or a further
+    promotion (`full_loop.sh` step 7b declines one for an `ephemeral` agent).
     Writes no tag and moves nothing; it records the refusal as one op line
     so the divergence between what the system proposed and what the human
     accepted is auditable (the article-9 data). This is a write path, so
-    like every write it goes through the CLI and is logged.
+    like every write it goes through the CLI and is logged. Only a decline
+    reason is accepted: a demotion reason names a different act.
     """
+    if reason is not None and reason not in HUMAN_DECLINE_REASONS:
+        typer.echo(f"decline --reason must be one of {sorted(HUMAN_DECLINE_REASONS)}, "
+                   f"got {reason!r}", err=True)
+        raise typer.Exit(code=2)
     store = _store(state_dir)
     agents = current_agents(store)
     entry = agents.get(agent)

@@ -122,6 +122,41 @@ def test_a_build_that_cannot_resolve_its_components_exits_cleanly(runner, tmp_pa
     _refused(result, 1, "build failed")
 
 
+def test_a_refused_build_leaves_the_store_as_it_found_it(runner, tmp_path, spec) -> None:
+    """Invariant 3 on the CLI path: the seeds are writes too.
+
+    One of the spec's two components is on disk, so seeding HAS something to
+    write before resolution fails on the other. Seeding straight into the store
+    left that block and its ref behind in a state dir the build was refused on.
+    """
+    components = tmp_path / "components"
+    components.mkdir()
+    (components / "recap_format.yaml").write_text(
+        (ROOT / "examples" / "components" / "recap_format.yaml").read_text())
+    state = tmp_path / "state"
+    result = runner.invoke(app, [
+        "build", str(spec), "--history", str(HISTORY), "--replay-window", "40d",
+        "--components", str(components), "--model-id", "stub-model-1",
+        "--state-dir", str(state),
+    ])
+    _refused(result, 1, "build failed")
+    from cle.store.backends import open_store
+
+    assert open_store(state).list_refs("") == []
+    assert not [p for p in (state / "store").rglob("*") if p.is_file()]
+
+
+# --- cle decline ---------------------------------------------------------------
+
+def test_decline_refuses_a_reason_that_is_not_a_decline_reason(runner, tmp_path) -> None:
+    """`cost_regression` is in the vocabulary, but it names a descent, not a refusal."""
+    state = tmp_path / "state"
+    result = runner.invoke(app, ["decline", "ghost", "--reason", "cost_regression",
+                                 "--state-dir", str(state)])
+    _refused(result, 2, "decline --reason must be one of")
+    assert not state.exists(), "refused before the state dir is opened"
+
+
 # --- commands addressing an agent the topology does not hold ----------------
 
 def test_run_refuses_an_agent_the_topology_does_not_hold(runner, tmp_path) -> None:

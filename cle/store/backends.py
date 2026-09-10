@@ -91,6 +91,49 @@ class InMemoryStore:
         return dict(self._objects), dict(self._refs)
 
 
+class StagedStore:
+    """Writes held in memory over a real backend, reaching it only on `commit()`.
+
+    Invariant 3: a staged build consumes nothing. `cle build` seeds the
+    components it resolves against, and seeding is a write; done on the real
+    store, a build that then failed left blocks and refs behind in a state dir
+    it had been refused on. Reads see the pending writes first, then the
+    backend beneath; the checks are the backends' own (content address on
+    `put`, write-once version refs on `move_ref`, against both layers).
+    """
+
+    def __init__(self, backend: StoreBackend) -> None:
+        self._backend = backend
+        self._pending = InMemoryStore()
+
+    def put(self, object_hash: str, data: bytes) -> None:
+        self._pending.put(object_hash, data)
+
+    def get(self, object_hash: str) -> bytes:
+        try:
+            return self._pending.get(object_hash)
+        except KeyError:
+            return self._backend.get(object_hash)
+
+    def move_ref(self, name: str, object_hash: str) -> None:
+        assert_ref_movable(name, dict(self._backend.list_refs(name)))
+        self._pending.move_ref(name, object_hash)
+
+    def list_refs(self, prefix: str) -> list[tuple[str, str]]:
+        merged = dict(self._backend.list_refs(prefix))
+        merged.update(self._pending.list_refs(prefix))
+        return sorted(merged.items())
+
+    def commit(self) -> None:
+        """Hand every pending object and ref to the backend, objects first."""
+        objects, refs = self._pending.snapshot()
+        for object_hash, data in objects.items():
+            self._backend.put(object_hash, data)
+        for name, object_hash in refs.items():
+            self._backend.move_ref(name, object_hash)
+        self._pending = InMemoryStore()
+
+
 class FileStore:
     """Directory-backed store: objects/<hash> files plus refs.json.
 
