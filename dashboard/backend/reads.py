@@ -1,4 +1,4 @@
-"""Snapshot builders — read-only views over the FileStore + oplog.
+"""Snapshot builders - read-only views over the FileStore + oplog.
 
 Every function here imports CLE's own read helpers so the dashboard sees
 exactly what the engine sees. Nothing here writes. Integrity checks during
@@ -199,6 +199,9 @@ def topology(state_dir: Path, version: int | None = None) -> dict[str, Any]:
                 "state": entry.get("state"),
                 "image_short": _short(entry.get("image")),
                 "cause_kind": _cause_kind(entry.get("cause", {})),
+                # Present, generation_failed, or None for an agent born before
+                # facets existed - the three cases level 2 must tell apart.
+                "facet_status": entry.get("facet_status"),
             }
             for name, entry in sorted(agents.items())
         ],
@@ -214,7 +217,7 @@ def _cause_kind(cause: dict[str, Any]) -> str:
 
 def topology_diff(state_dir: Path, a: int, b: int) -> dict[str, Any]:
     """Structured delta between two topology versions, with each entry's
-    evidence — added / removed / retagged."""
+    evidence - added / removed / retagged."""
     backend = store(state_dir)
     rec_a, rec_b = _topology_record(backend, a), _topology_record(backend, b)
     if rec_a is None or rec_b is None:
@@ -245,7 +248,7 @@ def decisions(state_dir: Path, limit: int = 50) -> list[dict[str, Any]]:
     """The Pulse zone's second view: only the lines where something was
     DECIDED, already rendered as sentences.
 
-    Rendered HERE, in Python, by the same `render_decision` the CLI uses —
+    Rendered HERE, in Python, by the same `render_decision` the CLI uses -
     re-implementing the sentence in JavaScript would give the audit view two
     sources of truth that drift apart. The frontend only displays.
     """

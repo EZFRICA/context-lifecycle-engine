@@ -1,15 +1,17 @@
 """Every read-only dashboard route resolves and answers.
 
-SCOPE — bucket 1 (embedder-agnostic): nothing here touches a vector space.
+SCOPE - bucket 1 (embedder-agnostic), except the one test that writes a real
+topology to check the payload names its vector space: it builds through the
+stub, which makes it bucket 2. Measured by `tools/buckets.py`.
 
-CLE need — the gap this closes. The dashboard had NO test of any kind, so a
+CLE need - the gap this closes. The dashboard had NO test of any kind, so a
 route body was only ever executed by a human clicking. `/state/decisions`
 shipped calling an undefined `_state_dir()` and raised NameError on every
 request; the suite was green throughout, because a FastAPI route body is dead
 code until something calls it.
 
 These are deliberately shallow: status code and JSON shape, on an EMPTY state
-directory. That is the point — the read paths must answer on a fresh install,
+directory. That is the point - the read paths must answer on a fresh install,
 before any agent exists, and a smoke test that needs a seeded world would not
 have caught the undefined name either. Depth belongs in the reads tests; this
 file exists so no route body can stay unexecuted.
@@ -59,7 +61,7 @@ def test_the_route_list_covers_every_read_only_get_route() -> None:
     """The list above cannot silently fall behind the app.
 
     A hand-maintained route list is worthless the first time someone adds a
-    route and forgets this file — so the list is checked against the app's own
+    route and forgets this file - so the list is checked against the app's own
     routing table rather than trusted.
     """
     import importlib
@@ -79,7 +81,7 @@ def test_the_route_list_covers_every_read_only_get_route() -> None:
     missing = declared - set(READ_ROUTES) - parameterised
     assert not missing, (
         f"read-only routes with no smoke coverage: {sorted(missing)}. "
-        "Add them to READ_ROUTES — an untested route body is dead code until a "
+        "Add them to READ_ROUTES - an untested route body is dead code until a "
         "human clicks it."
     )
 
@@ -93,7 +95,7 @@ def test_the_decisions_route_is_actually_executed(client) -> None:
 
 # ── the two routes that take required query args ────────────────────────────
 # Written because the comment above used to CLAIM these cases existed when they
-# did not — the same "naming what does not exist" pattern the repo keeps
+# did not - the same "naming what does not exist" pattern the repo keeps
 # reproducing, this time inside a test file added to close a coverage gap.
 
 
@@ -112,13 +114,51 @@ def test_the_image_route_rejects_a_missing_query_arg(client) -> None:
 
 def test_the_topology_diff_route_executes_on_absent_versions(client) -> None:
     # Empty state dir: versions 1 and 2 do not exist. The handler catches
-    # KeyError and answers 404 — a decision it makes, not a crash.
+    # KeyError and answers 404 - a decision it makes, not a crash.
     response = client.get("/state/topology/diff", params={"a": 1, "b": 2})
     assert response.status_code < 500, response.text
 
 
 def test_the_topology_diff_route_rejects_missing_query_args(client) -> None:
     assert client.get("/state/topology/diff").status_code == 422
+
+
+def test_an_absent_topology_version_is_a_404_not_an_empty_answer(client) -> None:
+    """The route turns the KeyError into a 404, and that decision is pinned.
+
+    The test above only checks the handler does not crash. Without the 404 the
+    handler returns None, which FastAPI serves as `200 null`: a reader asking for
+    a diff that does not exist would be told, successfully, that it is empty.
+    """
+    response = client.get("/state/topology/diff", params={"a": 1, "b": 2})
+    assert response.status_code == 404, response.text
+    assert "topology" in response.json()["detail"]
+
+
+def test_a_second_run_while_one_is_in_progress_is_a_409(client, monkeypatch) -> None:
+    """Two `full_loop.sh` on one state dir would each `rm -rf` it under the other.
+
+    The single-flight lock lives in `ScriptRunner.start`; the route's job is to
+    turn its refusal into a status the page can show. Without the 409 the route
+    reports `started` for a run that never began.
+    """
+    from dashboard.backend import actions
+    from dashboard.backend import app as app_module
+
+    monkeypatch.setattr(actions, "demo_run_env", lambda state_dir: {"env": {}})
+    monkeypatch.setattr(app_module.script_runner, "start", lambda env: False)
+    response = client.post("/actions/run_workspaces")
+    assert response.status_code == 409, response.text
+    assert "already in progress" in response.json()["detail"]
+
+
+def test_a_second_demo_while_one_is_running_is_a_409(client, monkeypatch) -> None:
+    from dashboard.backend import app as app_module
+
+    monkeypatch.setattr(app_module.demo_runner, "start", lambda pace_ms: False)
+    response = client.post("/demo/start", json={"pace_ms": 10})
+    assert response.status_code == 409, response.text
+    assert "already running" in response.json()["detail"]
 
 
 def test_the_topology_payload_carries_the_vector_space(tmp_path) -> None:
@@ -177,7 +217,7 @@ def test_every_action_routes_its_state_dir_somewhere() -> None:
     so `full_loop.sh` wrote its 52 oplog lines into its own default `.cle-demo`
     while the dashboard tailed `$CLE_STATE_DIR/log.jsonl`. The script exited 0.
     The board never moved. Nothing in the suite noticed, because every assertion
-    about the run was true — of a directory nobody was watching.
+    about the run was true - of a directory nobody was watching.
 
     An unused parameter is the readable symptom, so that is what this checks.
     """
@@ -209,7 +249,7 @@ def test_run_test_on_the_live_state_refuses_with_an_actionable_message() -> None
 
     `full_loop.sh` starts with `rm -rf` on the directory it is handed, so it
     refuses `.cle`. Left to the script, that refusal reaches the browser as
-    "set CLE_DEMO_STATE to a scratch directory" after an 11 ms run — advice that
+    "set CLE_DEMO_STATE to a scratch directory" after an 11 ms run - advice that
     is correct in a shell and unusable in a page, because the dashboard's state
     directory is fixed at launch by a DIFFERENT variable, `CLE_STATE_DIR`.
 
@@ -225,7 +265,7 @@ def test_run_test_on_the_live_state_refuses_with_an_actionable_message() -> None
     assert result["code"] == 1
     assert result["argv"] == [], "nothing should have been spawned"
     # The message must hand back a command the operator can paste, and it must be
-    # the one the README teaches — an error that invents its own launch syntax
+    # the one the README teaches - an error that invents its own launch syntax
     # sends the reader somewhere the docs do not go.
     assert "cle dashboard --state-dir" in result["stderr"], (
         f"the refusal must name the documented launch command; got: {result['stderr']!r}"
@@ -259,7 +299,7 @@ def test_the_live_stream_survives_the_state_directory_being_replaced() -> None:
     The tailer used to detect only truncation, by comparing sizes. A replacement
     file that reaches the old offset before the next poll passes that check, and
     the tailer reads from a byte position belonging to a file that no longer
-    exists — splicing out the middle of a line, which parses to nothing. The
+    exists - splicing out the middle of a line, which parses to nothing. The
     opening events of a fresh run then disappear with no error raised anywhere,
     and the board starts partway through the run it is supposed to be showing.
 
@@ -316,7 +356,7 @@ def test_the_command_the_refusal_teaches_actually_exists() -> None:
     Asserting the message merely CONTAINS the right string proves only that two
     pieces of prose agree. If `cle dashboard` ever loses `--state-dir`, or the
     subcommand is renamed, the message keeps its text and starts teaching a
-    command that fails — and the test above stays green while the operator is
+    command that fails - and the test above stays green while the operator is
     stuck exactly where they were.
     """
     import asyncio
@@ -362,7 +402,7 @@ def test_health_tells_the_page_whether_the_demo_run_is_possible(
     """The page must be able to grey the button out before anyone clicks it.
 
     Without this the only way to learn that "2. Run test" cannot work here is to
-    press it and read the failure — which is how the operator found it: the
+    press it and read the failure - which is how the operator found it: the
     button flashed for 11 ms and stopped.
     """
     import importlib
@@ -404,7 +444,7 @@ def test_health_and_the_action_cannot_disagree(tmp_path: Path) -> None:
 def test_every_button_colour_class_has_a_rule() -> None:
     """A button asking for a colour that no rule defines renders grey.
 
-    `btn violet` was on two buttons — "demo" and "2. Run test" — with no
+    `btn violet` was on two buttons - "demo" and "2. Run test" - with no
     `.btn.violet` rule anywhere, so both fell back to the default border. Grey is
     also how this stylesheet renders `:disabled`, so an enabled button read as a
     blocked one, and the operator reported the run button as blocked when it was
@@ -436,14 +476,14 @@ def test_the_live_stream_survives_a_replacement_that_keeps_the_inode() -> None:
     """The case CI hit, which the previous fix did not cover.
 
     That fix compared inode numbers. A filesystem is free to give a replacement
-    file the inode it has just freed, and Linux commonly does — so on CI the
+    file the inode it has just freed, and Linux commonly does - so on CI the
     wipe-and-recreate looked like the same file, the offset survived, and the
     first line of the new log was spliced in half and lost. The same check passed
     on APFS, where reuse is rarer. A test that only wipes a directory therefore
     passes or fails by filesystem.
 
     This reproduces the shape directly and without depending on inode luck: the
-    file is REWRITTEN in place — same inode by construction — with different,
+    file is REWRITTEN in place - same inode by construction - with different,
     longer content, so neither the inode check nor the size check fires.
     """
     import asyncio
@@ -487,7 +527,7 @@ def test_the_frontend_is_served_with_revalidation() -> None:
     the asset URLs carry no version, so a browser falls back to heuristic
     freshness and may keep serving its cached copy without asking. That is not a
     theory: a fix to `.btn.violet` shipped, the server served it, and the page
-    kept rendering the old grey button — the operator reported the button as
+    kept rendering the old grey button - the operator reported the button as
     blocked twice, on a server that already had the fix.
 
     `no-cache` means "revalidate", not "do not store", so the etag still answers
@@ -669,7 +709,7 @@ def test_abort_reaches_the_children_not_just_the_shell(tmp_path: Path) -> None:
 
         # Let bash actually fork its children first. Aborting immediately kills
         # the shell before the grandchildren exist, and the test then passes
-        # whether or not the group is signalled — which is how an earlier
+        # whether or not the group is signalled - which is how an earlier
         # version of it passed against the very defect it describes.
         await asyncio.sleep(0.4)
 

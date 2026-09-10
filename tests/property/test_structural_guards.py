@@ -1,20 +1,20 @@
 """Structural guards over the repository itself.
 
-SCOPE — bucket 1 (embedder-agnostic): these assert properties of the source
+SCOPE - bucket 1 (embedder-agnostic): these assert properties of the source
 tree, not of any vector space.
 
 CLE need. Verifying something once and guarding it are not the same thing, and
 only one of the two survives. Each test here converts a whole CLASS of defect,
 not one instance, into something that fails on its own.
 
-  * §1 single writer  — invariant 1 of the blueprint (`topology.yaml` has one
+  * §1 single writer - invariant 1 of the blueprint (`topology.yaml` has one
     writer) had ZERO test representation. Opening a second write site inside
     `OpLog.emit`, the hottest path in the system, and the suite stayed green.
-  * §2 cited files    — 2 of the 7 "names that designate nothing" were file
+  * §2 cited files - 2 of the 7 "names that designate nothing" were file
     names cited in docstrings: `temperature_experiment.py`, offered as PROOF of
     invariant 6 and never written, and `WeaviateStore`. Both were found by
     reading, not by failing.
-  * §3 suite count    — the published test count drifts every time a test file
+  * §3 suite count - the published test count drifts every time a test file
     is added, and a stale count in the README is the first thing a reader sees.
 """
 
@@ -40,7 +40,7 @@ def _topology_write_sites() -> list[str]:
     """Files containing a write to a path whose name is `topology.yaml`.
 
     Matches `<expr>.write_text(...)` where the receiver mentions `topology`, and
-    any literal "topology.yaml" appearing next to a write call — deliberately
+    any literal "topology.yaml" appearing next to a write call - deliberately
     broad, because a guard that only knows today's spelling is the grep-audit
     failure again.
     """
@@ -68,7 +68,7 @@ def test_topology_yaml_has_exactly_one_writer() -> None:
     sites = _topology_write_sites()
     assert sites == [TOPOLOGY_WRITER], (
         f"topology.yaml write sites: {sites}, expected only [{TOPOLOGY_WRITER!r}]. "
-        "Invariant 1: the lifecycle engine is the single writer — it is what makes "
+        "Invariant 1: the lifecycle engine is the single writer - it is what makes "
         "the topology history a trustworthy channel for a population level."
     )
 
@@ -86,18 +86,18 @@ def test_the_declared_writer_actually_writes() -> None:
 _CITED = re.compile(r"[\w./*-]+\.(?:py|sh|json|ya?ml|md|jsonl|toml|css|js|html)\b")
 
 #: Names that are patterns, or artifacts the system CREATES at runtime rather
-#: than files that ship. Each exemption is named individually — a broadened
+#: than files that ship. Each exemption is named individually - a broadened
 #: regex would quietly re-admit the phantoms this guard exists to catch.
 _NOT_A_PATH = {
     "vectors.*.json",        # a glob over the cache family
     "examples/vectors.*.json",
     "settings.local.json",   # may be absent on a fresh clone
     # FileStore's on-disk layout. Present only after a FileStore run, and absent
-    # entirely when the state dir uses SqliteStore — so its absence says which
+    # entirely when the state dir uses SqliteStore - so its absence says which
     # backend last ran, not that the docstring lies.
     "refs.json",
     # The rest of the state directory, on the same rule. These are files the
-    # engine WRITES — `cle init` and the lifecycle create them — so they exist on
+    # engine WRITES - `cle init` and the lifecycle create them - so they exist on
     # a machine that has run the CLI and are absent in a fresh clone. Docstrings
     # must be able to name them: `topology.yaml` is the single-writer invariant's
     # subject, and `log.jsonl` is the oplog the dashboard tails.
@@ -109,6 +109,9 @@ _NOT_A_PATH = {
     "log.jsonl",
     ".cle/log.jsonl",
     "containers.json",
+    # What `cle population` writes under its `--out` directory, on the same
+    # rule: an output the engine produces, absent until a population has run.
+    "report.json",
 }
 
 
@@ -146,7 +149,7 @@ def test_every_file_cited_in_a_docstring_exists() -> None:
     assert not missing, (
         f"docstrings cite files that do not exist: {missing}. "
         "A docstring citing a nonexistent file is the pattern this codebase keeps "
-        "reproducing — `temperature_experiment.py` was offered as PROOF of an "
+        "reproducing - `temperature_experiment.py` was offered as PROOF of an "
         "invariant that measurement later contradicted."
     )
 
@@ -182,8 +185,8 @@ _COUNT = re.compile(r"\*\*(\d+)[ -]tests?\b|\*\*(\d+) tests across (\d+) files")
 #: data is a count only its author can check: it read 388 here and 383 in CI,
 #: and the number in the docs was the one no reader could reproduce.
 #:
-#: This list is load-bearing in a dangerous direction — anything named here
-#: leaves the published total — so `test_corpus_gated_modules_really_are_gated`
+#: This list is load-bearing in a dangerous direction - anything named here
+#: leaves the published total - so `test_corpus_gated_modules_really_are_gated`
 #: keeps it honest.
 CORPUS_GATED = ("tests/unit/test_real_state_regression.py",)
 
@@ -255,5 +258,5 @@ def test_the_documented_test_count_matches_reality(doc: str) -> None:
     wrong = sorted(c for c in claimed if c != tests)
     assert not wrong, (
         f"{doc} claims {wrong} tests; the collector reports {tests} across {files} files. "
-        "This number has drifted six times — the guard exists so it cannot drift again."
+        "This number has drifted six times - the guard exists so it cannot drift again."
     )

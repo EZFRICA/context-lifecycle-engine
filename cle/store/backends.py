@@ -4,14 +4,14 @@ Contract (cle-core-contracts):
 - Protocol: `put(hash, bytes)`, `get(hash)`, `move_ref(name, hash)`,
   `list_refs(prefix)`.
 - Refs: `agents/<name>/<state>` (mobile), `agents/<name>/v<semver>`
-  (immutable — moving one raises), `topology/<version>`.
+  (immutable - moving one raises), `topology/<version>`.
 - Semver rule (applied by P3 tagging, recorded here): major = trigger
   changed, minor = component ref swapped, patch = lifecycle thresholds only.
 Implementations, all behind the same Protocol and all exercised by the
 default suite (conformance is parametrized across them):
-- `InMemoryStore` — the default, and the only backend the invariant tests need.
-- `FileStore` — persistent CLI/dashboard state under `--state-dir`.
-- `SqliteStore` — persistent and inspectable; stdlib `sqlite3`, no server.
+- `InMemoryStore` - the default, and the only backend the invariant tests need.
+- `FileStore` - persistent CLI/dashboard state under `--state-dir`.
+- `SqliteStore` - persistent and inspectable; stdlib `sqlite3`, no server.
 
 Both shipped backends are local, offline and deterministic, so both are
 eligible for the default suite. There is no remote backend, and no test
@@ -27,7 +27,7 @@ from typing import Protocol, runtime_checkable
 
 from cle.store.objects import content_hash
 
-# agents/<name>/v<semver> — these refs are immutable once created.
+# agents/<name>/v<semver> - these refs are immutable once created.
 # Deliberately the core triplet only: the contract's semver rule defines
 # major/minor/patch semantics and nothing else, so prerelease/build refs
 # are not a namespace we mint (a decision, not an oversight).
@@ -39,7 +39,7 @@ class ImmutableRefError(Exception):
 
 
 def assert_ref_movable(name: str, current_refs: dict[str, str]) -> None:
-    """Shared ref rule for every backend — version refs are write-once.
+    """Shared ref rule for every backend - version refs are write-once.
 
     CLE need: an immutable version is the thing evidence accumulated
     against; silently re-pointing it would forge history.
@@ -86,7 +86,7 @@ class InMemoryStore:
         )
 
     def snapshot(self) -> tuple[dict[str, bytes], dict[str, str]]:
-        """Copy of all state — for the staged-failure-writes-nothing
+        """Copy of all state - for the staged-failure-writes-nothing
         byte-compare (BLUEPRINT §8 test floor); not part of the Protocol."""
         return dict(self._objects), dict(self._refs)
 
@@ -94,7 +94,7 @@ class InMemoryStore:
 class FileStore:
     """Directory-backed store: objects/<hash> files plus refs.json.
 
-    CLE need: the lifecycle spans CLI invocations and days — evidence
+    CLE need: the lifecycle spans CLI invocations and days - evidence
     accumulates against artifacts that must outlive a process. Same
     Protocol as InMemoryStore; tests use tmp_path, never a server.
     (P2 decision, documented: this is the persistence the CLI runs on.)
@@ -142,10 +142,10 @@ class FileStore:
 
 
 class SqliteStore:
-    """SQLite-backed store — determinism beyond InMemory, one inspectable file.
+    """SQLite-backed store - determinism beyond InMemory, one inspectable file.
 
     CLE need: the lifecycle persists across processes and must be
-    INSPECTABLE — one file you can open with any sqlite client, instead of a
+    INSPECTABLE - one file you can open with any sqlite client, instead of a
     tree of hash-named blobs. stdlib sqlite3, zero network, deterministic, so
     it is eligible for the default test suite. Same Protocol, same shared
     ref rule as the other backends.
@@ -216,16 +216,32 @@ STORE_KINDS = ("file", "sqlite")
 def open_store(state_dir: Path | str, kind: str | None = None) -> StoreBackend:
     """Open the persistent store for a state directory.
 
-    `kind` defaults to $CLE_STORE, itself defaulting to "file" — so existing
+    `kind` defaults to $CLE_STORE, itself defaulting to "file" - so existing
     state and existing invocations keep working untouched. The two backends
     hold DIFFERENT paths under the same state dir (`store/` vs `store.db`), so
     switching does not read the other's data: it starts an empty one, which is
     honest rather than a silent partial read.
     """
+    kind, path = _store_location(state_dir, kind)
+    return FileStore(path) if kind == "file" else SqliteStore(path)
+
+
+def store_exists(state_dir: Path | str, kind: str | None = None) -> bool:
+    """Whether `open_store` would find a store here, asked without creating one.
+
+    Opening is not read-only: both backends create their path on construction.
+    A caller that must never write into what it reads - `cle population` over
+    other users' instances - asks this first.
+    """
+    return _store_location(state_dir, kind)[1].exists()
+
+
+def _store_location(state_dir: Path | str, kind: str | None) -> tuple[str, Path]:
+    """The backend kind and its path under `state_dir`: one resolution for both."""
     state_dir = Path(state_dir)
     kind = (kind or os.getenv("CLE_STORE") or "file").lower()
     if kind == "file":
-        return FileStore(state_dir / "store")
+        return kind, state_dir / "store"
     if kind == "sqlite":
-        return SqliteStore(state_dir / "store.db")
+        return kind, state_dir / "store.db"
     raise ValueError(f"unknown store kind {kind!r}; expected one of {STORE_KINDS}")

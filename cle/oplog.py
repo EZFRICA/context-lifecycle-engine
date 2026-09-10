@@ -1,4 +1,4 @@
-"""One JSON line per operation — the single emitter for invariant 4.
+"""One JSON line per operation - the single emitter for invariant 4.
 
 CLE need: every lifecycle op logs one JSON line (invariant 4, BLUEPRINT §5)
 and
@@ -89,16 +89,19 @@ class OpLog:
 # ── two READ views over the one write path ──────────────────────────────────
 # CLE need: the log serves two readers with opposite needs. An operator
 # debugging wants every mechanical step; a human auditing article-9 wants only
-# the moments where something was DECIDED. Splitting them is a READ concern —
+# the moments where something was DECIDED. Splitting them is a READ concern -
 # there is still exactly one writer (OpLog.emit), no duplication, and no new
 # call site. Invariant 4 is untouched.
 
 TECHNICAL_OPS = frozenset({
     "build", "run", "switch", "integrity_violation", "detector_observing",
     "closure_distribution", "cluster_stability",
-    # A revalidation that HELD decided nothing — the check merely ran. Only its
+    # A revalidation that HELD decided nothing - the check merely ran. Only its
     # failing twin (revalidation_failed) carries a consequence.
     "revalidate",
+    # Level 2. A failed facet blocks no birth (a facet is not evidence), and a
+    # population report reads topologies without moving anything in them.
+    "facet_generation_failed", "population_report",
 })
 
 DECISION_OPS = frozenset({
@@ -116,7 +119,7 @@ class UnclassifiedOpError(KeyError):
 
 
 def classify_op(op: str) -> str:
-    """"technical" | "decision" — exactly one, never both."""
+    """"technical" | "decision" - exactly one, never both."""
     if op in DECISION_OPS:
         return "decision"
     if op in TECHNICAL_OPS:
@@ -132,7 +135,7 @@ def requires_on_behalf_of(record: dict[str, Any]) -> bool:
 
     Only for DECISION ops naming a specific subject (an agent or a workspace).
     Technical ops are excluded by design; `run`/`switch` already carry
-    `workspace`, which IS their on-behalf-of — aliased, never duplicated.
+    `workspace`, which IS their on-behalf-of - aliased, never duplicated.
     """
     if classify_op(record.get("op", "")) != "decision":
         return False
@@ -153,11 +156,11 @@ def render_decision(record: dict[str, Any]) -> str:
 
     if op == "tag":
         frm, to = record.get("from"), record.get("to")
-        # The shadow engine emits a `tag` line that moves NOTHING — it carries
+        # The shadow engine emits a `tag` line that moves NOTHING - it carries
         # `would` and no `to`. Rendering it as a move would put a decision in
         # the audit trail that never happened.
         if record.get("would") is not None:
-            return (f"{actor}{on_behalf} judged {subject} from {frm} — "
+            return (f"{actor}{on_behalf} judged {subject} from {frm} - "
                     f"would: {record['would']} (no ref written)")
         verb = "moved" if frm else "tagged"
         where = f"{frm} -> {to}" if frm else str(to)
@@ -169,11 +172,11 @@ def render_decision(record: dict[str, Any]) -> str:
             pe = record["pre_evidence"]
             why = f" (pre_evidence: capture {pe.get('capture_rate')}, false {pe.get('false_trigger_rate')})"
         if record.get("reason"):
-            why += f" — {record['reason']}"
+            why += f" - {record['reason']}"
         return f"{actor}{on_behalf} {verb} {subject} {where}{why}"
 
     if op == "candidate_declined":
-        why = f" — {record['reason']}" if record.get("reason") else ""
+        why = f" - {record['reason']}" if record.get("reason") else ""
         return f"{actor}{on_behalf} declined {subject} (was {record.get('from', '?')}){why}"
 
     if op == "revalidation_failed":
@@ -184,6 +187,6 @@ def render_decision(record: dict[str, Any]) -> str:
 
     if op == "topology_write":
         return (f"{actor}{on_behalf} wrote topology v{record.get('version', '?')} "
-                f"— {subject} now {record.get('to', '?')} (diff {record.get('diff_size', '?')})")
+                f" - {subject} now {record.get('to', '?')} (diff {record.get('diff_size', '?')})")
 
     return f"{actor}{on_behalf} {op} {subject}"
