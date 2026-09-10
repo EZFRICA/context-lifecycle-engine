@@ -1,9 +1,10 @@
-"""The dashboard's only write path - Approve / Decline, through the CLI.
+"""The dashboard's writes, each through the CLI.
 
-Approve promotes a candidate to `trial` (`cle tag <agent> trial`); Decline
-records a refusal (`cle decline <agent>`). Both shell out to the same `cle`
-binary a human would use, tagged `actor=human:dashboard`, so every write is
-logged and auditable. The dashboard never touches the store directly.
+The audience's path: Approve promotes a candidate to `trial` (`cle tag <agent>
+trial`); Decline records a refusal (`cle decline <agent>`). The operator
+controls - init, run test, clean - drive the same `cle` binary or the demo
+script. Every write is tagged `actor=human:dashboard`, logged and auditable,
+and the dashboard never touches the store directly.
 """
 
 import asyncio

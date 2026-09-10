@@ -35,9 +35,17 @@ will grow; the dashboard must not crash on new event types.
 - `GET /state/topology/diff?a=&b=` - the delta with per-entry evidence.
 - `POST /actions/approve {agent}` → runs `cle tag <agent> trial`,
   env actor=human:dashboard. `POST /actions/decline {agent}` → runs
-  `cle decline <agent>` (the command exists; it logs `candidate_declined`
-  and moves no tag). NO other POST route may exist - the single-write-path
-  rule is what keeps the dashboard read-mostly.
+  `cle decline <agent>` (it logs `candidate_declined` and moves no tag).
+  These two are the audience's write path.
+- Operator controls, on the state the dashboard was started on:
+  `POST /actions/init`, `/actions/run_workspaces` (refuses `.cle`),
+  `/actions/abort_run`, `/actions/clean` (destroys the state),
+  `/demo/start`, `/demo/abort`. Every write goes through the CLI or the demo
+  script, never to the store directly. A new POST route is a new write path:
+  it is listed here and in `dashboard/README.md` in the same change.
+- No CORS. A write whose `Origin` is not the dashboard itself is refused with
+  403 before any route runs (`refuse_cross_origin_writes`): a bodiless POST
+  from another site's page would otherwise need nobody's permission.
 
 ## Rendering rules (contract, not style)
 - Evidence types are visually distinct EVERYWHERE: pre_evidence (blue),

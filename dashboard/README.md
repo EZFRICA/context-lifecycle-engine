@@ -97,7 +97,8 @@ exactly like data loss.
 - **BIRTHS** (left), detected candidates as proposal cards with capture /
   false-trigger / historical-cost. **Approve** (amber, the human gate) shells
   `cle tag <agent> trial`; **Decline** shells `cle decline <agent>`. Both log
-  `actor=human:dashboard`. This is the only write path.
+  `actor=human:dashboard`. This is the audience-facing write path; the operator
+  controls listed under the API surface write as well.
 - **LIVES** (center), images with their lifecycle state (**five** in v1:
   `archived`, `candidate`, `trial`, `ephemeral`, `pinned`; the published theory
   names more, and that divergence is recorded in `docs/BLUEPRINT.md`),
@@ -141,6 +142,12 @@ abortable via `POST /demo/abort`.
 | `POST /demo/start {pace_ms}` · `/demo/abort` | demo runner |
 | `GET /health` | liveness |
 
+Every route that is not a GET is a write, and a write whose `Origin` header is
+not the dashboard itself is refused with 403 before any route runs. The page is
+served by the same server, so there is no CORS: another site's page can neither
+read the API nor, through a bodiless POST that a browser sends without asking,
+press `clean` on your behalf.
+
 `GET /state/topology` carries an **`embedding`** field: the vector space the
 history was born in (`embedder_id`, threshold, calibration). It is not optional
 decoration. Centroids are only comparable inside the space that produced them,
@@ -155,8 +162,8 @@ distinct everywhere (pre_evidence blue · evidence teal · persistence
 amber/coral), the type separation is a core theory claim, never blurred. And
 the metrics shown here are the **human's** window: the dashboard reads them, but
 nothing here is ever fed back to an agent. Reads import CLE's own read helpers;
-only Approve/Decline (and the demo) write, always through the CLI, always
-logged.
+only Approve/Decline and the operator controls (init, run test, clean, the
+demo) write, always through the CLI, always logged, and only from this page.
 
 ## Layout
 ```

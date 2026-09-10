@@ -50,6 +50,27 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         yield test_client
 
 
+def test_a_write_from_another_site_is_refused_before_any_route_runs(client) -> None:
+    """A page on another site can send a bodiless POST without asking anyone.
+
+    `abort_run` stands in for `clean`: same shape, no body, nothing to lose if
+    the guard ever fails. A read from anywhere still answers, and names no
+    other origin as allowed.
+    """
+    refused = client.post("/actions/abort_run", headers={"Origin": "https://elsewhere.example"})
+    assert refused.status_code == 403, refused.text
+    assert refused.json() == {"detail": "cross-origin write refused"}
+
+    read = client.get("/health", headers={"Origin": "https://elsewhere.example"})
+    assert read.status_code == 200
+    assert "access-control-allow-origin" not in read.headers
+
+
+def test_a_write_from_the_page_itself_or_from_no_page_goes_through(client) -> None:
+    assert client.post("/actions/abort_run", headers={"Origin": "http://testserver"}).status_code == 200
+    assert client.post("/actions/abort_run").status_code == 200
+
+
 @pytest.mark.parametrize("route", READ_ROUTES)
 def test_every_read_route_answers_on_an_empty_state_dir(client, route: str) -> None:
     response = client.get(route)
