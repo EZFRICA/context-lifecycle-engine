@@ -1,9 +1,9 @@
-"""FastAPI app — SSE + snapshot REST + the one write path + demo runner.
+"""FastAPI app - SSE + snapshot REST + the one write path + demo runner.
 
 Run:  cle dashboard --state-dir .cle-demo --port 8000
 
 That subcommand exports CLE_STATE_DIR and calls uvicorn on this module, so
-running uvicorn directly works too — but then the state directory comes from
+running uvicorn directly works too - but then the state directory comes from
 the ambient CLE_STATE_DIR (default `.cle/`) rather than from a flag, which is
 the reading everything else in the docs assumes. Serves the Alpine frontend
 at /.
@@ -92,7 +92,7 @@ def state_image(hash: str):
 
 @app.get("/state/decisions")
 def state_decisions():
-    """Read-only second view over the same log — no new write path."""
+    """Read-only second view over the same log - no new write path."""
     return reads.decisions(STATE_DIR)
 
 
@@ -155,7 +155,7 @@ async def actions_run_workspaces():
     """Start `full_loop.sh` in the background and return at once.
 
     This used to await the subprocess, so the request held open for the whole
-    run — 26 s on stub models, 131 s measured on real ones — with every control
+    run - 26 s on stub models, 131 s measured on real ones - with every control
     on the page disabled and nothing printed until the end. Progress now arrives
     as `demo_step` events on the same SSE stream the rest of the board reads, and
     the button is released by the terminal event rather than by the response.
@@ -232,7 +232,7 @@ class _RevalidatingStaticFiles(StaticFiles):
 
     The visible consequence, and the reason this exists: a stylesheet fix shipped,
     the server served it, and an operator with the page already open kept seeing
-    the old rendering — a button that read as disabled. Nothing was wrong on
+    the old rendering - a button that read as disabled. Nothing was wrong on
     either side; the fix simply never crossed.
 
     `no-cache` does not mean "do not cache". It means "revalidate before use", so

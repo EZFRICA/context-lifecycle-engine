@@ -1,8 +1,8 @@
-"""Invariant 2 — the Goodhart boundary, enforced by reflection.
+"""Invariant 2 - the Goodhart boundary, enforced by reflection.
 
 Container must expose NO read path to its own metrics: no method, no
 property, no injected context. This test is written against the P1 stub and
-must stay green through P2's runtime work — any widening of the Container
+must stay green through P2's runtime work - any widening of the Container
 surface fails here before it reaches review.
 """
 
@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from cle.runtime.container import Container
 
 # The complete allowed public surface of the Container record. Adding ANY
-# public field, method, or property requires amending this set — which is
+# public field, method, or property requires amending this set - which is
 # exactly the review conversation the invariant wants to force.
 ALLOWED_PUBLIC_FIELDS = {"image_hash", "workspace_id", "mounts", "metrics_volume_id"}
 
@@ -28,7 +28,7 @@ def test_container_fields_are_exactly_the_declared_record() -> None:
 
 def test_container_adds_no_public_surface_beyond_pydantic() -> None:
     # Everything public on Container must be either a declared record field
-    # or plain BaseModel machinery — no extra methods or properties where a
+    # or plain BaseModel machinery - no extra methods or properties where a
     # metrics read path could hide.
     extra_surface = _public_members(Container) - _public_members(BaseModel) - ALLOWED_PUBLIC_FIELDS
     assert not extra_surface, f"Container grew a public surface: {extra_surface}"
@@ -48,7 +48,7 @@ def test_container_defines_no_properties_or_methods_of_its_own() -> None:
 
 def test_metrics_reference_is_an_opaque_id_only() -> None:
     # The single metrics-adjacent member is the volume id the runtime
-    # writes to — a plain str, not a structure something could read from.
+    # writes to - a plain str, not a structure something could read from.
     # (pydantic v2 keeps fields off the class dir(), so sweep both the
     # class surface and the declared fields.)
     full_surface = _public_members(Container) | set(Container.model_fields)

@@ -1,4 +1,4 @@
-"""GDG organizer fixture — the enriched ground-truth (recovery) source.
+"""GDG organizer fixture - the enriched ground-truth (recovery) source.
 
 FREEZE-ONCE. This script authors realistic, varied usage for one francophone
 GDG Cloud Abidjan organiser and freezes it to committed files. Determinism
@@ -9,17 +9,17 @@ diff. Reproducible on demand, never run in CI.
 
 Cadence is honest (the old fixture scheduled a "monthly" meetup daily): the
 window is 16 weeks so a monthly ritual actually recurs monthly, a weekly one
-weekly. Tools are declarations only — requires_tool / frozen tool_result
+weekly. Tools are declarations only - requires_tool / frozen tool_result
 decor, nothing executed.
 
 Outputs:
-- prompt_history_gdg.jsonl  — what the detector sees (NO labels).
-- gdg_ground_truth.json     — sidecar: planted intents (thread prefix per
+- prompt_history_gdg.jsonl - what the detector sees (NO labels).
+- gdg_ground_truth.json - sidecar: planted intents (thread prefix per
   intent, for the realism guard), conflict labels by thread, per-domain tool.
   The detector must never read this.
-- gdg_tools/*.yaml          — one declaration per tool.
+- gdg_tools/*.yaml - one declaration per tool.
 
-Run: .venv/bin/python examples/make_gdg_fixture.py
+Run: uv run python examples/make_gdg_fixture.py
 """
 
 import json
@@ -72,7 +72,7 @@ class Builder:
     def at(self, day: int, *, spread_hours: tuple[int, int] = (7, 22)) -> datetime:
         # Anchor to midnight so `hour` is the actual hour of day, not an
         # offset from T0's 08:00. Reserve a UNIQUE hour per day so same-day
-        # episodes never overlap (each span is < 1h) — overlap would let one
+        # episodes never overlap (each span is < 1h) - overlap would let one
         # thread interleave another and fragment it on thread change.
         midnight = T0.replace(hour=0, minute=0)
         used = self._hours_used.setdefault(day, set())
@@ -156,7 +156,7 @@ def build() -> tuple[list[dict], dict]:
                   followups=b.some("sponsors"), tool="sponsor_crm")
 
     # ── routing pair: meetup-night agenda vs coding-workshop agenda ──────────
-    # Two near intents recurring on adjacent days — competition, labeled routing.
+    # Two near intents recurring on adjacent days - competition, labeled routing.
     # ~12-day cadence so each agenda intent recurs >= 8 times (its full bank).
     for i, day in enumerate(range(10, DAYS, 12)):
         b.episode("agenda_meetup", day, f"agenda_meetup-{i}",
@@ -216,7 +216,7 @@ def main() -> None:
         (tools_dir / f"{name}.yaml").write_text(
             f'ref: tools/{name}\nkind: tool\npayload: \'{{"name": "{name}", "capability": "{cap}"}}\'\n')
 
-    # Self-report (uses cle — generator only, never CI): how much of the
+    # Self-report (uses cle - generator only, never CI): how much of the
     # planted structure the v1 detector actually recovers.
     from cle.detect.clusters import HashedTokenEmbedder, IntentClusterer
     from cle.detect.episodes import DetectorConfig, Message, segment

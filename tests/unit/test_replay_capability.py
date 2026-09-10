@@ -2,9 +2,9 @@
 
 tool_result is decor: read, never asserted correct (invariant 5).
 
-SCOPE — bucket 2 (stub-as-a-tool): the stub is incidental. The claim — capture
+SCOPE - bucket 2 (stub-as-a-tool): the stub is incidental. The claim - capture
 requires centroid match AND tool mount, unmounted-tool episodes stay in the
-denominator — is space-independent.
+denominator - is space-independent.
 """
 
 import io
@@ -52,7 +52,7 @@ def test_capture_requires_centroid_and_mount() -> None:
     without = _replay(messages, frozenset())
     assert with_tool.pre_evidence.capture_rate == 1.0
     # Same centroid match, missing capability: episodes stay in the
-    # denominator and are NOT captured — the gap is visible, not hidden.
+    # denominator and are NOT captured - the gap is visible, not hidden.
     assert without.pre_evidence.capture_rate == 0.0
 
 
@@ -86,7 +86,7 @@ def test_capability_gating_is_deterministic() -> None:
 
 def test_tool_result_is_decor_not_verdict() -> None:
     # Two windows identical except for tool_result values: replay numbers
-    # are identical — no code path scores the result as right or wrong.
+    # are identical - no code path scores the result as right or wrong.
     a = _replay(_history("calendar_api", ["slot_free"] * 4), frozenset({"calendar_api"}))
     b = _replay(_history("calendar_api", ["no_slot"] * 4), frozenset({"calendar_api"}))
     assert a.pre_evidence == b.pre_evidence

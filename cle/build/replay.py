@@ -1,8 +1,8 @@
-"""Build stage 2 — replay validation.
+"""Build stage 2 - replay validation.
 
 Contract (replay-validation skill, BLUEPRINT §3.2, invariant 5):
 Replay answers ONE question: would this candidate's trigger have fired on
-the right past episodes? It can never rate answer quality — yesterday's
+the right past episodes? It can never rate answer quality - yesterday's
 user cannot score an alternative answer. Outputs are `PreEvidence`
 (capture_rate, false_trigger_rate, historical_cost, window) and the type
 system keeps them out of promotion paths.
@@ -13,7 +13,7 @@ system keeps them out of promotion paths.
 
 P1 routing scope: the semantic half of the trigger (cosine against the
 centroid, competing with the existing topology). A period, when present,
-is carried into the image untested by replay — evaluating temporal fit
+is carried into the image untested by replay - evaluating temporal fit
 retrospectively needs the v2 scheduler model, and pretending otherwise
 would overstate what replay proved.
 
@@ -26,7 +26,7 @@ Two gates enforced here:
   episode that REQUIRED a tool is captured only if the candidate mounts
   it. Such episodes stay in the DENOMINATOR, so capture drops honestly
   instead of hiding the capability gap. `tool_result` is read as frozen
-  decor and never scored — asserting it correct would be answer-quality
+  decor and never scored - asserting it correct would be answer-quality
   territory (invariant 5).
 """
 
@@ -49,7 +49,7 @@ class ReplayError(Exception):
 
 
 class ReplayOutcome(BaseModel, frozen=True):
-    """Internal carrier for stage 3 — NOT an evidence type.
+    """Internal carrier for stage 3 - NOT an evidence type.
 
     pre_evidence is the contractual replay report; in_cluster_openers are
     the probe-set raw material (§9 decision 3) the assembler freezes.
@@ -57,7 +57,7 @@ class ReplayOutcome(BaseModel, frozen=True):
 
     pre_evidence: PreEvidence
     in_cluster_openers: tuple[str, ...]
-    # Closure mix of the in-cluster episodes — the closure_distribution
+    # Closure mix of the in-cluster episodes - the closure_distribution
     # measurement (P1 arbitration): how the cluster's episodes ended is
     # article-9 material and the sanity check on the abandoned-exclusion.
     closure_counts: dict[str, int]
@@ -68,7 +68,7 @@ def _require_operand_space(operand_space: str | None, trigger, what: str) -> Non
 
     Placed AT each comparison, not only at the function entry. The entry gate
     checks the embedder handed in, which covers the three sites below only
-    because every centroid reaching them happens to come from it today — a
+    because every centroid reaching them happens to come from it today - a
     property of the current flow, not of the code. These read the provenance of
     the operand actually being compared, so they survive a new path being added.
 
@@ -141,7 +141,7 @@ def _replay(
     # --embedder, `embedder.embed(...)` below produces vectors from one space
     # while `trigger.centroid` comes from another, and every cosine in this
     # function would cross them silently (selecting target_cluster, computing
-    # capture, and beating incumbents — three sites, not one).
+    # capture, and beating incumbents - three sites, not one).
     #
     # Guard on IDENTITY, not on dimension: two distinct real spaces of equal
     # width would pass a length check and mean nothing.
@@ -150,7 +150,7 @@ def _replay(
         raise SpaceMismatchError(
             f"replay runs on embedder {runtime_space!r} but the trigger centroid "
             f"comes from {trigger.embedder_id!r}; a centroid is only meaningful in "
-            "the space that produced it — rebuild the spec under this embedder"
+            "the space that produced it - rebuild the spec under this embedder"
         )
 
     episodes = segment(list(messages), config)
@@ -163,7 +163,7 @@ def _replay(
     assignments = [clusterer.assign(episode) for episode in episodes]
     # Site 1 of 3. The entry gate checks the embedder passed IN; this checks the
     # provenance of the OPERAND actually compared. They differ the day a centroid
-    # reaches this function by another path — which is exactly why the entry gate
+    # reaches this function by another path - which is exactly why the entry gate
     # alone is a property of the current flow, not of the code.
     _require_operand_space(clusterer.embedder_id, trigger, "clusterer centroid")
     target_cluster = max(
@@ -176,12 +176,12 @@ def _replay(
         raise ReplayError("no in-cluster episodes in the replay window")
 
     # Routing: the candidate fires when it clears the similarity bar AND
-    # beats every existing trigger — ties go to the incumbent, so a
+    # beats every existing trigger - ties go to the incumbent, so a
     # candidate can never silently annex already-routed traffic.
     def candidate_fires(episode: Episode) -> bool:
         # Capability gating (approved design): an episode that REQUIRED a
         # tool is only captured if the candidate mounts it. Such episodes
-        # stay in the denominator — capture drops honestly rather than
+        # stay in the denominator - capture drops honestly rather than
         # hiding the capability gap.
         if episode.required_tool is not None and episode.required_tool not in mounted_tools:
             return False
@@ -204,7 +204,7 @@ def _replay(
     captured_in = sum(1 for episode in in_cluster if candidate_fires(episode))
     captured_out = sum(1 for episode in out_of_cluster if candidate_fires(episode))
 
-    # historical_cost: what the cluster costs under the CURRENT topology —
+    # historical_cost: what the cluster costs under the CURRENT topology -
     # the numeric justification of the birth. Abandoned episodes are
     # excluded (anti-Goodhart guard), using the same provisional-baseline
     # bootstrap as the detector: closure needs a baseline, so the first

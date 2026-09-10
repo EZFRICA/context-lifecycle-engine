@@ -44,7 +44,7 @@ rather than you:
 ```bash
 SA=$(bq show --format=prettyjson --connection \
      "${CLE_BQ_PROJECT}.${CLE_BQ_REGION}.${CLE_BQ_CONNECTION}" \
-     | python -c 'import json,sys;print(json.load(sys.stdin)["cloudResource"]["serviceAccountId"])')
+     | uv run python -c 'import json,sys;print(json.load(sys.stdin)["cloudResource"]["serviceAccountId"])')
 
 gcloud projects add-iam-policy-binding "${CLE_BQ_PROJECT}" \
   --member="serviceAccount:${SA}" --role=roles/aiplatform.user
@@ -92,10 +92,10 @@ column is the external ground truth behind the 67% figure: a human judgment the
 detector never sees.
 
 ```bash
-python examples/bigquery/extract_corpus_b.py      # matched controls
-python examples/bigquery/extract_corpus_c.py      # 90-day recurrence windows
-python examples/bigquery/build_zero_overlap.py    # pairs no lexical baseline sees
-python examples/bigquery/embed_pairs.py           # bills: one embedding per text
+uv run python examples/bigquery/extract_corpus_b.py      # matched controls
+uv run python examples/bigquery/extract_corpus_c.py      # 90-day recurrence windows
+uv run python examples/bigquery/build_zero_overlap.py    # pairs no lexical baseline sees
+uv run python examples/bigquery/embed_pairs.py           # bills: one embedding per text
 ```
 
 ## 5. Corpus C, WildChat
@@ -105,9 +105,9 @@ terms, then `huggingface-cli login`. It is **real user prompts, consented for
 research**. Treat it accordingly.
 
 ```bash
-python examples/bigquery/load_wildchat.py         # streams from HF into BigQuery
-python examples/bigquery/extract_cohort.py
-python examples/bigquery/wildchat_density.py
+uv run python examples/bigquery/load_wildchat.py         # streams from HF into BigQuery
+uv run python examples/bigquery/extract_cohort.py
+uv run python examples/bigquery/wildchat_density.py
 ```
 
 `examples/bigquery/data/` and `examples/bigquery/states/` are gitignored in full,
@@ -119,9 +119,9 @@ not summaries. Do not move a dump out of those directories.
 Parquet is columnar binary:
 
 ```bash
-python examples/bigquery/read_data.py                      # the catalogue
-python examples/bigquery/read_data.py facets_pilot         # schema + first rows
-python examples/bigquery/read_data.py facets_pilot --dump  # full text, to a file
+uv run python examples/bigquery/read_data.py                      # the catalogue
+uv run python examples/bigquery/read_data.py facets_pilot         # schema + first rows
+uv run python examples/bigquery/read_data.py facets_pilot --dump  # full text, to a file
 ```
 
 ## 7. Replaying a corpus through the CLE, free
@@ -130,8 +130,8 @@ Once `prepare_states.py` has written the histories and the vector cache exists,
 this needs neither BigQuery nor an API key:
 
 ```bash
-python examples/bigquery/run_state.py stackoverflow
-python examples/bigquery/run_state.py wildchat
+uv run python examples/bigquery/run_state.py stackoverflow
+uv run python examples/bigquery/run_state.py wildchat
 ```
 
 It reads `examples/bigquery/data/vectors.corpus_states.json` through
@@ -146,7 +146,7 @@ The AI Studio surface rate-limits, and it does so at a volume any real sweep
 reaches. Measured before there was a backoff: comparing 186 cached vectors
 against AI Studio lost **32 of them to 429s**, and an immediate second pass lost
 **86**. The figure that came back described whatever survived the quota, and a
-rerun described something else — an unrepeatable measurement, not a slow one.
+rerun described something else - an unrepeatable measurement, not a slow one.
 
 `RealEmbedder` now retries a rate-limited call: **three attempts**, delay
 doubling from 1 s and capped at 8 s, with full jitter so a batch that backs off
@@ -160,7 +160,7 @@ rides out a burst and nothing more.
 
 **If a sweep still hits the wall, change surface rather than wait.** The same
 `gemini-embedding-2` is served by the Vertex API at location `global` under
-application-default credentials — set `CLE_VERTEX_PROJECT` and the API-key branch
+application-default credentials - set `CLE_VERTEX_PROJECT` and the API-key branch
 is bypassed entirely. Measured on the same 186 vectors: AI Studio returned 154 in
 153 s; Vertex returned **186 in 37 s with zero failures**. Same space, cosine
 1.000000 either way.

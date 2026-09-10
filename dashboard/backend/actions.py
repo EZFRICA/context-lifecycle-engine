@@ -1,4 +1,4 @@
-"""The dashboard's only write path — Approve / Decline, through the CLI.
+"""The dashboard's only write path - Approve / Decline, through the CLI.
 
 Approve promotes a candidate to `trial` (`cle tag <agent> trial`); Decline
 records a refusal (`cle decline <agent>`). Both shell out to the same `cle`
@@ -69,7 +69,7 @@ def demo_run_refusal(state_dir: Path) -> str | None:
 
     One predicate, two callers: `run_workspaces` refuses with it, and `/health`
     publishes it so the page can grey the button out BEFORE anyone clicks. That
-    is the point of extracting it — an operator should not have to press a button
+    is the point of extracting it - an operator should not have to press a button
     to be told it was never going to work, and two copies of the same rule drift
     until the panel and the page disagree about what is possible.
     """
@@ -99,7 +99,7 @@ def demo_run_env(state_dir: Path) -> dict[str, Any]:
     moves while it runs. Every other action here appends `--state-dir`; this one
     used to accept the parameter and ignore it, so the script wrote to its own
     default (`.cle-demo`) while the dashboard tailed the oplog under
-    `$CLE_STATE_DIR`. Nothing failed — the script exited 0, wrote its 52 oplog
+    `$CLE_STATE_DIR`. Nothing failed - the script exited 0, wrote its 52 oplog
     lines, and the operator watched a board that never moved.
     """
     blocked = demo_run_refusal(state_dir)
@@ -135,6 +135,6 @@ async def clean_system(state_dir: Path) -> dict[str, Any]:
     `--yes` is required, not a shortcut: this is a subprocess with no tty, so
     `cle clean`'s confirmation prompt would raise rather than ask. The
     confirmation therefore happens where the human actually is, in the browser
-    — see `reinitSystem` in dashboard/frontend/app.js.
+- see `reinitSystem` in dashboard/frontend/app.js.
     """
     return await _run([_cle_bin(), "clean", "--yes"], state_dir)

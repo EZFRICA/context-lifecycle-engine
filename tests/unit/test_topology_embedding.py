@@ -1,13 +1,13 @@
 """The embedding configuration recorded in topology.yaml.
 
-SCOPE — bucket 1 (embedder-agnostic): the assertions are about what the
+SCOPE - bucket 1 (embedder-agnostic): the assertions are about what the
 topology RECORDS, not about any vector space's behaviour. The stub embedder
 appears only as a thing with an `embedder_id`.
 
 CLE need: two instances on the same embedder at 0.775 and at 0.72 do not birth
 the same agents from the same usage. A population-level report that aggregated
 their topologies would measure its own instrumentation rather than its
-population — the v1 failure mode transposed. So the configuration is an
+population - the v1 failure mode transposed. So the configuration is an
 AGGREGATION KEY: recorded at topology scope, written only by the engine.
 """
 

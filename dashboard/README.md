@@ -27,8 +27,8 @@ uv run cle dashboard --state-dir .cle-demo --port 8000
 
 ### Why `.cle-demo` and not `.cle`
 
-Because of the **2. Run test** button, which runs `bash examples/full_loop.sh`
-— and that script begins with `rm -rf` on the state directory it is given.
+Because of the **2. Run test** button, which runs `bash examples/full_loop.sh` -
+and that script begins with `rm -rf` on the state directory it is given.
 
 It refuses to do that to `.cle`:
 
@@ -48,7 +48,7 @@ Launch the dashboard on `.cle` and the button is greyed out from the first
 paint: the page asks `GET /health`, which answers with `demo_runnable` computed
 by the same predicate the action uses, so the page cannot offer a run the
 backend would refuse. Hovering gives the command to relaunch on a scratch
-state, and pressing it — if anything ever bypasses the page — still refuses
+state, and pressing it - if anything ever bypasses the page - still refuses
 before spawning. It does not simply forward the
 script's own message: that one says to set `CLE_DEMO_STATE`, which is true in a
 shell and unusable in a browser, because the dashboard's directory is fixed at
@@ -59,7 +59,7 @@ That is a change from the earlier behaviour, which is worth stating because
 anyone who used the dashboard before will have seen it: the button used to
 ignore the dashboard's state directory entirely and write to its own default
 `.cle-demo`. It exited 0, wrote its 52 oplog lines, and the board showed
-nothing — the run had succeeded somewhere nobody was watching. It looked like a
+nothing - the run had succeeded somewhere nobody was watching. It looked like a
 frozen dashboard and was a directory mismatch.
 
 **The run no longer blocks.** `POST /actions/run_workspaces` starts the script
@@ -75,7 +75,7 @@ Two properties that took a second attempt to get right, and are pinned by tests:
   holds a single-flight lock and answers `409` to the second caller.
 * **Stopping kills the process group, not just the shell.** `cle` and `pytest`
   run as children and inherit the stdout pipe, so killing only `bash` leaves the
-  reader blocked on a pipe the grandchildren still hold — measured:
+  reader blocked on a pipe the grandchildren still hold - measured:
   `run_in_progress` stayed true three seconds after an abort that reported
   success. The run gets its own session and the whole group is signalled.
 

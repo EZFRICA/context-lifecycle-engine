@@ -1,4 +1,4 @@
-"""Lifecycle — tags, shadow engine, topology writer, re-validator (P3 scope).
+"""Lifecycle - tags, shadow engine, topology writer, re-validator (P3 scope).
 
 CLE need: the second cardinal pillar. Candidates are trialed, promoted,
 demoted, archived, resurrected on evidence only (BLUEPRINT §5-§7). P1 ships

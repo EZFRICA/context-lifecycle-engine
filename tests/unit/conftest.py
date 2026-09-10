@@ -1,11 +1,11 @@
 """Shared GDG-fixture detection run (session-scoped: detect once, assert many).
 
 The fixture is now realistic (varied phrasings), so the detector FRAGMENTS
-each planted intent into many clusters — that is a measured finding, not a
+each planted intent into many clusters - that is a measured finding, not a
 bug. Tests therefore group episodes by the PLANTED intent (the thread prefix
 in the committed .jsonl), never by a detected cluster. `planted_centroid`
 gives the trigger centroid the detector WOULD use if the intent clustered
-cleanly — the honest stand-in for a measurement that assumes recovery.
+cleanly - the honest stand-in for a measurement that assumes recovery.
 """
 
 import io
@@ -38,7 +38,7 @@ def gdg():
     ground = json.loads((EXAMPLES / "gdg_ground_truth.json").read_text())
     episodes = segment(messages, config)
 
-    # Detected clusters (for the recovery finding — how badly it fragments).
+    # Detected clusters (for the recovery finding - how badly it fragments).
     clusterer = IntentClusterer(embedder, config)
     detected = [clusterer.assign(e) for e in episodes]
     by_cluster: dict[int, list] = {}
@@ -54,7 +54,7 @@ def gdg():
         return sorted(by_intent[intent], key=lambda e: e.started_at)
 
     def planted_centroid(intent: str):
-        # Normalized mean of the intent's opener embeddings — the trigger
+        # Normalized mean of the intent's opener embeddings - the trigger
         # centroid the detector WOULD use if the intent had clustered.
         vecs = [embedder.embed(e.opener) for e in by_intent[intent]]
         mean = [sum(col) / len(vecs) for col in zip(*vecs)]

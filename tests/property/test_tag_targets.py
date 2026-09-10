@@ -1,9 +1,9 @@
-"""Invariant 1, tag half — lifecycle tags attach to Image hashes only.
+"""Invariant 1, tag half - lifecycle tags attach to Image hashes only.
 
 Mandated test 2 of cle-core-contracts (test_tag_source_raises), written
 before the guard it enforces. The guard inspects the stored record's
-cle_kind domain marker, so anything that is not an image — source specs,
-blocks, arbitrary records — is rejected at the tagging boundary.
+cle_kind domain marker, so anything that is not an image - source specs,
+blocks, arbitrary records - is rejected at the tagging boundary.
 """
 
 import io
@@ -36,7 +36,7 @@ def test_tag_source_raises(yaml_raw: str) -> None:
 
 @given(kind=st.text(min_size=1, max_size=16), payload=st.text(max_size=64))
 def test_tag_block_raises(kind: str, payload: str) -> None:
-    # Blocks are components, not lifecycle subjects — same rejection.
+    # Blocks are components, not lifecycle subjects - same rejection.
     store = InMemoryStore()
     block_hash = _store_canonical(store, Block(kind=kind, payload=payload).canonical_bytes())
     with pytest.raises(TagTargetError):
@@ -57,10 +57,10 @@ def test_tag_image_record_passes() -> None:
 
 def test_source_and_image_hash_namespaces_are_domain_separated() -> None:
     # Identical inner content under different cle_kind markers yields
-    # different addresses — the structural half of the two-hash invariant.
+    # different addresses - the structural half of the two-hash invariant.
     source = SourceSpec(yaml_raw="name: recap")
     imposter = json.loads(source.canonical_bytes())
-    # The marker must actually be stamped — this line fails if Storable
+    # The marker must actually be stamped - this line fails if Storable
     # ever stops writing cle_kind, keeping the invariant tested rather
     # than merely documented.
     assert imposter.pop("cle_kind") == "source_spec"
@@ -69,7 +69,7 @@ def test_source_and_image_hash_namespaces_are_domain_separated() -> None:
 
 
 def test_non_json_record_raises_tag_target_error() -> None:
-    # put() validates addresses, not JSON-ness — arbitrary bytes are
+    # put() validates addresses, not JSON-ness - arbitrary bytes are
     # legitimate store content, and the tagging boundary must reject them
     # with the typed error, never leak a decode error.
     store = InMemoryStore()

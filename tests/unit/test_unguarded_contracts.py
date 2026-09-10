@@ -1,6 +1,6 @@
 """Six guards the mutation sweep found unenforced.
 
-SCOPE — bucket 1 (embedder-agnostic): no vector space is under test.
+SCOPE - bucket 1 (embedder-agnostic): no vector space is under test.
 
 Each `raise` here was reachable by no test, which is a different claim from
 "undocumented": the code was correct and nothing would have gone red if it had
@@ -85,7 +85,7 @@ def test_context_may_not_shadow_a_contract_key() -> None:
     """Every operation logs one JSON line whose shape is the contract.
 
     A caller passing `op=` or `actor=` as free context would overwrite the field
-    downstream readers key on, and the line would still be valid JSON — a
+    downstream readers key on, and the line would still be valid JSON - a
     corrupted audit trail that parses. Refused at the boundary instead.
     """
     oplog, _ = _oplog()
@@ -124,7 +124,7 @@ def test_loading_a_non_image_by_hash_is_refused() -> None:
 
 def test_malformed_component_refs_are_refused() -> None:
     """`components:` holds `#ref` strings. Anything else resolves to nothing and
-    would produce an image assembled from an empty component set — a build that
+    would produce an image assembled from an empty component set - a build that
     succeeds and ships nothing."""
     from cle.build.resolver import resolve
     from cle.store.commits import SourceSpec

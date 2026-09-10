@@ -1,7 +1,7 @@
-"""GDG replay demo — competition, not a clean room.
+"""GDG replay demo - competition, not a clean room.
 
 Why this exists: replaying the events candidate against the raw GDG fixture
-prints capture=1.000 / false=0.000 — a tautology. Two biases produce it:
+prints capture=1.000 / false=0.000 - a tautology. Two biases produce it:
 
   1. Clean-room build. With no incumbent in `existing_triggers`, a candidate
      trivially captures its whole cluster. Real topologies have incumbents;
@@ -12,8 +12,8 @@ prints capture=1.000 / false=0.000 — a tautology. Two biases produce it:
   2. The events cluster is degenerate: all 45 openers are identical, so no
      single incumbent can own a *fraction* of it (it wins or loses wholesale).
      A realistic fractional number needs a window with genuine phrasing
-     variety. This demo therefore builds a constructed window — exactly like
-     `prompt_history_adversarial.jsonl` — rather than the raw fixture.
+     variety. This demo therefore builds a constructed window - exactly like
+     `prompt_history_adversarial.jsonl` - rather than the raw fixture.
 
 The non-trivial false_trigger is obtained by PLANTING its cause: one
 adversarial "bridge" episode (labelled BRIDGE below) that reads out-of-cluster
@@ -22,7 +22,7 @@ docs/METRICS.md; it engineers the number to show the false-trigger machinery
 works, and is not evidence of an emergent false trigger.
 
 Everything here is trigger-only replay (invariant 5): tool_result is decor,
-never scored. Run:  .venv/bin/python examples/gdg_demo.py
+never scored. Run:  uv run python examples/gdg_demo.py
 """
 
 import io
@@ -43,13 +43,13 @@ EMB = HashedTokenEmbedder()
 HERE = Path(__file__).resolve().parent
 
 # The events candidate's centroid (what detection would produce) and a
-# legitimate incumbent that already reserves rooms — its intent overlaps
+# legitimate incumbent that already reserves rooms - its intent overlaps
 # scheduling, so it competes for the reworded "book the room" phrasings.
 CANDIDATE_OPENER = "schedule the monthly gdg meetup in the main room"
 INCUMBENT_OPENER = "book and reserve the main room booking for the meetup"
 
 # Constructed window openers. CANONICAL episodes are unambiguously the
-# candidate's. CONTESTED episodes are reworded toward the incumbent — it
+# candidate's. CONTESTED episodes are reworded toward the incumbent - it
 # wins them, so capture < 1.0. SPONSOR is well-separated out-of-cluster
 # traffic. BRIDGE is the planted adversarial episode: it reads as sponsor
 # work (joins that cluster) yet clears the candidate's bar (a false trigger).
@@ -75,16 +75,16 @@ def build_window() -> list[Message]:
     # traffic and false_trigger reads a spurious 0).
     msgs: list[Message] = []
     day = 0
-    for k in range(6):  # sponsor cluster — the out-of-cluster traffic
+    for k in range(6):  # sponsor cluster - the out-of-cluster traffic
         msgs += _episode_messages(SPONSOR, f"spon{k}", day, None, None)
         day += 1
-    for k in range(6):  # canonical events — candidate owns these
+    for k in range(6):  # canonical events - candidate owns these
         msgs += _episode_messages(CANONICAL, f"cand{k}", day, "calendar_api", "slot_free")
         day += 2
-    for k in range(4):  # contested rewordings — the incumbent owns these
+    for k in range(4):  # contested rewordings - the incumbent owns these
         msgs += _episode_messages(CONTESTED, f"cont{k}", day, "calendar_api", "no_slot")
         day += 2
-    # 1 planted adversarial bridge — joins sponsor, fires on the candidate.
+    # 1 planted adversarial bridge - joins sponsor, fires on the candidate.
     msgs += _episode_messages(BRIDGE, "bridge0", day, None, None)
     return sorted(msgs, key=lambda m: m.ts)
 
@@ -102,7 +102,7 @@ def main() -> None:
 
     messages = build_window()
 
-    print("\n=== clean-room replay (no incumbent) — the tautology ===")
+    print("\n=== clean-room replay (no incumbent) - the tautology ===")
     clean = replay_validate(
         trigger=candidate, messages=messages, window_label="gdg-demo",
         existing_triggers=[], embedder=EMB, config=CFG, oplog=OpLog(io.StringIO()),
@@ -120,7 +120,7 @@ def main() -> None:
     print(f"  capture={competed.capture_rate:.3f}  false_trigger={competed.false_trigger_rate:.3f}  "
           f"cost={competed.historical_cost:.2f}")
     print("  (capture < 1.0: the incumbent owns the reworded 'book the room' episodes;")
-    print("   false_trigger > 0: the planted BRIDGE episode — cause deliberately planted.)")
+    print("   false_trigger > 0: the planted BRIDGE episode - cause deliberately planted.)")
 
     # Tie back to Action 2: the real events cluster's stability line, with its
     # resolution diagnostic and permanent world_state attribution.

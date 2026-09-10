@@ -1,4 +1,4 @@
-"""Build stage 1 — resolve.
+"""Build stage 1 - resolve.
 
 Contract (BLUEPRINT §3, stage 1): every `#ref` in the SourceSpec exists in
 the store. A missing ref fails the build in milliseconds; nothing is
@@ -7,15 +7,15 @@ Resolved components are integrity-checked (re-hashed) on fetch.
 
 Ref forms (blueprint names the syntax `#ref` and is silent on shapes; two
 forms cover both authorship paths):
-- `#<64-hex>` — direct content address, as the detector writes it.
-- `#<ref-name>` — a name in the store's ref table, as a human writes it.
+- `#<64-hex>` - direct content address, as the detector writes it.
+- `#<ref-name>` - a name in the store's ref table, as a human writes it.
 Both resolve to a content hash whose object must exist and verify.
 
-Tool gating (stage 1 of two — the other is capability gating in replay):
+Tool gating (stage 1 of two - the other is capability gating in replay):
 - every name in the source's `tools:` list must resolve under `#tools/<name>`
   AND be of kind `tool`, else `ResolutionError`;
 - the trigger's `requires_tools` must be a subset of the declared mounts,
-  else `ResolutionError` — a candidate may not claim an intent whose
+  else `ResolutionError` - a candidate may not claim an intent whose
   capability it does not mount.
 Tools are DECLARATIONS: nothing here executes one, and no network is
 touched. A gating failure obeys invariant 3 like any other stage-1 failure
@@ -58,7 +58,7 @@ def resolve(
     or the full sorted list of missing refs) or IntegrityError (a
     component exists but fails verification); on any failure path the only
     write is the build log line naming this stage. `actor` comes from the
-    initiator (the CLI passes human:<id>) — a stage never invents one.
+    initiator (the CLI passes human:<id>) - a stage never invents one.
     """
     started = time.monotonic()
     try:
@@ -85,7 +85,7 @@ def _resolve_refs(source: SourceSpec, backend: StoreBackend, oplog: OpLog) -> di
         raise ResolutionError("source must be a mapping with a `components` list")
 
     # ── capability gating, stage 1 (CLE need: a candidate can match an
-    # intent semantically yet lack the capability the task requires — it
+    # intent semantically yet lack the capability the task requires - it
     # must fail HERE, fast, before anything is consumed, not silently
     # episode-by-episode at replay).
     declared_tools = parsed.get("tools", []) or []
@@ -131,7 +131,7 @@ def _resolve_refs(source: SourceSpec, backend: StoreBackend, oplog: OpLog) -> di
         except KeyError:
             # Dangling ref: name exists, object gone. (On InMemoryStore a
             # KeyError can only come from the first get; a backend where
-            # the refetch can also miss — concurrent deletion — would be
+            # the refetch can also miss - concurrent deletion - would be
             # misclassified here and needs tightening if a remote backend lands.)
             missing.append(ref)
             continue

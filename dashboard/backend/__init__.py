@@ -1,4 +1,4 @@
-"""CLE live dashboard — read-mostly window onto a running CLE.
+"""CLE live dashboard - read-mostly window onto a running CLE.
 
 Feeds exclusively on CLE artifacts under the state dir (default .cle/):
 the oplog (log.jsonl) and the FileStore (images, tags, topology). It reads

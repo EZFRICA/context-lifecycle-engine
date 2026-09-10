@@ -11,7 +11,7 @@ and are not, unless something asserts them directly:
     exception look tested while two of its three sites are free.
   * `EmptyTextError`, the outbound guard on the embedding path.
 
-`python tools/mutate.py` is how this is checked rather than assumed.
+`uv run python tools/mutate.py` is how this is checked rather than assumed.
 """
 
 from __future__ import annotations

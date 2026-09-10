@@ -1,8 +1,8 @@
 """Replay validation properties: determinism, both rates always computed,
 empty-window failure writes nothing (invariant 3).
 
-SCOPE — bucket 2 (stub-as-a-tool): the stub is incidental. The claims — both
-rates always computed, determinism, topology competition lowers capture — are
+SCOPE - bucket 2 (stub-as-a-tool): the stub is incidental. The claims - both
+rates always computed, determinism, topology competition lowers capture - are
 space-independent. The exact capture/false VALUES on the inline data are a
 by-product of the stub, not the point.
 """
@@ -73,7 +73,7 @@ def test_replay_is_deterministic() -> None:
 
 def test_both_rates_are_always_computed() -> None:
     outcome = _run(_weekly_history())
-    # capture over the recap cluster, false triggers over the noise — a
+    # capture over the recap cluster, false triggers over the noise - a
     # capture rate without a false-trigger rate is meaningless.
     assert outcome.pre_evidence.capture_rate == 1.0
     assert outcome.pre_evidence.false_trigger_rate == 0.0
@@ -115,7 +115,7 @@ def test_out_of_cluster_capture_shows_in_false_trigger_rate() -> None:
 
 def test_existing_topology_wins_ties_and_reduces_capture() -> None:
     # If an existing agent already owns the recap intent, the candidate
-    # captures nothing — no theft from legitimate routing.
+    # captures nothing - no theft from legitimate routing.
     messages = _weekly_history()
     incumbent = TriggerSpec(centroid=EMBEDDER.embed("write the weekly recap of my project"), embedder_id=EMBEDDER.embedder_id)
     outcome = replay_validate(

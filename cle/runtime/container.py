@@ -1,20 +1,20 @@
-"""Container record — Goodhart boundary enforced here.
+"""Container record - Goodhart boundary enforced here.
 
 Contract (cle-core-contracts, invariant 2): `Container` is a mutable record
 of a running instantiation. It MUST NOT expose any read path to its own
-metrics — no method, no property, no injected context. The runtime writes
+metrics - no method, no property, no injected context. The runtime writes
 metrics one-way through `metrics_volume.record(container_id, event)`; the
 only metrics-adjacent thing a Container may carry is the opaque id of the
 volume the runtime writes to.
 
-P2 completes the runtime as MODULE FUNCTIONS — instantiate, solicit,
-switch — precisely so the Container record surface never widens and the
+P2 completes the runtime as MODULE FUNCTIONS - instantiate, solicit,
+switch - precisely so the Container record surface never widens and the
 reflection test in tests/property/test_goodhart_boundary.py stays green
 by construction.
 
 Switch cost (non-negotiable measurement): every workspace switch logs
 `diff_blocks` and `diff_tokens`, computed by diff-only checkout between
-the outgoing and incoming images — the context-switch cost metric, the
+the outgoing and incoming images - the context-switch cost metric, the
 founding question of the series.
 """
 
@@ -38,7 +38,7 @@ class Container(BaseModel):
 
     Mutable record (not frozen): the runtime updates mounts on
     reconfiguration. The metrics volume id is an opaque write-target
-    pointer for the runtime — it is not, and must never become, a way for
+    pointer for the runtime - it is not, and must never become, a way for
     the container (or the agent inside it) to read its own numbers.
     """
 
@@ -53,7 +53,7 @@ class Container(BaseModel):
 def container_id(container: Container) -> str:
     """Identity = workspace + image: switching images in a workspace is a
     NEW container (metrics must never blend across a switch). A module
-    function, not a property — the record surface is frozen by the
+    function, not a property - the record surface is frozen by the
     Goodhart reflection test and stays data-only."""
     return f"{container.workspace_id}:{container.image_hash[:8]}"
 
@@ -70,7 +70,7 @@ def _containers_path(state_root: Path) -> Path:
 
 
 def load_containers(state_root: Path) -> dict[str, Container]:
-    """Runtime state, keyed by workspace_id — one live container each."""
+    """Runtime state, keyed by workspace_id - one live container each."""
     path = _containers_path(state_root)
     if not path.exists():
         return {}
@@ -153,7 +153,7 @@ def solicit(
     model; iteration count is derived from the live response length. Falls
     back to a deterministic stand-in when no model is reachable (offline/CI),
     so metrics stay meaningful without a key. Metrics go through the volume
-    ONLY — the container record is not touched, and nothing here returns
+    ONLY - the container record is not touched, and nothing here returns
     metrics to the caller."""
     image = load_image(backend, container.image_hash, oplog)  # integrity check before use
 

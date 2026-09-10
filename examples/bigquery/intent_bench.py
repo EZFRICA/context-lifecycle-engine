@@ -9,7 +9,7 @@ is one intent a MODERATOR attested several times: q1~q2 and q2~q3 both judged
 duplicates makes {q1,q2,q3} one recurring intent, not three questions.
 
 Each component is split into two disjoint halves. A facet is generated for EACH
-half — so the comparison is between two summaries of two DISJOINT sets of
+half - so the comparison is between two summaries of two DISJOINT sets of
 episodes of the same attested intent, which is exactly the agent-facet shape.
 
   positives = the two halves of the same component
@@ -34,7 +34,7 @@ STRICT = """You are writing a one-sentence description of a RECURRING TASK that 
 person asks an assistant to do. You will be shown several examples of that task.
 
 Write ONE sentence, in ENGLISH, 40 to 300 characters, starting with a verb,
-describing WHAT THE TASK IS — not who the person is, not the subject area.
+describing WHAT THE TASK IS - not who the person is, not the subject area.
 
 HARD RULES, all of them:
 - NEVER reproduce any private information.
@@ -53,7 +53,7 @@ person asks an assistant to do. You will be shown several examples of that task.
 
 Write ONE sentence, in ENGLISH, 40 to 300 characters, starting with a verb,
 describing WHAT THE TASK IS. NAME THE TECHNOLOGIES, LANGUAGES, TOOLS AND
-SUBJECT DOMAINS involved — they are what makes the task recognisable.
+SUBJECT DOMAINS involved - they are what makes the task recognisable.
 
 HARD RULES:
 - NEVER reproduce any private information.

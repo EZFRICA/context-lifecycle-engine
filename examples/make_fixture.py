@@ -1,17 +1,17 @@
 """Generate a demanding synthetic history that exercises the whole detector,
 and let the DETECTOR (not a human) write one candidate per real pattern.
 
-Deterministic by construction — no randomness, no wall clock — so every
+Deterministic by construction - no randomness, no wall clock - so every
 number downstream is reproducible. Run from the repo root:
 
-    .venv/bin/python examples/make_fixture.py
+    uv run python examples/make_fixture.py
 
 What the history contains (≈40 days, one user):
-  - weekly_recap    — a weekly ritual        -> RECURRENCE signal
-  - standup_digest  — an every-2-days ritual  -> RECURRENCE signal
-  - incident_triage — repeated, expensive     -> REFORMULATION signal
-  - onboard_setup   — only twice (< 3)         -> NO candidate (below threshold)
-  - noise           — varied one-offs + boundary traffic (out-of-cluster)
+  - weekly_recap - a weekly ritual        -> RECURRENCE signal
+  - standup_digest - an every-2-days ritual  -> RECURRENCE signal
+  - incident_triage - repeated, expensive     -> REFORMULATION signal
+  - onboard_setup - only twice (< 3)         -> NO candidate (below threshold)
+  - noise - varied one-offs + boundary traffic (out-of-cluster)
 
 Because the three ritual clusters have DISTINCT vocabularies, they get
 distinct centroids -> distinct probe openers -> distinct fingerprints ->
@@ -58,7 +58,7 @@ EXAMPLES = Path(__file__).resolve().parent
 
 # A recap rephrasing that still co-clusters with the canonical recap opener
 # (cosine ≈ 0.78) but which the hand-authored `status_report` agent owns
-# exactly — so at replay the two compete and weekly_recap captures < 100%.
+# exactly - so at replay the two compete and weekly_recap captures < 100%.
 REWORD = "put together the weekly project recap for the team"
 
 
@@ -76,7 +76,7 @@ class Cluster:
     occurrences: int
     closes_with_thanks: bool
     components: tuple[str, ...] = field(default_factory=tuple)
-    # Reworded openers for the LAST k occurrences — same intent, still in the
+    # Reworded openers for the LAST k occurrences - same intent, still in the
     # cluster, but lexically distinct enough that an incumbent owning that
     # phrasing steals them at replay (non-trivial capture_rate).
     reworded: tuple[str, ...] = field(default_factory=tuple)
@@ -98,7 +98,7 @@ CLUSTERS = [
                    "tighten the summary section"),
         period_days=7, start_day=0, occurrences=5, closes_with_thanks=True,
         components=("#blocks/recap_format", "#blocks/team_context"),
-        # 2 of 5 weeks the user rephrases toward a "status report" — the
+        # 2 of 5 weeks the user rephrases toward a "status report" - the
         # status_report incumbent owns that phrasing, so weekly_recap's
         # capture_rate lands below 100% (see REWORD below).
         reworded=(REWORD, REWORD),
@@ -112,7 +112,7 @@ CLUSTERS = [
     ),
     Cluster(
         # Expensive and repeated, closes WITHOUT a marker: the reformulation
-        # story — the user keeps hammering the same intent at high cost.
+        # story - the user keeps hammering the same intent at high cost.
         name="incident_triage",
         opener="diagnose the production latency spike on the checkout service",
         followups=("check the database connection pool saturation",
@@ -125,7 +125,7 @@ CLUSTERS = [
         components=("#blocks/incident_runbook", "#blocks/oncall_context"),
     ),
     Cluster(
-        # Only twice — below the recurrence threshold, so the detector must
+        # Only twice - below the recurrence threshold, so the detector must
         # stay SILENT here. Proves detection is evidence-gated, not eager.
         name="onboard_setup",
         opener="draft an onboarding checklist for a new backend engineer",
@@ -176,7 +176,7 @@ def adversarial_history() -> list[Message]:
     """Base history + rejection traps. Two kinds:
 
     - one BRIDGE episode engineered to fall in a separate cluster yet still
-      clear the recap trigger — a genuine false trigger (the rate must not be
+      clear the recap trigger - a genuine false trigger (the rate must not be
       a flat zero);
     - SEVERAL near-but-distinct traps: openers that share vocabulary with a
       detected agent (weekly / recap / standup / diagnose / latency) but a
@@ -192,10 +192,10 @@ def adversarial_history() -> list[Message]:
     _episode(messages, "u1", start,
              ["review the weekly recap numbers for the finance team", "thanks"], "bridge")
 
-    # Near-but-distinct traps — same surface vocabulary, DIFFERENT intent, so
+    # Near-but-distinct traps - same surface vocabulary, DIFFERENT intent, so
     # they must be REJECTED (each sits below the 0.6 trigger similarity). A
     # trap that shares the intent (e.g. "the weekly recap of my book club")
-    # would legitimately FIRE — that is the bridge's job above, not a trap's.
+    # would legitimately FIRE - that is the bridge's job above, not a trap's.
     traps = [
         (14, "draft the monthly report for the board of directors"),    # near recap / report
         (21, "review the standup comedy setlist for open mic night"),   # near standup_digest
@@ -210,7 +210,7 @@ def adversarial_history() -> list[Message]:
 
 def _baseline(clusters_eps: dict[int, list], config: DetectorConfig) -> float:
     """Per-user baseline: median iterations across SUBSTANTIVE clusters
-    (>= min occurrences), excluding abandoned closures — the anti-Goodhart
+    (>= min occurrences), excluding abandoned closures - the anti-Goodhart
     baseline the reformulation signal is measured against."""
     labelled = []
     for eps in clusters_eps.values():
@@ -289,21 +289,21 @@ def main() -> None:
     for cid, spec, eps, centroid, signal in sorted(detected, key=lambda d: -len(d[2])):
         name = spec.name if spec else "(noise)"
         fp = content_hash(list(centroid))[:8]
-        sig = signal.kind if signal else "—"
+        sig = signal.kind if signal else "-"
         occ = signal.occurrences if signal else len(eps)
         note = ""
         if spec and signal:
             _write_candidate(spec, centroid, signal); emitted += 1
             note = f"-> {spec.name}_agent.yaml"
         elif spec and not signal:
-            note = "(below threshold — no candidate)"
+            note = "(below threshold - no candidate)"
         if spec or len(eps) >= 2:
             print(f"{name:16} {sig:13} {occ:>3}  {fp:10}  {note}")
 
     # Hand-authored incumbent (not detected): it owns the reworded "status
     # report" phrasing exactly. Built BEFORE weekly_recap it competes for the
     # 2 reworded recap episodes, so weekly_recap captures 3/5 = 60% (topology
-    # competition, BLUEPRINT §3.2) — a non-trivial capture_rate.
+    # competition, BLUEPRINT §3.2) - a non-trivial capture_rate.
     status_centroid = FIXTURE_EMBEDDER.embed(REWORD)
     (EXAMPLES / "status_report_agent.yaml").write_text(yaml.safe_dump({
         "name": "status_report",

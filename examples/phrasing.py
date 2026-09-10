@@ -1,15 +1,15 @@
-"""Phrasing banks + a seeded episode assembler — the raw material for the
+"""Phrasing banks + a seeded episode assembler - the raw material for the
 freeze-once fixtures.
 
 Pure data and stdlib only: this module imports NOTHING from `cle`, so the
 holdout generator (which must stay process-independent) can use it without
 coupling to the detector. Determinism comes from the COMMITTED .jsonl the
-generators freeze, not from this module — the generators seed a
+generators freeze, not from this module - the generators seed a
 `random.Random` and this module never touches a global RNG or the clock.
 
 These banks are DELIBERATELY NOT calibrated to cluster under the v1
 embedder. Realistic paraphrase does not co-cluster in bag-of-hashed-tokens
-at cosine 0.6 — that is a measured finding about the detector, reported in
+at cosine 0.6 - that is a measured finding about the detector, reported in
 docs/METRICS.md, not something to engineer away by shaving the text down to
 near-duplicates. The banks aim only for genuine human variety: register,
 franglais, typos, word order, differing structure. Whether the detector
@@ -126,7 +126,7 @@ OPENERS: dict[str, list[str]] = {
 
 # ── follow-up / directive banks ─────────────────────────────────────────────
 # Consistent-intent follow-ups (used for the non-contradiction body of each
-# intent) — varied so directive cosines SPREAD (no degenerate single value).
+# intent) - varied so directive cosines SPREAD (no degenerate single value).
 
 FOLLOWUPS: dict[str, list[str]] = {
     "events": [
@@ -175,7 +175,7 @@ FOLLOWUPS: dict[str, list[str]] = {
     ],
 }
 
-# Contradiction directive banks — each SIDE is itself varied, so the flip is a
+# Contradiction directive banks - each SIDE is itself varied, so the flip is a
 # genuine spread of moderate/severe cosines, not one repeated sentence.
 NEWSLETTER_SHORT = [  # intra_cluster side A
     "keep the digest short, three bullets max, no fluff",
@@ -195,7 +195,7 @@ VENUE_DIY = [  # temporal side A (earlier regime)
     "take care of the whole booking on your own",
     "you decide and book it, no need to ask",
 ]
-VENUE_ASK = [  # temporal side B (later regime — the flip)
+VENUE_ASK = [  # temporal side B (later regime - the flip)
     "always ask me for approval before booking anything",
     "run every reservation past me first from now on",
     "dont commit to any venue until i sign off",
@@ -221,7 +221,7 @@ CLOSERS: list[str | None] = [
     None, None, None,  # a third of episodes end with no closer at all
 ]
 
-# Community Q&A / noise — diverse one-offs (correctly do NOT recur/cluster).
+# Community Q&A / noise - diverse one-offs (correctly do NOT recur/cluster).
 QA_OPENERS = [
     "answer a member asking how to submit a lightning talk",
     "reply to the discord question about the next event date",

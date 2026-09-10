@@ -154,7 +154,7 @@ def test_silent_cheap_close_is_success() -> None:
 
 def test_silent_expensive_close_is_abandoned() -> None:
     # No marker, no return, cost beyond 1.5x baseline: struggled, then
-    # vanished — the anti-Goodhart guard excludes these from baselines.
+    # vanished - the anti-Goodhart guard excludes these from baselines.
     episode = _episode(6, marker=False)
     assert (
         classify_closure(episode, returned_to_cluster=False, user_baseline=3.0, config=CONFIG)
@@ -211,13 +211,13 @@ def test_mature_history_allows_candidates() -> None:
 # ── coarse timestamps make silence-based segmentation inert ─────────────────
 
 def test_coarse_timestamps_raise_instead_of_segmenting_plausibly() -> None:
-    """A corpus whose timestamps are coarser than its events does not fail — it
+    """A corpus whose timestamps are coarser than its events does not fail - it
     returns a segmentation that looks right.
 
     Observed on WildChat: every turn of a conversation carries the
     conversation's timestamp, so intra-thread gaps are all zero and the silence
     rule can never fire. The segmenter still returns episodes. Same family as
-    a stale centroid — a degraded behaviour indistinguishable from the
+    a stale centroid - a degraded behaviour indistinguishable from the
     normal one, which is the kind that survives a whole campaign unnoticed.
 
     Measured across 6,161 WildChat users: p25=0.51, p50=0.67, p95=0.89

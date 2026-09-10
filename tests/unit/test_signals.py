@@ -31,7 +31,7 @@ def test_baseline_is_median_iterations_excluding_abandoned() -> None:
         (_episode(T0 + timedelta(hours=2), 6), "reformulated"),
         (_episode(T0 + timedelta(hours=3), 40), "abandoned"),  # excluded
     ]
-    # Median of [2, 4, 6] — the 40-iteration abandonment must not drag it.
+    # Median of [2, 4, 6] - the 40-iteration abandonment must not drag it.
     assert user_baseline(episodes_with_closures) == 4.0
 
 
@@ -83,7 +83,7 @@ def test_two_expensive_episodes_are_not_enough() -> None:
 
 def test_thresholds_are_relative_to_the_user_baseline() -> None:
     # The same absolute costs stop signalling when the user's own baseline
-    # is high — never absolute (replay-validation skill). Jittered spacing
+    # is high - never absolute (replay-validation skill). Jittered spacing
     # keeps recurrence out of the picture.
     offsets_days = [0, 1, 9]
     episodes = [_episode(T0 + timedelta(days=d), 4) for d in offsets_days]

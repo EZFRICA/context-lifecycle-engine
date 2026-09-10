@@ -1,4 +1,4 @@
-"""Invariant 5 / BLUEPRINT §5 — three standards of proof, three types.
+"""Invariant 5 / BLUEPRINT §5 - three standards of proof, three types.
 
 Mandated test 5 of cle-core-contracts (test_pre_evidence_not_evidence),
 written before the types exist. Replay output (PreEvidence) must be
@@ -27,7 +27,7 @@ def _pre_evidence(capture_rate: float = 0.9) -> PreEvidence:
 
 
 def test_the_three_types_share_no_lineage() -> None:
-    # No subclassing between the standards of proof, in any direction —
+    # No subclassing between the standards of proof, in any direction -
     # substitutability is exactly what invariant 5 forbids.
     for weaker, stronger in [
         (PreEvidence, Evidence),
@@ -42,7 +42,7 @@ def test_the_three_types_share_no_lineage() -> None:
 
 @given(capture_rate=rates)
 def test_pre_evidence_not_evidence(capture_rate: float) -> None:
-    # However good the replay numbers, they are retrospective — the
+    # However good the replay numbers, they are retrospective - the
     # promotion gate rejects them regardless of magnitude.
     with pytest.raises(TypeError):
         require_evidence(_pre_evidence(capture_rate))

@@ -2,7 +2,7 @@
 plus persistence, integrity, and determinism specific to SQLite.
 
 The conformance block runs the same assertions against InMemoryStore,
-FileStore and SqliteStore — one behaviour, three substrates.
+FileStore and SqliteStore - one behaviour, three substrates.
 """
 
 import pytest
@@ -153,7 +153,7 @@ def test_sqlite_binary_payload_round_trip(tmp_path) -> None:
 #
 # Bucket 1 (embedder-agnostic), verified rather than assumed: the last test
 # imports cle.cli.main and dashboard.backend.reads, which DO import detect/
-# transitively — but running these five constructs ZERO Embedder instances
+# transitively - but running these five constructs ZERO Embedder instances
 # (checked by instrumenting HashedTokenEmbedder/CachedEmbedder/RealEmbedder
 # __init__). The criterion is INSTANTIATION, not transitive import: a bound
 # name that is never called cannot make an assertion depend on a vector space.

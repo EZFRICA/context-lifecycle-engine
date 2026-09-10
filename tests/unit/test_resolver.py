@@ -31,7 +31,7 @@ def test_resolves_hash_refs_and_named_refs() -> None:
         f"#{block.hash}": block.hash,
         "#blocks/recap_format": block.hash,
     }
-    # A successful stage logs nothing — the pipeline owns the single
+    # A successful stage logs nothing - the pipeline owns the single
     # success line for the whole build.
     assert sink.getvalue() == ""
 

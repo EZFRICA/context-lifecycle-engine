@@ -4,7 +4,7 @@ Two states, never mixed. Everything goes through `cle`, in a subprocess: no
 library call writes anything here, because the architecture says the CLI is the
 one write surface, and this is where real corpora exercise it.
 
-`--state-dir` follows the SUBCOMMAND. `CLE_STATE_DIR` is not read by the CLI —
+`--state-dir` follows the SUBCOMMAND. `CLE_STATE_DIR` is not read by the CLI -
 it is an export toward the dashboard subprocess, and mistaking that is how a
 run writes into the operator's live state.
 
@@ -76,8 +76,8 @@ def main(argv: list[str]) -> int:
     once, and `--model-id stub-model-1` keeps the fingerprinter off the
     live model (the default is `current`, which bills).
 
-        python examples/bigquery/run_state.py stackoverflow [--state-dir DIR]
-        python examples/bigquery/run_state.py wildchat      [--state-dir DIR]
+        uv run python examples/bigquery/run_state.py stackoverflow [--state-dir DIR]
+        uv run python examples/bigquery/run_state.py wildchat      [--state-dir DIR]
     """
     if not argv or argv[0] not in ("stackoverflow", "wildchat"):
         print(__doc__ and main.__doc__)

@@ -1,11 +1,11 @@
 """The retry policy on the live embedding surface.
 
-SCOPE — bucket 1 (embedder-agnostic): no vector space is under test, only which
+SCOPE - bucket 1 (embedder-agnostic): no vector space is under test, only which
 failures are worth a second attempt.
 
 CLE need. Without a backoff, the sample size of a live measurement is set by the
 quota rather than by the operator. Measured: comparing 186 cached vectors against
-AI Studio lost 32 to 429s, and an immediate second pass lost 86 — so the figure
+AI Studio lost 32 to 429s, and an immediate second pass lost 86 - so the figure
 that came back described whatever survived the quota, and a rerun described
 something else. That is not a slow measurement, it is an unrepeatable one.
 
@@ -122,7 +122,7 @@ def test_a_non_rate_limit_fails_on_the_first_attempt(sleeps: list[float]) -> Non
 
 def test_the_backoff_grows_and_is_capped() -> None:
     """Full jitter, so a batch that backs off together does not re-collide on
-    every wave — each wait is somewhere in [0, delay], and delay doubles."""
+    every wave - each wait is somewhere in [0, delay], and delay doubles."""
     delay, seen = RETRY_BASE_SECONDS, []
     for _ in range(8):
         seen.append(delay)

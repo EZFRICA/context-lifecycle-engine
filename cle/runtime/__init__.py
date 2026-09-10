@@ -1,4 +1,4 @@
-"""Runtime — containers, mounts, metrics volume (P2 scope).
+"""Runtime - containers, mounts, metrics volume (P2 scope).
 
 CLE need: one image serves many workspaces; per-container metrics feed the
 lifecycle engine without ever feeding the agent itself (invariant 2, the

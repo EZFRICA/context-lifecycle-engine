@@ -3,7 +3,7 @@
 Positives defined by proximity in the episode space, the same space
 the facet embedding uses: the embedding key was mechanically favoured, and 51.1%
 oriented without concluding. This replaces that with the one external ground
-truth the project has — 11,848 Stack Overflow self-duplicate pairs, each closed
+truth the project has - 11,848 Stack Overflow self-duplicate pairs, each closed
 by a human moderator as a duplicate of the same user's earlier question.
 
 The test: generate a facet for EACH question, then ask whether the facets of a
@@ -14,7 +14,7 @@ exist.
 RESERVATION, carried with the result: a facet of a Stack Overflow question is
 NOT a facet of an agent. What is tested is the narrower property "does an
 engine-written summary preserve the intent", not the final object. The prompt is
-the CONTRACT'S prompt, unchanged, shown one example instead of several — kept
+the CONTRACT'S prompt, unchanged, shown one example instead of several - kept
 identical on purpose so the mechanism under test is the same one.
 """
 import sys, time

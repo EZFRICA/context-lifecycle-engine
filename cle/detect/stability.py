@@ -1,56 +1,56 @@
-"""Cluster-stability analysis — the four-contradiction taxonomy.
+"""Cluster-stability analysis - the four-contradiction taxonomy.
 
 CLE need (stated per the governance rule): a contradictory cluster is a
 "don't automate yet" signal, but environmental noise must not read as a
-user contradiction — the anti-noise guard in the lineage of the
+user contradiction - the anti-noise guard in the lineage of the
 anti-Goodhart rule. Before synthesis, divergence WITHIN a cluster is
 classified into:
 
 - intra_cluster : opposite directives on the same task, close in time
                   (gap <= instability_window)      -> UNSTABLE, no candidate
 - grey_zone     : divergence in the middle band
-                  (instability_window .. temporal_evolution_gap) — a total
+                  (instability_window .. temporal_evolution_gap) - a total
                   partition has no uncovered interval (approved adjustment
                   1); classified UNSTABLE by default: when in doubt, don't
                   automate. Band width is a calibration parameter.
 - temporal      : the user changed their mind across
                   gap >= temporal_evolution_gap    -> evolution, recency
                   wins: synthesize from the post-flip segment
-- world_state   : same intention, DIFFERENT frozen tool_result — the world
+- world_state   : same intention, DIFFERENT frozen tool_result - the world
                   moved, not the user               -> excluded from
                   instability; a candidate may still be born
 
 world_state preconditions (approved adjustment 2, explicit): it requires
 tool_result PRESENT ON BOTH SIDES and DIFFERENT. Episodes without a tool
-have no external world in the frame — their divergence can only be
+have no external world in the frame - their divergence can only be
 intra_cluster / grey_zone / temporal, never world_state.
 
 Adversarial guard (approved adjustment 3): a differing tool_result does
 NOT blindly excuse divergence. If the directives are SEVERELY divergent
-(cosine below severe_divergence_threshold — near-zero shared intent), a
+(cosine below severe_divergence_threshold - near-zero shared intent), a
 genuine user contradiction may be masked by a world change; prudence
 resolves the pair to UNSTABLE (missing a real contradiction is costlier
 than over-flagging).
 
-KNOWN LIMITATION — moderate-band contradictions on tool-bearing clusters
+KNOWN LIMITATION - moderate-band contradictions on tool-bearing clusters
 are NOT detected in v1. A MODERATE preference flip (directive cosine
 between severe_divergence_threshold and directive_divergence_threshold)
 co-occurring with a world change is still classified world_state and
 excluded. This is not a threshold we can safely move: on the GDG fixture
 every divergent pair in the tool-bearing `events` cluster sits at exactly
 one cosine (band width 0.0000), so the divergence measure cannot separate
-a mild contradiction from lexically diverse but consistent follow-ups —
+a mild contradiction from lexically diverse but consistent follow-ups -
 any threshold placed inside that degenerate bin is arbitrary. Closing the
 blind spot needs a finer embedder (a real divergence spread) AND a fixture
 that plants a moderate contradiction in a tool-bearing cluster; see
 docs/METRICS.md (fixture debt). v1 SURFACES the condition instead of
-guessing — see the resolution diagnostic below.
+guessing - see the resolution diagnostic below.
 
 Resolution diagnostic (Option B extended): when a cluster's divergent
 cosines concentrate in a band narrower than config.degenerate_band_width
 (with at least degenerate_min_pairs to be meaningful), the report carries
 resolution="degenerate" and the band width. Such a cluster is neither
-stable nor unstable — it is UNRESOLVABLE at the current measurement
+stable nor unstable - it is UNRESOLVABLE at the current measurement
 resolution. The flag is DIAGNOSTIC ONLY: it is logged, it never blocks,
 and `unstable` is still computed. Rationale (same principle as
 PreEvidence != Evidence): a weak measurement must not masquerade as a
@@ -59,7 +59,7 @@ strong verdict.
 world_state attribution: the log line carries, permanently, how many
 world_state pairs would have been intra_cluster with an identical
 tool_result (ws_would_be_intra) and what fraction of all divergent pairs
-the world_state exclusion absorbs (ws_share_pct) — so the exclusion's
+the world_state exclusion absorbs (ws_share_pct) - so the exclusion's
 reach stays visible rather than hidden inside a single count.
 
 routing (the fourth type) is inter-cluster and lives where it always
@@ -82,13 +82,13 @@ Verdict = Literal["stable", "unstable", "unavailable"]
 
 # The spaces the bag-of-tokens divergence heuristic was CALIBRATED FOR. This is
 # not a soundness property: R6 showed the heuristic only appeared to work there
-# by lexical coincidence — opposing instructions happen to share few tokens —
+# by lexical coincidence - opposing instructions happen to share few tokens -
 # not because cosine measures contradiction. In a real semantic space it scores
 # the planted OPPOSING directives at 0.62-0.86 (they ARE about the same thing),
 # detects nothing, and must report `unavailable` rather than a reassuring
 # "stable".
 #
-# CLE need: a NON-MEASUREMENT MUST NEVER MASQUERADE AS A VERDICT — the same
+# CLE need: a NON-MEASUREMENT MUST NEVER MASQUERADE AS A VERDICT - the same
 # principle as PreEvidence != Evidence and the `degenerate` resolution flag.
 # Replacing cosine with a signed/entailment operator is its own run.
 DIVERGENCE_HEURISTIC_CALIBRATED_FOR = frozenset({"stub:hashed64"})
@@ -97,7 +97,7 @@ DIVERGENCE_HEURISTIC_CALIBRATED_FOR = frozenset({"stub:hashed64"})
 def divergence_check_available(embedder_id: str | None) -> bool:
     """Did / would the contradiction check run in this vector space? The single
     source of truth for both the signal gate and any consumer that needs to
-    disclose the gap (e.g. the dashboard override card) — never re-derive the
+    disclose the gap (e.g. the dashboard override card) - never re-derive the
     set elsewhere."""
     return embedder_id in DIVERGENCE_HEURISTIC_CALIBRATED_FOR
 
@@ -125,7 +125,7 @@ class StabilityReport(BaseModel, frozen=True):
     # When temporal evolution is present (and nothing unstable), signal
     # detection should run on episodes from this index onward (post-flip).
     stable_from_index: int
-    # Resolution diagnostic — orthogonal to the stable/unstable axis and
+    # Resolution diagnostic - orthogonal to the stable/unstable axis and
     # never blocking. "degenerate" means the divergent cosines are too
     # concentrated for the measure to resolve a verdict (band_width < the
     # configured floor); the verdict above is then unreliable by nature.
@@ -141,7 +141,7 @@ class StabilityReport(BaseModel, frozen=True):
 def _directive_text(episode: Episode) -> str:
     # Directives live in the follow-ups (where preferences are stated);
     # openers already agreed (same cluster). Closure markers ("thanks")
-    # are ritual, not preference content — including them would inflate
+    # are ritual, not preference content - including them would inflate
     # similarity between short opposing directives and mask severity.
     from cle.detect.episodes import _contains_success_marker, DetectorConfig
 
@@ -167,7 +167,7 @@ def _classify_pair(
         # The one observable separating user from environment: the frozen
         # tool_result differs -> divergence attributed to the world.
         return "world_state"
-    # Everything else is user-side divergence, classified by time — a
+    # Everything else is user-side divergence, classified by time - a
     # TOTAL partition (<= window | middle band | >= gap), no hole.
     if gap_days <= config.instability_window.total_seconds() / 86400.0:
         return "intra_cluster"
@@ -238,7 +238,7 @@ def analyze_cluster_stability(
 
     # Recency weighting for temporal evolution: the post-flip segment
     # starts at the FIRST episode of the new regime (the earliest "later"
-    # side of a temporal pair) — the whole recent sub-pattern, not just
+    # side of a temporal pair) - the whole recent sub-pattern, not just
     # its tail. v1 handles the single-flip case; multi-flip refinement is
     # a calibration question for real data.
     stable_from = 0
@@ -258,7 +258,7 @@ def analyze_cluster_stability(
 
     # Resolution diagnostic: is the divergence measure even able to resolve
     # a verdict here? A near-zero span across enough pairs means the cosine
-    # cannot separate contradiction from lexical noise. Diagnostic only —
+    # cannot separate contradiction from lexical noise. Diagnostic only -
     # it never touches `unstable`.
     cosines = [p.directive_cosine for p in pairs]
     band_width = round(max(cosines) - min(cosines), 6) if cosines else 0.0

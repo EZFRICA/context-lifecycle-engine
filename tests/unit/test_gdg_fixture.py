@@ -20,7 +20,7 @@ def test_scale(gdg) -> None:
 @pytest.mark.parametrize("intent,tool", list(DOMAIN_TOOL.items()))
 def test_planted_domain_carries_its_tool(gdg, intent, tool) -> None:
     # Every episode of a tool-bearing planted intent declares that tool
-    # (declaration only — nothing executed).
+    # (declaration only - nothing executed).
     assert all(e.required_tool == tool for e in gdg.planted(intent))
 
 

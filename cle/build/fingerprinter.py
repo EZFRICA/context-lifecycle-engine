@@ -1,9 +1,9 @@
-"""Live model fingerprinter — the real substrate footprint (invariant 6).
+"""Live model fingerprinter - the real substrate footprint (invariant 6).
 
 Replays the image's frozen probe set through the configured LLM and hashes
 each output. Probes run at temperature 0 (see get_fingerprint_llm): the
 same model yields the same footprint, so a fingerprint delta at
-revalidation time means the served MODEL drifted — not that the sampler
+revalidation time means the served MODEL drifted - not that the sampler
 rolled differently. That is the whole point of "proof expires."
 
 Determinism caveat (honest): even at temperature 0, a hosted API can carry
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 def response_text(content: Any) -> str:
     """Extract ONLY the generated text from a chat response.
 
-    Newer Gemini models return structured content — a list of parts like
+    Newer Gemini models return structured content - a list of parts like
     [{"type":"text","text":"…","extras":{…}}] where `extras` carries
     volatile per-call metadata (ids, token counts). Hashing the whole
     structure would make the fingerprint change on every call even at
@@ -75,7 +75,7 @@ class LiveModelFingerprinter:
                     raise RuntimeError(
                         f"Real-model probe failed (CLE_FORCE_REAL_MODEL=1): {error}"
                     ) from error
-                # Stable fallback for CI / offline runs — hashes the probe, not
+                # Stable fallback for CI / offline runs - hashes the probe, not
                 # the model, so a failed call reads as "no signal", never drift.
                 output_hashes.append(content_hash(f"probe-call-failed:{probe}"))
         return tuple(output_hashes)

@@ -1,9 +1,9 @@
-"""Build stage 3 — assemble.
+"""Build stage 3 - assemble.
 
 Contract (BLUEPRINT §3.3, §9 decision 3 as adopted in the approved P1
 plan): compile the system prompt in declared order, capture
 `model_fingerprint` (API version if exposed; else output hash over a fixed
-probe set — 12 probes drawn from the cluster's replay window at build
+probe set - 12 probes drawn from the cluster's replay window at build
 time, frozen into the image), hash the complete artifact -> Image.
 Invariant 1: image.hash != source.hash (structural via cle_kind).
 Invariant 6: the fingerprint is what lets the re-validator expire proof.
@@ -54,7 +54,7 @@ class AssemblyError(Exception):
 
 def parse_mounted_tools(source: SourceSpec) -> tuple[str, ...]:
     """The tool NAMES a candidate mounts (stage-1 already verified they
-    resolve). Order preserved, deduplicated — part of the image identity."""
+    resolve). Order preserved, deduplicated - part of the image identity."""
     parsed = yaml.safe_load(source.yaml_raw)
     names = parsed.get("tools", []) or [] if isinstance(parsed, dict) else []
     seen: list[str] = []
@@ -67,7 +67,7 @@ def parse_mounted_tools(source: SourceSpec) -> tuple[str, ...]:
 def parse_trigger(source: SourceSpec) -> TriggerSpec:
     """Read the trigger the detector wrote into the candidate source.
 
-    The centroid is produced by detect/ and only carried here — assembly
+    The centroid is produced by detect/ and only carried here - assembly
     never invents trigger geometry.
     """
     parsed = yaml.safe_load(source.yaml_raw)
@@ -82,7 +82,7 @@ def parse_trigger(source: SourceSpec) -> TriggerSpec:
         )
     # Provenance: the source declares the vector space its centroid came from.
     # A source written before provenance existed is, by definition, a v1
-    # bag-of-tokens centroid — naming that space explicitly is honest, and a
+    # bag-of-tokens centroid - naming that space explicitly is honest, and a
     # centroid mislabelled this way fails LOUDLY later (SpaceMismatchError on
     # comparison) rather than silently pretending to share a space.
     embedder_id = trigger_raw.get("embedder_id", "stub:hashed64")
@@ -108,7 +108,7 @@ def assemble(
     Declared order = the order of `components` in the source (which is
     the iteration order of resolved_refs, preserved since resolve walks
     the list). Probes: the first PROBE_SET_SIZE in-cluster openers of the
-    replay window, chronological — deterministic, no sampling."""
+    replay window, chronological - deterministic, no sampling."""
     fragments: list[str] = []
     for ref, target_hash in resolved_refs.items():
         payload = fetch_verified(backend, target_hash, oplog)
@@ -116,7 +116,7 @@ def assemble(
         if record.get("cle_kind") != "block":
             raise AssemblyError(f"component {ref} is not a block")
         if record.get("kind") == "tool":
-            # Tools are capability DECLARATIONS, never prompt text — they
+            # Tools are capability DECLARATIONS, never prompt text - they
             # ride on the image as mounted_tools, not in assembled_prompt.
             continue
         fragments.append(Block(kind=record["kind"], payload=record["payload"]).payload)

@@ -11,7 +11,7 @@ The contract is `docs/BLUEPRINT.md` (invariants in §4–§5b, non-promises in
 §10). Figures measured on REAL corpora are `docs/FINDINGS.md`; figures measured
 on fixtures are `docs/METRICS.md`; the capability map is `docs/CAPABILITIES.md`
 and the test accounting is `docs/TESTING.md`. If a project `CLAUDE.md` is
-present it repeats the invariant list — when it and the blueprint disagree,
+present it repeats the invariant list - when it and the blueprint disagree,
 stop and ask.
 
 Blocking checklist, in order:
@@ -29,7 +29,7 @@ Blocking checklist, in order:
 
 3. **A non-measurement is never a verdict.** A check whose soundness depends
    on the substrate must report `unavailable` rather than a reassuring pass.
-   `unstable` vetoes a birth; `unavailable` does NOT — it is disclosed to the
+   `unstable` vetoes a birth; `unavailable` does NOT - it is disclosed to the
    human instead. Any path recording `stability="stable"` when the check did
    not run is blocking, as is a weak measure presented as a verdict (the
    `degenerate` resolution flag exists for exactly this).
@@ -40,7 +40,7 @@ Blocking checklist, in order:
 5. **Replay honesty.** Grep the diff for language implying replay measures
    answer quality; any occurrence is blocking. `false_trigger_rate` must be
    computed wherever `capture_rate` is. `tool_result` may be read but never
-   asserted correct. Capability-gated episodes stay in the DENOMINATOR — a
+   asserted correct. Capability-gated episodes stay in the DENOMINATOR - a
    change that quietly drops them (inflating capture) is blocking.
 
 6. **Space-dependence.** Any threshold or heuristic calibrated for one
@@ -63,9 +63,9 @@ Blocking checklist, in order:
 9. **Closed vocabulary.** Nothing writes free text into a topology record.
    `cause["reason"]` is refused; the route is `TopologyReason` over a `Literal`.
    A new member of that vocabulary must name something a code path actually
-   emits — a slot with no producer is removed, not reserved.
+   emits - a slot with no producer is removed, not reserved.
 
-10. **Numbers in prose.** Candidate counts never stand bare — they carry purity
+10. **Numbers in prose.** Candidate counts never stand bare - they carry purity
    against the planted intents (GENUINE / FRAGMENT / SPURIOUS). A published
    figure carries its pinning key `(date, commit, embedder_id, model_id)` AND
    the command that reproduces it; verify the command exists and runs. Fixture
@@ -75,5 +75,5 @@ Blocking checklist, in order:
    An un-sourced number is removed, not carried forward.
 
 11. **Plan conformity.** The change matches the approved plan; flag any silent
-   addition, even a good one. Report regressions as findings — never fix them
+   addition, even a good one. Report regressions as findings - never fix them
    silently mid-review.

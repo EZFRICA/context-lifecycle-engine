@@ -1,8 +1,8 @@
 """
-llm_provider.py — LLM Abstraction Layer
+llm_provider.py - LLM Abstraction Layer
 ========================================
 Routes between:
-  - CLOUD  : Gemini via Google API (default — provider principal)
+  - CLOUD  : Gemini via Google API (default - provider principal)
   - LOCAL  : Gemma via Ollama  (fallback si ressources insuffisantes)
 
 Usage:
@@ -24,12 +24,12 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma:2b")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 GEMMA_MODEL = os.getenv("GEMMA_MODEL", "gemma-2-27b-it")
-# Real model by default — the CLE runs on a live substrate locally. Override
+# Real model by default - the CLE runs on a live substrate locally. Override
 # with GEMINI_MODEL in .env if your key targets a different one.
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 # Temperature for conversational solicitations (cle run).
 # In production this is typically 0.7–1.0 for varied, creative responses.
-# The FINGERPRINTER always runs at 0 regardless — see get_fingerprint_llm().
+# The FINGERPRINTER always runs at 0 regardless - see get_fingerprint_llm().
 MAIN_TEMPERATURE = float(os.getenv("MAIN_TEMPERATURE", "1"))
 
 logger = logging.getLogger(__name__)
@@ -42,12 +42,12 @@ def get_main_llm():
 
     Temperature is MAIN_TEMPERATURE (default 0.7, configurable via .env).
     In real conditions a variable temperature produces more natural, varied
-    responses — this is intentional and correct for conversational use.
+    responses - this is intentional and correct for conversational use.
 
     DO NOT use this for fingerprinting; use get_fingerprint_llm() instead.
     """
     if LLM_PROVIDER == "ollama":
-        logger.info("LLM Provider: Ollama — model=%s, temperature=%s", OLLAMA_MODEL, MAIN_TEMPERATURE)
+        logger.info("LLM Provider: Ollama - model=%s, temperature=%s", OLLAMA_MODEL, MAIN_TEMPERATURE)
         return ChatOllama(
             model=OLLAMA_MODEL,
             base_url=OLLAMA_BASE_URL,
@@ -55,14 +55,14 @@ def get_main_llm():
             num_predict=2048,
         )
     elif LLM_PROVIDER == "gemini":
-        logger.info("LLM Provider: Gemini — model=%s, temperature=%s", GEMINI_MODEL, MAIN_TEMPERATURE)
+        logger.info("LLM Provider: Gemini - model=%s, temperature=%s", GEMINI_MODEL, MAIN_TEMPERATURE)
         return ChatGoogleGenerativeAI(
             model=GEMINI_MODEL,
             temperature=MAIN_TEMPERATURE,
             google_api_key=GEMINI_API_KEY,
         )
     else:
-        logger.info("LLM Provider: Gemma — model=%s, temperature=%s", GEMMA_MODEL, MAIN_TEMPERATURE)
+        logger.info("LLM Provider: Gemma - model=%s, temperature=%s", GEMMA_MODEL, MAIN_TEMPERATURE)
         return ChatGoogleGenerativeAI(
             model=GEMMA_MODEL,
             temperature=MAIN_TEMPERATURE,
@@ -73,10 +73,10 @@ def get_main_llm():
 def get_fingerprint_llm(model_override: str | None = None):
     """Strictly deterministic (temperature=0) model for substrate probes.
 
-    TEMPERATURE IS ALWAYS 0 HERE — NOT CONFIGURABLE. This is not a
+    TEMPERATURE IS ALWAYS 0 HERE - NOT CONFIGURABLE. This is not a
     conservative default; it is an architectural requirement (invariant 6):
     the fingerprint must measure the MODEL, never the sampler. A delta at
-    revalidation time means the served model drifted — if temperature were
+    revalidation time means the served model drifted - if temperature were
     non-zero, each revalidation would produce a different fingerprint on the
     same model, triggering spurious auto-demotes to trial.
 
@@ -88,7 +88,7 @@ def get_fingerprint_llm(model_override: str | None = None):
     Reproduce: run `cle revalidate` three times against an unchanged live model
     and compare the three fingerprints.
 
-    A served model is not deterministic at temperature 0 — batching, routing
+    A served model is not deterministic at temperature 0 - batching, routing
     and hardware make identical prompts return different text. Temperature is
     still pinned at 0 (a non-zero sampler would add a second, avoidable source
     of variance), but pinning it does NOT deliver the equality the drift
@@ -96,13 +96,13 @@ def get_fingerprint_llm(model_override: str | None = None):
     the UNCHANGED model reports `DRIFT: 4/4 probes moved` and auto-demotes.
 
     An earlier version of this docstring cited an experiment script as proof of
-    the opposite result. That script has never existed in this repository — not
+    the opposite result. That script has never existed in this repository - not
     in the tree, not in git history; `git log --all --diff-filter=A --name-only`
     finds no such addition. It is not named here: a docstring must not cite a
     file that does not exist, which is exactly what
-    tests/property/test_structural_guards.py now enforces. The remedy — tolerance band,
+    tests/property/test_structural_guards.py now enforces. The remedy - tolerance band,
     embedding distance, semantic judge, or dropping drift as a demotion trigger
-    on live substrates — is an open decision, not a settled one.
+    on live substrates - is an open decision, not a settled one.
 
     `model_override` lets the re-validator probe a DIFFERENT real model to
     enact genuine drift (e.g. gemini-3.5-flash-lite → gemini-3.6-flash).
@@ -112,12 +112,12 @@ def get_fingerprint_llm(model_override: str | None = None):
         return ChatOllama(
             model=model_override or OLLAMA_MODEL,
             base_url=OLLAMA_BASE_URL,
-            temperature=0,  # MUST NOT be changed — see docstring
+            temperature=0,  # MUST NOT be changed - see docstring
             num_predict=512,
         )
     return ChatGoogleGenerativeAI(
         model=model,
-        temperature=0,  # MUST NOT be changed — see docstring
+        temperature=0,  # MUST NOT be changed - see docstring
         google_api_key=GEMINI_API_KEY,
     )
 
@@ -128,14 +128,14 @@ def get_extractor_llm():
     Uses Gemini/Gemma via Google API or falls back to Ollama.
     """
     if LLM_PROVIDER == "gemini":
-        logger.debug("Extractor LLM: Gemini — model=%s (deterministic)", GEMINI_MODEL)
+        logger.debug("Extractor LLM: Gemini - model=%s (deterministic)", GEMINI_MODEL)
         return ChatGoogleGenerativeAI(
             model=GEMINI_MODEL,
             temperature=0.7,
             google_api_key=GEMINI_API_KEY,
         )
     elif LLM_PROVIDER == "ollama":
-        logger.info("Extractor LLM: Ollama (local fallback) — model=%s", OLLAMA_MODEL)
+        logger.info("Extractor LLM: Ollama (local fallback) - model=%s", OLLAMA_MODEL)
         return ChatOllama(
             model=OLLAMA_MODEL,
             base_url=OLLAMA_BASE_URL,
@@ -144,7 +144,7 @@ def get_extractor_llm():
             format="json",
         )
     else:
-        logger.info("Extractor LLM: Gemma — model=%s", GEMMA_MODEL)
+        logger.info("Extractor LLM: Gemma - model=%s", GEMMA_MODEL)
         return ChatGoogleGenerativeAI(
             model=GEMMA_MODEL,
             temperature=0.7,

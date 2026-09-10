@@ -1,9 +1,9 @@
-"""Re-validator — proof expires (invariant 6).
+"""Re-validator - proof expires (invariant 6).
 
 Contract (BLUEPRINT §5): replay the image's frozen probe set against the
 currently served model. Fingerprint drift -> auto-demote to trial and log
 {"op":"revalidation_failed", "persistence": {...}}. Outputs are
-`Persistence` — the third evidence type; it can demote, never promote.
+`Persistence` - the third evidence type; it can demote, never promote.
 
 Drift is LOCALIZED: the image froze per-probe output hashes at build, so
 probe_deltas names exactly which probes moved under the new substrate.
@@ -31,7 +31,7 @@ def revalidate(
 
     Logs op:"revalidate" when proof holds, op:"revalidation_failed" when
     it drifted. The DEMOTION itself is the caller's move (cle revalidate
-    routes it through move_state_tag + topology like any tag op) — one
+    routes it through move_state_tag + topology like any tag op) - one
     op, one line, no hidden writes here."""
     started = time.monotonic()
     image = load_image(backend, image_hash, oplog)

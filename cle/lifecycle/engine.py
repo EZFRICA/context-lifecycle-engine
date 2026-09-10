@@ -1,8 +1,8 @@
-"""Lifecycle engine — shadow mode in v1.
+"""Lifecycle engine - shadow mode in v1.
 
 Contract (BLUEPRINT §6): humans move tags via `cle tag`; the engine runs
 the part-7 state-machine thresholds (config, article defaults) in shadow
-and logs what it WOULD have done — actor engine:shadow, never a ref
+and logs what it WOULD have done - actor engine:shadow, never a ref
 write. The human/engine divergence log is a deliverable and the
 calibration set for going live in v2.
 
@@ -51,12 +51,12 @@ def shadow_decide(
     """Evaluate the state machine on lived evidence; log the would-move.
 
     Returns the decision ("ephemeral" | "pinned" | "trial" | "archived" |
-    "hold") and ONLY logs — a shadow engine that writes refs is a live
+    "hold") and ONLY logs - a shadow engine that writes refs is a live
     engine, which is v2 behind the divergence calibration this log feeds.
 
     `days_since_last_solicitation` and `trigger_period_days` enable the
     silence-based demotion rule (> silence_factor × period). In v1 these
-    are optional — the runtime doesn't track them yet. When supplied, the
+    are optional - the runtime doesn't track them yet. When supplied, the
     engine evaluates and logs `would: demote_silence`.
     """
     would = "hold"

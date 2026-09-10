@@ -1,17 +1,17 @@
-"""Offline vector-cache generator — the ONLY RealEmbedder caller.
+"""Offline vector-cache generator - the ONLY RealEmbedder caller.
 
 Embeds every distinct text in the realistic committed fixtures (GDG +
 holdout) plus an explicit `EXTRA_TEXTS` list (the R7 injected-contradiction
 strings, which need REAL vectors for the world_state retest), and freezes the
 result to a committed JSON keyed by cache_key(embedder_id, text). CI then reads
-those vectors through CachedEmbedder — no key, no network.
+those vectors through CachedEmbedder - no key, no network.
 
 Adjustment 3 (cache coverage): fixture texts + EXTRA_TEXTS are covered here;
 every other synthetic/demo text uses StubEmbedder explicitly and never reaches
 this cache.
 
-Run (needs GEMINI_API_KEY, network — NOT run in CI):
-    .venv/bin/python examples/make_vectors.py
+Run (needs GEMINI_API_KEY, network - NOT run in CI):
+    uv run python examples/make_vectors.py
 """
 
 import json
@@ -25,7 +25,7 @@ from cle.detect.embedders import RealEmbedder, VECTOR_CACHE, cache_key  # noqa: 
 EX = Path(__file__).resolve().parent
 FIXTURES = ["prompt_history_gdg.jsonl", "prompt_history_holdout.jsonl"]
 
-# R7 world_state retest — a MODERATE opposing-directive pair on the events
+# R7 world_state retest - a MODERATE opposing-directive pair on the events
 # (tool-bearing) intent. Same strings the R7 test uses, so they resolve from
 # this committed cache. The opener it pairs with is already a fixture text.
 EXTRA_TEXTS = [
@@ -40,11 +40,11 @@ def collect_texts() -> list[str]:
     """Every string any consumer will embed.
 
     Two distinct consumers, two shapes of text:
-      * clustering / replay embed the episode OPENER — an individual message;
+      * clustering / replay embed the episode OPENER - an individual message;
       * the stability classifier embeds `_directive_text(episode)`, which is the
         episode's follow-ups JOINED into one string. That join is not any single
         message, so covering only message texts would miss it (found at R4, not
-        at R2 — recorded in the journal).
+        at R2 - recorded in the journal).
     """
     from cle.detect.episodes import DetectorConfig, Message, segment
     from cle.detect.stability import _directive_text

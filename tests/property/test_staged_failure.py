@@ -1,4 +1,4 @@
-"""Invariant 3 — staged builds consume nothing.
+"""Invariant 3 - staged builds consume nothing.
 
 Mandated test 4 of cle-core-contracts (test_staged_failure_writes_nothing),
 written before the resolver exists. A failed stage leaves the store
@@ -56,7 +56,7 @@ def test_malformed_yaml_fails_and_writes_nothing() -> None:
 
 
 def test_failed_resolve_logs_the_failing_stage() -> None:
-    # The one permitted trace: a build line naming the stage that failed —
+    # The one permitted trace: a build line naming the stage that failed -
     # the raw material of the failure-stage distribution measurement.
     import json
 

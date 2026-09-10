@@ -9,7 +9,7 @@ Decisions (P2, documented per authorization):
 - MCP handles are network mounts: scope_ref `mcp://<server>/<tool>`. They
   are not store-resolvable, so store validation skips them; mode still
   applies (an ro MCP mount is a read-only tool surface).
-- rw store mounts must target MOBILE ref names — a raw content hash or an
+- rw store mounts must target MOBILE ref names - a raw content hash or an
   immutable version ref cannot absorb a write (content addresses don't
   move; version refs must not).
 - ALL store mounts (ro included) must resolve at instantiation: a dead ro
@@ -30,7 +30,7 @@ _VERSION_REF = re.compile(r"^agents/.+/v\d+\.\d+\.\d+$")
 
 class MountError(Exception):
     """A mount that cannot be honored fails instantiation before any
-    container exists — scopes are contracts, not suggestions."""
+    container exists - scopes are contracts, not suggestions."""
 
 
 class Mount(BaseModel, frozen=True):

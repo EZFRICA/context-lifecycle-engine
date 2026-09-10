@@ -1,10 +1,10 @@
-"""Holdout history generator — a process-independent discovery source.
+"""Holdout history generator - a process-independent discovery source.
 
-PROCESS INDEPENDENCE — what this module deliberately does NOT share with
+PROCESS INDEPENDENCE - what this module deliberately does NOT share with
 cle/detect (the whole point; it breaks the circularity of make_fixture.py,
 which plants patterns with the SAME embedder the detector uses):
 
-  * It imports NOTHING from `cle` — pure stdlib. It emits plain prompt-history
+  * It imports NOTHING from `cle` - pure stdlib. It emits plain prompt-history
     dicts; the detector processes them blind.
   * It does NOT use the embedder, the dimension (64), the cosine threshold
     (0.6), the min_signal_occurrences gate, DetectorConfig, or any centroid.
@@ -16,11 +16,11 @@ FREEZE-ONCE + realistic (the realism run): openers are genuinely varied
 (>= 8 distinct per recurring pattern), timing is irregular, closers vary, and
 some episodes have no closer. Determinism comes from the committed .jsonl and
 a fixed seed. Whether the detector RECOVERS these patterns from realistic
-paraphrase is exactly what the discovery test MEASURES — and reports, never
+paraphrase is exactly what the discovery test MEASURES - and reports, never
 tunes. (On realistic data the v1 bag-of-tokens embedder fragments paraphrase
 badly; expect discovery to drop. That is a finding about the detector.)
 
-Run:  .venv/bin/python examples/make_holdout.py
+Run:  uv run python examples/make_holdout.py
 Writes examples/prompt_history_holdout.jsonl.
 """
 
@@ -35,7 +35,7 @@ WEEKS = 16
 DAYS = WEEKS * 7
 SEED = 424242
 
-# Recurring patterns — the organiser's own voice, distinct from the Abidjan
+# Recurring patterns - the organiser's own voice, distinct from the Abidjan
 # ground-truth banks. >= 8 varied phrasings each so the DATA is non-templated
 # regardless of whether the detector clusters them.
 MEETUP_PREP = [
@@ -140,15 +140,15 @@ class Builder:
 def holdout_history() -> list[dict]:
     b = Builder(SEED)
     used_prep, used_out, used_ven = [[]], [[]], [[]]
-    # A. monthly meetup prep — 2 prep sessions/month over 4 months (~8), varied.
+    # A. monthly meetup prep - 2 prep sessions/month over 4 months (~8), varied.
     for occ, day in enumerate(range(2, DAYS, 13)):
         b.episode(day, f"meetup-prep-{occ}", b.draw(MEETUP_PREP, used_prep),
                   followups=b.some())
-    # B. speaker outreach — ~fortnightly, short threads (>= 8).
+    # B. speaker outreach - ~fortnightly, short threads (>= 8).
     for occ, day in enumerate(range(4, DAYS, 12)):
         b.episode(day, f"outreach-{occ}", b.draw(OUTREACH, used_out),
                   followups=b.some(2))
-    # C. venue friction — costly, usually no closer (reformulation candidate).
+    # C. venue friction - costly, usually no closer (reformulation candidate).
     for occ, day in enumerate(range(6, DAYS, 13)):
         b.episode(day, f"venue-{occ}", b.draw(VENUE, used_ven),
                   followups=b.rng.sample(FOLLOWUPS, 3), force_close=False)

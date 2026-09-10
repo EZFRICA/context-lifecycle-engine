@@ -1,4 +1,4 @@
-"""Canonical hashing properties — the foundation of both hash namespaces.
+"""Canonical hashing properties - the foundation of both hash namespaces.
 
 content_hash is THE hashing function (cle-core-contracts): canonical JSON,
 sorted keys, no whitespace, UTF-8, sha256. Written before objects.py per
@@ -32,7 +32,7 @@ def test_hash_is_deterministic(value) -> None:
 def test_object_hash_matches_independent_canonical_encoding(value) -> None:
     # Pins all three canonicalization clauses at once (sorted keys, no
     # whitespace, UTF-8) against an encoding built independently of the
-    # implementation — the other properties are corollaries of this one.
+    # implementation - the other properties are corollaries of this one.
     canonical = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode(
         "utf-8"
     )
@@ -41,7 +41,7 @@ def test_object_hash_matches_independent_canonical_encoding(value) -> None:
 
 @given(st.dictionaries(st.text(min_size=1, max_size=8), json_scalars, min_size=2, max_size=6))
 def test_hash_ignores_key_insertion_order(mapping) -> None:
-    # Same mapping built in reverse insertion order must hash identically —
+    # Same mapping built in reverse insertion order must hash identically -
     # canonicalization, not memory layout, defines identity.
     reversed_insertion = dict(reversed(list(mapping.items())))
     assert content_hash(mapping) == content_hash(reversed_insertion)
