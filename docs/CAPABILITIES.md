@@ -4,7 +4,7 @@ What the Context Lifecycle Engine does, why, and where each capability is
 demonstrated. Two cardinal pillars, **detection** (agents emerge from usage)
 and **lifecycle** (they earn or lose standing on lived evidence), over a
 content-addressed store, a runtime, and a live dashboard. Pinned by the
-**514-test** suite unless noted.
+**521-test** suite unless noted.
 
 > ## ⚠ Read this before any number below
 >
@@ -140,9 +140,11 @@ FastAPI + SSE + a single Alpine page (no build step). Four zones, **Pulse**
 (live oplog), **Births** (proposal cards with the human Approve/Decline gate),
 **Lives** (5-state images, per-container metrics, switch-cost badges, drift
 card), **Topology** (state ladder, shadow strip, version diff). Read-mostly:
-the only writes are Approve/Decline, routed through the CLI and logged as
-`human:dashboard`. Metrics shown are the human's window, never fed back to an
-agent.
+the audience's writes are Approve/Decline, the operator controls (init, run
+test, clean, the demo) write too, every write goes through the CLI and is
+logged as `human:dashboard`, and a write sent from another site is refused
+before any route runs. Metrics shown are the human's window, never fed back to
+an agent.
 - **Disclosed-gap marker on Births cards**: when a candidate's contradiction
   check could not run in its vector space, the card shows a dashed *"⚠
   contradiction check did not run"* marker, deliberately **not** styled as an

@@ -18,7 +18,7 @@ written to fix the drift.
 
 ---
 
-## Test coverage: **514 tests** across 53 files, 1 skipped
+## Test coverage: **521 tests** across 53 files, 1 skipped
 
 Five more run only where the private WildChat corpus is present, so they are not counted here: a suite size a reader cannot reproduce is not a suite size. The skip is that corpus-gated module.
 
@@ -144,8 +144,8 @@ observe; the probe then checks that every marked test really did embed in
 
 | Bucket | Tests | Meaning |
 |---|---|---|
-| **1. Embedder-agnostic** | **394** | No embedder ran for the test. Hashing, store and backends, integrity, resolver, evidence types, the Goodhart boundary, staged failure, lifecycle, episode segmentation, signals, the level 2 facet and privacy guards, the dashboard routes, the structural guards. They hold in **any** vector space. |
-| **2. Stub-as-a-tool** | **91** | An embedder ran, but the claim is space-independent: two-hash inequality, build determinism, both rates always computed, tool gating, embedder provenance, CLI acceptance, the level 2 end-to-end run. |
+| **1. Embedder-agnostic** | **398** | No embedder ran for the test. Hashing, store and backends, integrity, resolver, evidence types, the Goodhart boundary, staged failure, lifecycle, episode segmentation, signals, the level 2 facet and privacy guards, the dashboard routes, the structural guards. They hold in **any** vector space. |
+| **2. Stub-as-a-tool** | **94** | An embedder ran, but the claim is space-independent: two-hash inequality, build determinism, both rates always computed, tool gating, embedder provenance, CLI acceptance, the level 2 end-to-end run. |
 | **3. Stub-as-the-subject** | **29** | Declared `stub_only`, and checked: true **only** in `stub:hashed64`, so they do **not** describe the production system. The contradiction taxonomy, the stability property tests, the adversarial and demo exact rates, the directive-band check. |
 
 Bucket 1 is the contract itself: it holds whatever embedder is configured.
@@ -178,7 +178,7 @@ bench modules, and run `sleep` under bash to test an abort; none of them embeds.
 | Oplog views & provenance | `test_oplog_views` (9) | every emitted op classifies into exactly one bucket (AST scrape); an unknown op raises; shadow lines are never rendered as a move; `on_behalf_of` is actually written at birth |
 | Topology embedding key | `test_topology_embedding` (8) | the vector space is recorded at topology scope, inherited by later writes; a first write without it raises; an embedder with no calibration provenance raises |
 | Runtime & Goodhart | `test_goodhart_boundary` (5), `test_runtime` (7) | Container has no metrics read path; mounts; switch cost carries both diffs |
-| Lifecycle | `test_lifecycle` (6) | proof ladder & gate; shadow decides but never writes; topology chain/diff; revalidate holds then drifts |
+| Lifecycle | `test_lifecycle` (9) | proof ladder & gate; a reason written only by the side that can conclude it, and never a decline reason on a tag move; shadow decides but never writes; topology chain/diff; revalidate holds then drifts, and a missing probe output counts as moved |
 | Closed vocabulary | `test_closed_vocabulary` (10) | which VALUES may be written to `reason`; out-of-vocabulary raises, and there is no `other` bucket to absorb the distinction |
 | CLI acceptance | `test_cli_acceptance` (10) | the documented commands run end to end on `--embedder stub` |
 | Embedder selection | `test_embedder_selection` (6) | which embedder the selection point returns for each flag and env var |
@@ -186,8 +186,8 @@ bench modules, and run `sleep` under bash to test an abort; none of them embeds.
 | `CLE_VECTOR_CACHE` | `test_vector_cache_override` (4) | a cache pointed at a foreign space is refused, never silently consulted |
 | Rate-limit backoff | `test_rate_limit_backoff` (11) | 429/`RESOURCE_EXHAUSTED` retries with full jitter; every other failure raises at once |
 | Live revalidation | `test_live_revalidation_guard` (2) | revalidation against a live model cannot run inside the offline suite |
-| Dashboard | `test_dashboard_routes` (32), `test_dashboard_matches_disk` (7) | every route; and the API payload matches what is actually on disk, whitelist included |
-| Unguarded-raise closures | `test_unguarded_raises` (10), `test_unguarded_contracts` (7), `test_refusals_bite` (11) | the raise sites the mutation sweep found unreachable, closed one at a time |
+| Dashboard | `test_dashboard_routes` (34), `test_dashboard_matches_disk` (7) | every route; a write sent from another site is refused before any route runs; and the API payload matches what is actually on disk, whitelist included |
+| Unguarded-raise closures | `test_unguarded_raises` (10), `test_unguarded_contracts` (7), `test_refusals_bite` (13) | the raise sites the mutation sweep found unreachable, closed one at a time |
 | Mutation harness | `test_mutation_harness` (12) | the tool that judges every other guard is itself judged: its pure functions are pinned |
 | Frozen defects | `test_frozen_defects` (4) | defects measured and deliberately not fixed, pinned so they cannot change unnoticed |
 | Published figures | `test_real_state_regression` (5) | recomputes numbers `docs/FINDINGS.md` publishes, so moving one turns the suite red |
@@ -202,7 +202,7 @@ bench modules, and run `sleep` under bash to test an abort; none of them embeds.
 
 | Bucket measurement | `test_bucket_measurement` (7) | the rules `tools/buckets.py` classifies by: buckets 1 and 2 measured, bucket 3 declared and checked, SCOPE headers compared |
 
-The rows sum to **519** across 54 files, against the **514** in the heading: the
+The rows sum to **526** across 54 files, against the **521** in the heading: the
 difference is `test_real_state_regression`, whose 5 tests run only where the
 private WildChat corpus is present and are therefore excluded from the
 reproducible count. A file absent from this table is a file that does not exist.

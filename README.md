@@ -210,8 +210,10 @@ add `--store sqlite` if the CLI wrote sqlite.
 
 One page (HTML + Alpine, no build step) served by FastAPI. Four zones: **Pulse**
 (live oplog over SSE), **Births** (candidate cards with the Approve/Decline gate
-and the disclosed-gap marker), **Lives**, **Topology**. The only write path is Approve/Decline, routed through
-the CLI and logged as `human:dashboard`. See `dashboard/README.md`.
+and the disclosed-gap marker), **Lives**, **Topology**. Approve/Decline is the
+audience-facing write path, routed through the CLI and logged as
+`human:dashboard`; the operator controls (init, run test, clean, the demo) write
+too, and a write sent from another site is refused. See `dashboard/README.md`.
 
 ### Level 2: the population layer
 
@@ -309,7 +311,8 @@ sees what the CLI wrote only if launched with the same setting.
 | `cle log [topology.yaml]` | Op-log tail, or topology history with provenance. |
 | `cle diff <vA> <vB>` | Learned-topology delta between two versions. |
 | `cle revalidate <agent>` | Replay the frozen probe set; on drift, auto-demote to `trial`. |
-| `cle decline <agent>` | Refuse a candidate. Logs the refusal, moves no tag. |
+| `cle decline <agent>` | Refuse what the system proposes for an agent (a birth, or a further promotion). Logs the refusal, moves no tag; `--reason` takes only `engine_disagrees` or `defer`. |
+| `cle population <dir>...` | Level 2: group the agents of many instances by their facets. Reads each `topology.yaml` only, writes `report.json` under `--out`. `--threshold`, `--namer stub\|live`. |
 | `cle dashboard` | Launch the FastAPI dashboard. `--port`. |
 | `cle clean` | Reset the state directory. **Confirms first**; `--yes` to skip. |
 
@@ -382,7 +385,7 @@ tests/          property/ + unit/, hypothesis for the invariants
 uv run pytest -q
 ```
 
-**514 tests across 53 files**, fully offline. Five more run only where the private WildChat corpus is present, so they are not counted here: a suite size a reader cannot reproduce is not a suite size. A green suite pins the
+**521 tests across 53 files**, fully offline. Five more run only where the private WildChat corpus is present, so they are not counted here: a suite size a reader cannot reproduce is not a suite size. A green suite pins the
 **contract**, not the production vector space: 161 assertions are embedder
 agnostic and hold in any era, while 31 pin the v1 stub mechanism only and do not
 describe the production system. Details in `docs/TESTING.md`.

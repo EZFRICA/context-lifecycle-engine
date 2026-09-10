@@ -207,6 +207,11 @@ moment was not, counting it as a rejection would be a product contresens).
 `engine_disagrees` is human but stays isolable, so an aggregate claiming to
 measure independent human judgement can exclude the engine's own influence.
 
+Both axes are enforced where a reason is written, not only named: a tag move
+refuses a decline reason, only an `engine:` actor may write an engine-authored
+reason and only a non-engine actor a human-authored one
+(`cle/lifecycle/tags.py`), and `cle decline` accepts decline reasons alone.
+
 Out-of-vocabulary values raise (`UnknownReasonError`); there is no `other`
 bucket, which would silently absorb the distinction the field exists to make.
 `cluster_stability`'s `reason=` is a technical diagnostic on a technical op and
