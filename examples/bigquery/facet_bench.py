@@ -4,9 +4,9 @@ The question `docs/proposals/facet-contract.md` leaves open, and the one that
 decides level 2's architecture. Clio's layer 1 replaces raw user text with a
 generated facet before anything is clustered. That is a privacy mechanism first,
 but it is also a claim about signal: the facet is supposed to say what KIND of
-task this is, stripped of the instance. If that claim is false — if facets group
+task this is, stripped of the instance. If that claim is false - if facets group
 no better than the titles they came from, or no better than free string overlap
-— then level 2 needs no embeddings and no generation step, and Clio's stages 2
+- then level 2 needs no embeddings and no generation step, and Clio's stages 2
 to 4 can run on something far cheaper.
 
 PROTOCOL, identical to `model_bench.py` so the numbers are comparable: every
@@ -24,7 +24,7 @@ Four methods over the same 600 pairs:
   facet-cosine    embed the generated facet
 
 SPACE: `bigquery:gemini-embedding-001:768`, the same as every other bench here,
-NOT the CLE's `google:gemini-embedding-2:768` — median cosine between the two on
+NOT the CLE's `google:gemini-embedding-2:768` - median cosine between the two on
 identical texts is 0.037. The engine's 0.775 threshold does not apply.
 
 BILLS: one embedding per distinct text, ~2,376 of them, once. Re-runs read the
@@ -39,8 +39,8 @@ from google.cloud import bigquery
 
 import bqconfig
 
-P = bqconfig.dataset()
-c = bigquery.Client(project=bqconfig.project())
+P = bqconfig.lazy_dataset()
+c = bqconfig.lazy_client()
 D = "examples/bigquery/data"
 
 #: The false-positive budgets to report. 0.101 is where the Stack Overflow bench
@@ -61,7 +61,7 @@ def jaccard(a: str, b: str) -> float:
 def recall_at(a_scores: np.ndarray, b_scores: np.ndarray, fp: float) -> tuple[float, float]:
     """Threshold so the CONTROL fires at `fp`, then read recall on the duplicates.
 
-    Returns (recall, threshold). The threshold comes from B and is read on A —
+    Returns (recall, threshold). The threshold comes from B and is read on A -
     that separation is the whole reason these numbers are comparable across
     methods that live on different scales (Jaccard is 0..1 over words, cosine is
     0..1 over a 768-dimension space, and they are not the same 0.7).
@@ -97,7 +97,7 @@ def embed_all(texts: list[str]) -> dict[str, np.ndarray]:
 
     Vectors come back UNNORMALISED (norm 0.57 to 0.60): BigQuery does not
     renormalise after truncating to the requested dimension. They are normalised
-    here, at the boundary, so the dot product below is a cosine — the same
+    here, at the boundary, so the dot product below is a cosine - the same
     correction `assert_unit_norm` refuses to make silently inside the engine.
     """
     frame = pd.DataFrame({"content": texts})

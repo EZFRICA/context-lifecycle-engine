@@ -5,7 +5,7 @@ against a derangement. Two things about that answer are weak, and this script
 fixes both:
 
   * **The controls were synthetic.** A derangement pairs two unrelated
-    components, which is easy — every method scored above 87%, titles reached
+    components, which is easy - every method scored above 87%, titles reached
     99.3%. Real controls come from `corpus_b_control.parquet`: same users, same
     elapsed-time range, no duplicate ruling. They are much harder, and they are
     the ones the published bench uses.
@@ -15,7 +15,7 @@ fixes both:
 
 SCALE, and it is a deliberate middle. The full corpus is 21,473 pairs and 39,280
 distinct titles, so facets for all of it is 38,092 generation calls. This runs
-3,000 pairs — about 4,800 generations — which is five times the resolution of
+3,000 pairs - about 4,800 generations - which is five times the resolution of
 the 276-component bench at an eighth of the full cost. What it cannot do is
 settle the far tail; that is stated rather than implied.
 
@@ -45,8 +45,8 @@ from google.cloud import bigquery
 import bqconfig
 from facet_prompt_bench import REDACTION, long_numbers, proper_nouns, redact
 
-P = bqconfig.dataset()
-c = bigquery.Client(project=bqconfig.project())
+P = bqconfig.lazy_dataset()
+c = bqconfig.lazy_client()
 D = "examples/bigquery/data"
 
 BUDGETS = (0.101, 0.05, 0.01)
@@ -207,7 +207,7 @@ def main() -> None:
 
     n_ctrl = int((~is_a).sum())
     print(f"\n  control pairs at the 1% budget: {n_ctrl * 0.01:.0f} "
-          f"(of {n_ctrl}) — the resolution this run buys")
+          f"(of {n_ctrl}) - the resolution this run buys")
 
 
 if __name__ == "__main__":

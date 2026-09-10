@@ -1,4 +1,4 @@
-"""Project, dataset and connection — from the environment, with NO default.
+"""Project, dataset and connection - from the environment, with NO default.
 
 A project id is not a credential, but it names live infrastructure and these
 scripts ship in a public repository, so nothing here is hardcoded.
@@ -27,7 +27,7 @@ load_dotenv()
 
 
 class MissingBigQueryConfigError(RuntimeError):
-    """A required BigQuery identifier is not set. Loud on purpose — see module docstring."""
+    """A required BigQuery identifier is not set. Loud on purpose - see module docstring."""
 
 
 def _require(name: str) -> str:
@@ -47,6 +47,58 @@ def project() -> str:
 def dataset() -> str:
     """Fully qualified `project.dataset` for the corpus tables."""
     return f"{project()}.{_require('CLE_BQ_DATASET')}"
+
+
+class _Deferred:
+    """A value built on first use, not at import.
+
+    Every bench module used to build its BigQuery client at module scope, so
+    IMPORTING one - for a pure helper, a constant, or an AST check - called
+    `google.auth.default()` and required `CLE_BQ_*`. A module that cannot be
+    imported without credentials cannot be reused or tested offline. The client
+    and the dataset name are now built the first time something reads them.
+
+    Supports what the benches do with the two values: attribute access on the
+    client (`c.query(...)`) and interpolation of the dataset (`f"{P}.table"`).
+    """
+
+    def __init__(self, build):
+        self._build = build
+        self._value = None
+
+    def resolve(self):
+        if self._value is None:
+            self._value = self._build()
+        return self._value
+
+    def __getattr__(self, name: str):
+        # Private names never trigger a build: copy and pickle probe them, and
+        # resolving on `_value` itself would recurse.
+        if name.startswith("_"):
+            raise AttributeError(name)
+        return getattr(self.resolve(), name)
+
+    def __format__(self, spec: str) -> str:
+        return format(self.resolve(), spec)
+
+    def __str__(self) -> str:
+        return str(self.resolve())
+
+
+def lazy_client() -> "_Deferred":
+    """The BigQuery client for `project()`, built on first use."""
+    def build():
+        from google.cloud import bigquery
+
+        return bigquery.Client(project=project())
+
+    return _Deferred(build)
+
+
+def lazy_dataset() -> "_Deferred":
+    """`dataset()`, resolved on first use so a missing variable raises when a
+    query needs it rather than when a module is imported."""
+    return _Deferred(dataset)
 
 
 def connection() -> str:

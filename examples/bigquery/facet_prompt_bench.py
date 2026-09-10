@@ -4,16 +4,16 @@
 against raw titles. That is half a finding. The other half is the question it
 raises: is the cost a property of facets, or of how generic THIS prompt is?
 
-Two prompts already exist over the same 276 ground-truth components — `strict`
-and `relaxed` — and they differ exactly along the axis that matters. The relaxed
+Two prompts already exist over the same 276 ground-truth components - `strict`
+and `relaxed` - and they differ exactly along the axis that matters. The relaxed
 one names Apache, Perl, CPAN; the strict one says "a web server environment".
 So the pair measures the slope rather than a point.
 
 TWO AXES, and the whole reason this script exists is that they move together:
 
-  * GROUPING — recall at a matched false-positive rate, the same protocol as
+  * GROUPING - recall at a matched false-positive rate, the same protocol as
     every other bench here. Higher is better.
-  * LEAK — the mechanical checks `docs/proposals/facet-contract.md` §d specifies
+  * LEAK - the mechanical checks `docs/proposals/facet-contract.md` §d specifies
     and that were never built: proper nouns, long numbers, and verbatim spans
     from the source. Lower is better.
 
@@ -24,7 +24,7 @@ both sides instead of an assertion on one.
 
 CONTROLS ARE BUILT, NOT DRAWN. The component file holds positives only: each row
 is one moderator-linked group, side `a` against side `b`. A control is therefore
-`facet_a[i]` against `facet_b[j]` for i != j — two sides of two unrelated
+`facet_a[i]` against `facet_b[j]` for i != j - two sides of two unrelated
 groups. Same construction for both prompts and for the title baseline, so the
 comparison is between methods and not between control sets.
 
@@ -42,8 +42,8 @@ from google.cloud import bigquery
 
 import bqconfig
 
-P = bqconfig.dataset()
-c = bigquery.Client(project=bqconfig.project())
+P = bqconfig.lazy_dataset()
+c = bqconfig.lazy_client()
 D = "examples/bigquery/data"
 
 BUDGETS = (0.101, 0.05, 0.01)
@@ -52,84 +52,17 @@ BUDGETS = (0.101, 0.05, 0.01)
 #: prompts rather than a new draw of negatives.
 SEED = 23
 
-#: Words that begin a sentence, or are otherwise capitalised for grammar rather
-#: than because they name something. Counting these as proper nouns would make
-#: every facet look like a leak.
-_STOP_CAPS = {"A", "An", "The", "This", "These", "Their", "It", "In", "On", "For",
-              "To", "By", "With", "When", "Where", "How", "What", "If", "And", "Or"}
-
-#: What a redacted proper noun becomes. A placeholder rather than a deletion:
-#: dropping the word would leave "configure the web server" and "configure the
-#: web server" indistinguishable whether the original said Apache or nginx, which
-#: silently merges two different tasks. The marker keeps the slot.
-REDACTION = "SYSTEM"
-
-
-def proper_nouns(text: str) -> list[str]:
-    """Capitalised words that are not sentence-initial and not grammar words.
-
-    A crude proxy, and deliberately so: §d asks for a MECHANICAL check, and a
-    mechanical check that needs a model to run is not one. It over-counts
-    (any capitalised technical term) and under-counts (lowercase product names),
-    which is why the number below is only ever compared BETWEEN prompts, never
-    read as an absolute leak rate.
-    """
-    words = text.split()
-    return [w.strip(".,;:()") for i, w in enumerate(words)
-            if i > 0 and w[:1].isupper()
-            and w.strip(".,;:()") not in _STOP_CAPS
-            # The redaction marker is capitalised by construction. Counting it
-            # made the redacted variant score 2.36 against relaxed's 2.35 — the
-            # check measuring its own placeholder and reporting the leak as
-            # slightly WORSE after closing it.
-            and w.strip(".,;:()") != REDACTION]
-
-
-def long_numbers(text: str) -> list[str]:
-    """Numbers longer than two digits — §a forbids them as an identifier channel."""
-    return re.findall(r"\b\d{3,}\b", text)
-
-
-def verbatim_spans(facet: str, sources: list[str], n: int = 6) -> int:
-    """Count n-grams the facet copies verbatim from its own source text.
-
-    The sharpest of the three checks: a facet is supposed to describe a KIND of
-    task, so any six-word span lifted from the instance is the failure the
-    contract names.
-    """
-    fac = facet.lower().split()
-    grams = {" ".join(fac[i:i + n]) for i in range(max(0, len(fac) - n + 1))}
-    hit = 0
-    for s in sources:
-        toks = s.lower().split()
-        src = {" ".join(toks[i:i + n]) for i in range(max(0, len(toks) - n + 1))}
-        hit += len(grams & src)
-    return hit
-
-
-
-
-def redact(text: str) -> str:
-    """Apply §d's mechanical checks as a TRANSFORM rather than a refusal.
-
-    The contract specifies these as guards that reject a facet. Rejection is the
-    right behaviour in production — a leaking facet must not be stored — but it
-    cannot be measured, because a rejected facet has no vector. Redacting
-    instead keeps every facet in the bench and asks the question the guard makes
-    impossible: does closing the leak channel cost the grouping the relaxed
-    prompt bought?
-    """
-    out = []
-    for i, word in enumerate(text.split()):
-        bare = word.strip(".,;:()")
-        if i > 0 and word[:1].isupper() and bare not in _STOP_CAPS:
-            out.append(REDACTION)
-        elif re.fullmatch(r"\d{3,}", bare):
-            out.append(REDACTION)
-        else:
-            out.append(word)
-    return " ".join(out)
-
+#: The mechanical §d checks live in the engine (`cle.population.leak`), where
+#: the facet type and the name screen use them. Re-exported so every caller of
+#: this module and every reference in the docs still resolves.
+from cle.population.leak import (  # noqa: E402
+    REDACTION,
+    _STOP_CAPS,
+    long_numbers,
+    proper_nouns,
+    redact,
+    verbatim_spans,
+)
 
 def recall_at(a: np.ndarray, b: np.ndarray, fp: float) -> float:
     return float((a >= float(np.quantile(b, 1 - fp))).mean())

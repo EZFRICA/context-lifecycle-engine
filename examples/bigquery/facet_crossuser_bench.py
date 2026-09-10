@@ -3,8 +3,8 @@
 Every facet bench before this one measured within-user separation, which is the
 detector's job, not level 2's. Level 2 reads many independent topologies and asks
 whether two of them carry the SAME recurring intent. That question has a
-different negative — two strangers' unrelated intents, not two questions the same
-person asked a week apart — and Part 4 showed the negative is what decides the
+different negative - two strangers' unrelated intents, not two questions the same
+person asked a week apart - and Part 4 showed the negative is what decides the
 answer.
 
 GROUND TRUTH, by construction rather than by judgement. `make_multiuser.py`
@@ -33,15 +33,15 @@ FOUR METHODS, the same four as `facet_scale_bench.py`:
 
     text-jaccard    free, over the cluster's concatenated episodes
     text-cosine     embed the concatenated episodes
-    facet-cosine    embed one generated facet per cluster — Clio's layer 1
+    facet-cosine    embed one generated facet per cluster - Clio's layer 1
     facet-redacted  the facet after §d's mechanical redaction
 
 SPACE: `bigquery:gemini-embedding-001:768`, as everywhere else here.
 """
 import collections
-import glob
 import itertools
 import json
+import pathlib
 import sys
 import time
 
@@ -50,10 +50,11 @@ import pandas as pd
 from google.cloud import bigquery
 
 import bqconfig
+from cle.population.lexical import jaccard  # noqa: E402
 from facet_prompt_bench import long_numbers, proper_nouns, redact
 
-P = bqconfig.dataset()
-c = bigquery.Client(project=bqconfig.project())
+P = bqconfig.lazy_dataset()
+c = bqconfig.lazy_client()
 
 BUDGETS = (0.101, 0.05, 0.01)
 
@@ -79,12 +80,31 @@ Requests:
 Sentence:"""
 
 
+#: Repository root, resolved from this file rather than from the working
+#: directory. The fixture glob used to be relative, so running this from
+#: anywhere but the root found no files, built an empty frame, and BigQuery
+#: created a 0-row table with FLOAT columns - surfacing as "ML.GENERATE_TEXT
+#: expects a `prompt` column" three calls later, which names neither the missing
+#: fixtures nor the directory.
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+
+
 def load_clusters() -> dict[tuple[str, str], list[str]]:
     """(user, intent) -> its episode texts, from the committed multiuser fixture."""
     out: dict[tuple[str, str], list[str]] = collections.defaultdict(list)
-    for path in sorted(glob.glob("examples/ph12_user*.jsonl")):
-        user = path.split("/")[-1].replace(".jsonl", "").split("_")[-1]
-        for line in open(path):
+    paths = sorted(ROOT.glob("examples/ph12_user*.jsonl"))
+    if not paths:
+        # Refused rather than returning {}: an empty result here produces a
+        # confusing failure deep inside BigQuery instead of naming the cause.
+        raise SystemExit(
+            f"no ph12_user*.jsonl fixtures under {ROOT / 'examples'}. "
+            "Regenerate them: uv run python examples/make_multiuser.py --users 12 --prefix ph12"
+        )
+    for path in paths:
+        user = path.stem.split("_")[-1]
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
             row = json.loads(line)
             intent = row["thread_id"].split("-")[0]
             if intent not in BACKGROUND:
@@ -167,9 +187,6 @@ def embed(texts: list[str]) -> dict[str, np.ndarray]:
     return vec
 
 
-def jaccard(a: str, b: str) -> float:
-    sa, sb = set(a.lower().split()), set(b.lower().split())
-    return len(sa & sb) / len(sa | sb) if sa and sb else 0.0
 
 
 def recall_at(a: np.ndarray, b: np.ndarray, fp: float) -> float:

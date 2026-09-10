@@ -55,6 +55,11 @@ not move anything out of those directories, including a `read_data.py --dump`.
 | `intent_bench.py` | the intent-level bench, and why the previous one was the wrong object |
 | `prepare_states.py` | the two real corpora, in CLI-consumable shape |
 | `run_state.py` | drives a real corpus through the CLI into its own state dir |
+| `facet_bench.py` | facets against raw text on the duplicate-pair task |
+| `facet_prompt_bench.py` | the facet prompt variants, and the mechanical leak checks (`proper_nouns`, `long_numbers`, `verbatim_spans`) the level 2 screen reuses |
+| `facet_scale_bench.py` | the same comparison at the scale the pipeline would run |
+| `facet_crossuser_bench.py` | intents ACROSS users, on 12 synthetic users with planted intents |
+| `facet_crossuser_so_bench.py` | the same task on Stack Overflow cross-author moderator duplicates: real users AND real labels |
 | `read_data.py` | reads the parquet artifacts as text; they are not human readable |
 
 ## Reading the results
@@ -62,9 +67,9 @@ not move anything out of those directories, including a `read_data.py --dump`.
 Parquet is columnar binary. `read_data.py` turns it into something openable:
 
 ```bash
-python examples/bigquery/read_data.py                      # the catalogue
-python examples/bigquery/read_data.py facets_pilot         # schema + first rows
-python examples/bigquery/read_data.py facets_pilot --dump  # full text, to a file
+uv run python examples/bigquery/read_data.py                      # the catalogue
+uv run python examples/bigquery/read_data.py facets_pilot         # schema + first rows
+uv run python examples/bigquery/read_data.py facets_pilot --dump  # full text, to a file
 ```
 
 ## Two things these scripts settled
