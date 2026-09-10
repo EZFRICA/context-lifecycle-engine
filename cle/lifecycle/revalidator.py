@@ -10,6 +10,7 @@ probe_deltas names exactly which probes moved under the new substrate.
 """
 
 import time
+from itertools import zip_longest
 
 from cle.build.assembler import ModelFingerprinter, fingerprint_from_outputs
 from cle.oplog import OpLog
@@ -39,10 +40,14 @@ def revalidate(
         content_hash(output) for output in fingerprinter.outputs(image.probe_set)
     )
     fingerprint_now = fingerprint_from_outputs(current_output_hashes)
+    # `zip_longest`, not `zip`: a probe whose output went missing, or an output
+    # with no frozen counterpart, is a probe that moved. `zip` stopped at the
+    # shorter side, so a truncated answer changed the fingerprint while naming
+    # no delta, and the proof was reported as holding.
     probe_deltas = tuple(
         f"probe-{index}"
         for index, (frozen, current) in enumerate(
-            zip(image.probe_output_hashes, current_output_hashes)
+            zip_longest(image.probe_output_hashes, current_output_hashes)
         )
         if frozen != current
     )

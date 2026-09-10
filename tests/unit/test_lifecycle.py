@@ -81,12 +81,49 @@ def test_tag_ladder_proof_requirements(tmp_path) -> None:
         )
     move_state_tag(
         backend=store, agent="recap", image_hash=image.hash, from_state="pinned",
-        to_state="trial", reason="substrate_drift", oplog=oplog, actor="human:t",
+        to_state="trial", reason="cost_regression", oplog=oplog, actor="human:t",
     )
     ops = [json.loads(line) for line in sink.getvalue().splitlines() if '"op": "tag"' in line]
     assert [o.get("to") for o in ops] == ["candidate", "trial", "ephemeral", "pinned", "trial"]
     assert ops[2]["evidence"]["cost_ratio"] == 0.5  # ephemeral promotion carries evidence
     assert ops[3]["evidence"]["cost_ratio"] == 0.4  # pin carries evidence
+
+
+def test_a_decline_reason_cannot_ride_on_a_tag_move(tmp_path) -> None:
+    """A decline says the detection was right and the moment was not; a descent
+    says something else. `reasons.py` keeps them apart, and so does the write."""
+    store = InMemoryStore()
+    image = _image_in(store, tmp_path)
+    with pytest.raises(TagMoveError, match="decline reason"):
+        move_state_tag(
+            backend=store, agent="recap", image_hash=image.hash, from_state="trial",
+            to_state="archived", reason="engine_disagrees", oplog=OpLog(io.StringIO()),
+            actor="human:t",
+        )
+
+
+def test_a_reason_is_written_only_by_the_side_that_can_conclude_it(tmp_path) -> None:
+    """`substrate_drift` is a metric that fired; `cost_regression` is a person's call.
+
+    Both directions, one site: a human filing the engine's reason would be
+    counted as the engine concluding it, and the reverse as a judgement nobody
+    made. Each side's own reason still passes.
+    """
+    store = InMemoryStore()
+    image = _image_in(store, tmp_path)
+    oplog = OpLog(io.StringIO())
+
+    def descend(reason: str, actor: str) -> None:
+        move_state_tag(backend=store, agent="recap", image_hash=image.hash,
+                       from_state="pinned", to_state="trial", reason=reason,
+                       oplog=oplog, actor=actor)
+
+    with pytest.raises(TagMoveError, match="engine-authored"):
+        descend("substrate_drift", "human:t")
+    with pytest.raises(TagMoveError, match="human-authored"):
+        descend("cost_regression", "engine:revalidator")
+    descend("substrate_drift", "engine:revalidator")
+    descend("cost_regression", "human:t")
 
 
 def test_version_tags_are_immutable(tmp_path) -> None:
@@ -227,3 +264,29 @@ def test_revalidate_holds_then_drifts(tmp_path) -> None:
 
     ops = [json.loads(line)["op"] for line in sink.getvalue().splitlines()]
     assert ops == ["revalidate", "revalidation_failed"]
+
+
+class TruncatingFingerprinter(DriftingFingerprinter):
+    """The same model, answering every probe but the last."""
+
+    def outputs(self, probes):
+        return super().outputs(probes)[:-1]
+
+
+def test_a_missing_probe_output_is_a_delta_not_a_hold(tmp_path) -> None:
+    """Every output that is there still matches; the one that is not must count.
+
+    With `zip`, the comparison stopped at the shorter side: the fingerprint
+    changed, no delta was named, and the proof was reported as holding.
+    """
+    store = InMemoryStore()
+    image = _image_in(store, tmp_path)
+    sink = io.StringIO()
+
+    truncated = revalidate(
+        backend=store, image_hash=image.hash, fingerprinter=TruncatingFingerprinter("stub"),
+        oplog=OpLog(sink), actor="engine:revalidator",
+    )
+    assert truncated.fingerprint_now != image.model_fingerprint
+    assert truncated.probe_deltas == (f"probe-{len(image.probe_set) - 1}",)
+    assert json.loads(sink.getvalue().splitlines()[-1])["op"] == "revalidation_failed"

@@ -20,7 +20,7 @@ Contract (cle-core-contracts, invariants 1, 4, 5):
 
 import time
 
-from cle.lifecycle.reasons import validate_reason
+from cle.lifecycle.reasons import ENGINE_AUTHORED, HUMAN_DECLINE_REASONS, validate_reason
 from cle.oplog import OpLog
 from cle.store.backends import StoreBackend
 from cle.store.commits import Evidence, PreEvidence, assert_tag_target
@@ -48,6 +48,24 @@ def require_evidence(evidence: Evidence) -> Evidence:
 
 class TagMoveError(Exception):
     """A state move that the ladder or its proof requirements reject."""
+
+
+def _check_reason_fits(reason: str, actor: str) -> None:
+    """The two axes of `cle/lifecycle/reasons.py`, enforced where a reason is written.
+
+    Membership in the vocabulary is not enough. A decline reason names a refusal,
+    not a descent, and belongs to `cle decline`. An engine reason names a metric
+    that fired, so only an `engine:` actor may write it; a judgement reason names
+    a person's call, so the engine may not. Without this, a human could file
+    `substrate_drift`, and an aggregate of what the engine concluded would count
+    a person.
+    """
+    if reason in HUMAN_DECLINE_REASONS:
+        raise TagMoveError(f"{reason!r} is a decline reason; a tag move is not a decline")
+    engine_reason = reason in ENGINE_AUTHORED
+    if engine_reason != actor.startswith("engine:"):
+        side = "engine" if engine_reason else "human"
+        raise TagMoveError(f"{reason!r} is {side}-authored; actor {actor!r} cannot write it")
 
 
 def move_state_tag(
@@ -92,6 +110,7 @@ def move_state_tag(
         raise TagMoveError("downward moves must state a reason (it is logged)")
     if reason is not None:
         validate_reason(reason)  # raises on anything outside the closed vocabulary
+        _check_reason_fits(reason, actor)
 
     backend.move_ref(f"agents/{agent}/{to_state}", image_hash)
     oplog.emit(
