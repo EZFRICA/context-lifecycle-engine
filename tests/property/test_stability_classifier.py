@@ -1,15 +1,15 @@
 """Stability classifier properties IN THE `stub:hashed64` SPACE (hypothesis).
 
-SCOPE — read before trusting the word "property". These are properties of the
+SCOPE - read before trusting the word "property". These are properties of the
 v1 bag-of-tokens mechanism, **not** properties of the classifier in a semantic
 embedding space. Hypothesis tests claim generality by their very format, and
 two of the claims below are simply FALSE in the production space
 (`google:gemini-embedding-2:768`), where the classifier returns
 `verdict="unavailable"` and NO pair is ever divergent:
 
-  * `test_same_flips_without_tool_flag_instability_iff_divergent` — the
+  * `test_same_flips_without_tool_flag_instability_iff_divergent` - the
     right-hand side stops holding: `unstable` is always False there.
-  * `test_world_state_only_divergence_never_flags_unstable` — holds only where
+  * `test_world_state_only_divergence_never_flags_unstable` - holds only where
     cosine separates the directives at all; in a semantic space it passes
     vacuously (nothing is divergent), which is not the guard being claimed.
 
@@ -29,6 +29,11 @@ from cle.detect.clusters import HashedTokenEmbedder
 from cle.detect.episodes import DetectorConfig, Message, segment
 from cle.detect.stability import analyze_cluster_stability
 from cle.oplog import OpLog
+import pytest
+
+#: Bucket 3 (docs/TESTING.md): true ONLY in `stub:hashed64`. Declared here,
+#: checked by tools/buckets.py against the embedder the tests actually invoke.
+pytestmark = pytest.mark.stub_only
 
 T0 = datetime(2026, 6, 1, tzinfo=timezone.utc)
 CFG = DetectorConfig()
@@ -81,7 +86,7 @@ def test_world_state_only_divergence_never_flags_unstable(flips) -> None:
     # Scope: stub:hashed64 ONLY. "Whatever the pattern, the anti-noise guard
     # holds" is true only where cosine separates the directives at all. In a
     # semantic space the planted OPPOSING directives score 0.62-0.86, nothing is
-    # divergent, and this passes VACUOUSLY — not the guard being claimed.
+    # divergent, and this passes VACUOUSLY - not the guard being claimed.
     report = _run(_eps(flips, with_tool=True))
     assert report.counts["intra_cluster"] == 0
     assert not report.unstable
@@ -90,9 +95,9 @@ def test_world_state_only_divergence_never_flags_unstable(flips) -> None:
 @settings(max_examples=20, deadline=None)
 @given(st.lists(st.booleans(), min_size=2, max_size=6))
 def test_same_flips_without_tool_flag_instability_iff_divergent(flips) -> None:
-    # Scope: stub:hashed64 ONLY — this equivalence is FALSE in production.
+    # Scope: stub:hashed64 ONLY - this equivalence is FALSE in production.
     # Adjustment 2 as a property: strip the tool and the SAME textual divergence
-    # becomes user signal — unstable exactly when both directives appear. Under
+    # becomes user signal - unstable exactly when both directives appear. Under
     # the real embedder the right-hand side still varies while `unstable` is
     # always False (nothing registers as divergent), so the iff breaks.
     report = _run(_eps(flips, with_tool=False))

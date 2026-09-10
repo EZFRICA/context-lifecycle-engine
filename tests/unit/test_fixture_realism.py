@@ -4,7 +4,7 @@ The point: a fixture that regresses to templated text (identical openers, two
 follow-ups, one closer, fixed timing) must become a TEST FAILURE here, not a
 discovery three runs later. All assertions are DATA properties, grouped by the
 PLANTED intent (from the sidecar / thread prefix), never by DETECTED clusters
-— whether the v1 embedder recovers those intents is a measured finding
+- whether the v1 embedder recovers those intents is a measured finding
 (docs/METRICS.md), deliberately not gated here (see the realism run decision).
 """
 
@@ -78,16 +78,17 @@ def test_gdg_timing_is_not_single_valued() -> None:
     assert len(gaps) >= 5, f"only {len(gaps)} distinct within-thread turn-gaps"
 
 
+@pytest.mark.stub_only  # bucket 3: see the SCOPE note in the body
 def test_tool_bearing_intent_directive_band_is_not_degenerate() -> None:
-    # SCOPE — `stub:hashed64` ONLY (the one test in this module that is not a
+    # SCOPE - `stub:hashed64` ONLY (the one test in this module that is not a
     # pure data property). Under the real embedder this band is 0.0000 again,
     # for the OPPOSITE reason: not one repeated cosine but NO divergent pair at
-    # all. So it cannot be read as "the fixture is varied" in that space — there
+    # all. So it cannot be read as "the fixture is varied" in that space - there
     # it is the anti-templating DATA checks above that carry the guarantee.
     #
     # The events intent is tool-bearing; its divergent-pair directive cosines
     # must SPREAD (band_width > the degeneracy floor). A degenerate band means
-    # the follow-ups were templated — the exact defect that made moderate-band
+    # the follow-ups were templated - the exact defect that made moderate-band
     # calibration impossible in the old fixture.
     # Guard the scope in CODE, not just in prose: this check is only meaningful
     # where the divergence heuristic is calibrated. Elsewhere "no divergent
@@ -111,11 +112,11 @@ def test_tool_bearing_intent_directive_band_is_not_degenerate() -> None:
         f"no divergent pairs under embedder_id={space!r}. In the stub space this "
         "means the follow-ups collapsed to one point (a TEMPLATED fixture); "
         "in any other space it would mean the cosine operator cannot separate "
-        "directives at all — hence the skip above."
+        "directives at all - hence the skip above."
     )
     band = max(cosines) - min(cosines)
     assert band > CFG.degenerate_band_width, (
-        f"events directive band {band:.4f} is degenerate under {space!r} — "
+        f"events directive band {band:.4f} is degenerate under {space!r} - "
         "the follow-ups look templated"
     )
 

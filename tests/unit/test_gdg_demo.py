@@ -4,7 +4,7 @@ Locks the two numbers the demo publishes: a legitimate incumbent drops
 capture below 1.0, and the planted bridge yields a non-trivial false_trigger.
 Both are trigger-only replay (invariant 5); tool_result is never scored.
 
-SCOPE — `stub:hashed64` ONLY. These assertions describe the v1
+SCOPE - `stub:hashed64` ONLY. These assertions describe the v1
 bag-of-tokens mechanism, not the production embedder. In a semantic space
 (`google:gemini-embedding-2:768`) they do not hold: the exact 1.000 / 0.600 /
 0.143 figures come from token overlap in a hand-built window; a semantic
@@ -20,6 +20,11 @@ from cle.oplog import OpLog
 from cle.store.commits import TriggerSpec
 
 import gdg_demo as demo
+import pytest
+
+#: Bucket 3 (docs/TESTING.md): true ONLY in `stub:hashed64`. Declared here,
+#: checked by tools/buckets.py against the embedder the tests actually invoke.
+pytestmark = pytest.mark.stub_only
 
 
 def _replay(existing):
@@ -35,7 +40,7 @@ def test_incumbent_competition_drops_capture_below_one() -> None:
     incumbent = TriggerSpec(centroid=demo.EMB.embed(demo.INCUMBENT_OPENER), embedder_id=demo.EMB.embedder_id)
     clean = _replay([])
     competed = _replay([incumbent])
-    # EXACT VALUES — CONSTRUCTED WINDOW, not realistic usage. 1.000 and 0.600
+    # EXACT VALUES - CONSTRUCTED WINDOW, not realistic usage. 1.000 and 0.600
     # are token-overlap outcomes of demo.build_window(), a hand-built history
     # in stub:hashed64. They pin the competition MECHANISM (an incumbent lowers
     # capture), never a system-wide rate; a semantic embedder reroutes that

@@ -1,7 +1,8 @@
 """The live revalidation path reports drift but must never write it.
 
-SCOPE: bucket 1 (embedder-agnostic). The topology is written under the stub;
-nothing here asserts anything about a vector space.
+SCOPE: bucket 2 (stub-as-a-tool), measured by `tools/buckets.py`: the topology
+is built through the stub, and nothing here asserts anything about a vector
+space.
 
 CLE need. A served model is not deterministic at temperature 0: probing the same
 frozen probe set twice against an UNCHANGED substrate produces different

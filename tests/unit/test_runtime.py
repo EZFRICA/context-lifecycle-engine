@@ -1,6 +1,7 @@
 """P2 runtime: FileStore conformance, mounts, one-way metrics, switch cost.
-SCOPE — bucket 2 (stub-as-a-tool): the stub only fabricates an image to run;
-the runtime, Goodhart-boundary, mount and switch-cost assertions are
+SCOPE - bucket 2 (stub-as-a-tool) for the two tests that build an image through
+the stub, bucket 1 for the five that do not. Measured by `tools/buckets.py`. The
+runtime, Goodhart-boundary, mount and switch-cost assertions are
 embedder-independent.
 """
 

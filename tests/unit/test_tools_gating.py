@@ -1,10 +1,12 @@
 """Tool kind + two-stage capability gating (build side).
 
-Tools are DECLARATIONS (name + capability tag), never runnable code — no
+Tools are DECLARATIONS (name + capability tag), never runnable code - no
 execution, no API call, no network anywhere in these tests.
 
-SCOPE — bucket 2 (stub-as-a-tool): the stub is incidental. Tool resolution and
-mount gating are independent of the vector space.
+SCOPE - bucket 2 (stub-as-a-tool): the stub is incidental. The two
+malformed-tools-list cases fail before anything is embedded and are bucket 1.
+Measured by `tools/buckets.py`. Tool resolution and mount gating are
+independent of the vector space.
 """
 
 import io

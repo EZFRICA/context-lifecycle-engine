@@ -3,12 +3,14 @@
 The suite must run offline and deterministically: the default embedder is the
 CachedEmbedder over committed vectors, a cache miss is an error (never a silent
 recompute), and NO test module imports RealEmbedder (the network+key path).
-This is a TEST, not a convention — an untested rule drifts on the first rushed
+This is a TEST, not a convention - an untested rule drifts on the first rushed
 session.
 
-SCOPE — bucket 2 (stub-as-a-tool): these pin the embedder-swap CONTRACT
-(provenance, cache-miss-is-error, cross-space comparison raises, cache
-integrity). The contract is not tied to any one vector space.
+SCOPE - bucket 1 for the six contract checks that compute no vector, bucket 2
+for the four that embed (the stub for the swap and cross-space cases, the cache
+for the miss). Measured by `tools/buckets.py`. They pin the embedder-swap
+CONTRACT - provenance, cache-miss-is-error, cross-space comparison raises, cache
+integrity - which is not tied to any one vector space.
 """
 
 import json
@@ -64,12 +66,12 @@ def test_stub_embedder_carries_its_id() -> None:
     assert StubEmbedder().embedder_id == "stub:hashed64"
 
 
-# ── R9c: cache integrity — a silent batching collapse must FAIL the suite ───
+# ── R9c: cache integrity - a silent batching collapse must FAIL the suite ───
 
 def test_vector_cache_has_one_distinct_vector_per_text() -> None:
     """The first generation silently collapsed 190 texts to 2 vectors, because
     gemini-embedding-2 treats a list of contents as ONE multi-part document.
-    Nothing raised — it was caught by eyeballing the file size. This makes that
+    Nothing raised - it was caught by eyeballing the file size. This makes that
     class of failure a test: count must match, and distinct texts must not
     share a vector."""
     from cle.detect.embedders import VECTOR_CACHE
@@ -152,7 +154,7 @@ def _image_built_in_space(embedder_id: str):
     )
     # The runtime embedder must DECLARE the space the spec claims. Without
     # this helper ran the stub while labelling the trigger `google:...`, i.e. it
-    # built a knowingly mislabelled spec — tolerated when the label was inert
+    # built a knowingly mislabelled spec - tolerated when the label was inert
     # metadata, and now refused by the identity gate on the capture path
     # (replay.py). The invariant under test is unchanged: provenance is part of
     # agent identity, so two spaces give two hashes. Only the lie is gone.
@@ -162,14 +164,14 @@ def _image_built_in_space(embedder_id: str):
         WHY THIS DISSOCIATION IS ALLOWED HERE AND NOWHERE ELSE. Everywhere in
         `cle/`, declaring a space you did not compute in is the defect the
         contract exists to stop: the number that comes back looks fine and means
-        nothing. Here the vectors are never compared across spaces — both images
+        nothing. Here the vectors are never compared across spaces - both images
         are built independently, and the assertion is on their HASHES. What is
         under test is that provenance participates in agent identity, so the
         arithmetic is irrelevant and only the label matters.
 
         Read this as the exception it is, not as the sanctioned pattern. If a
         future test needs two spaces whose vectors are actually COMPARED, it must
-        use two real embedders — this class would make the comparison silently
+        use two real embedders - this class would make the comparison silently
         meaningless, which is precisely what the contract forbids.
         """
 
