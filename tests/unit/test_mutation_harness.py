@@ -219,3 +219,24 @@ def test_baseline_failures_are_subtracted_from_a_verdict(monkeypatch, tmp_path) 
         "a failure that predates the mutation was credited to the guard"
     )
     assert victim.read_text() == original
+
+
+# ── an inner pytest that did not finish is never read as "unguarded" ────────
+
+def test_an_inner_run_killed_before_its_summary_is_a_harness_failure() -> None:
+    """No FAILED line because the run was killed, not because nothing failed.
+
+    A mutant that looped forever was once reported UNGUARDED: the inner pytest
+    died with no summary, and an empty summary reads as "every test passed".
+    """
+    from tools.mutate import abnormal_exit
+
+    assert abnormal_exit(-9, ((), ())) == ((), ("<exit -9>",))
+    assert abnormal_exit(2, ((), ())) == ((), ("<exit 2>",))
+
+
+def test_a_normal_exit_keeps_its_verdict() -> None:
+    from tools.mutate import abnormal_exit
+
+    assert abnormal_exit(0, ((), ())) == ((), ())
+    assert abnormal_exit(1, (("t::x",), ())) == (("t::x",), ())
