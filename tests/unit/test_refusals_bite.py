@@ -11,6 +11,7 @@ down, also with exit code 1. A test that checked only the code would stay green
 over a guard that no longer exists.
 """
 
+import re
 from pathlib import Path
 
 import pytest
@@ -50,13 +51,23 @@ def spec(tmp_path) -> Path:
     return path
 
 
+#: What Rich adds when Typer decides it writes to a terminal: colour codes, and
+#: the box a usage error is drawn in. Typer decides that on its own when
+#: `GITHUB_ACTIONS`, `FORCE_COLOR` or `PY_COLORS` is set, so the same refusal
+#: read differently in CI than on a laptop: `--store` was highlighted INSIDE the
+#: message, and a long message wraps inside the box.
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+_BOX = str.maketrans("", "", "│╭╮╰╯─")
+
+
 def _said(result) -> str:
+    """Everything the command printed, as plain text with its spacing collapsed."""
     text = result.output or ""
     try:
         text += result.stderr or ""
     except ValueError:  # a click that does not capture stderr separately
         pass
-    return text
+    return " ".join(_ANSI.sub("", text).translate(_BOX).split())
 
 
 def _refused(result, code: int, message: str) -> None:

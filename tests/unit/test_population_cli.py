@@ -20,6 +20,7 @@ from typer.testing import CliRunner
 from cle.cli.main import app
 from cle.lifecycle.topology import current_agents
 from cle.store.backends import open_store
+from tests.unit.test_refusals_bite import _said  # plain text, whatever Rich decides
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 HISTORY = ROOT / "examples" / "prompt_history_adversarial.jsonl"
@@ -142,4 +143,4 @@ def test_population_refuses_an_unknown_namer(instances, tmp_path) -> None:
     result = CliRunner().invoke(app, ["population", str(instances[0]), "--namer", "bogus",
                                       "--out", str(tmp_path / "out")])
     assert result.exit_code == 2
-    assert "--namer must be one of" in result.output + (result.stderr or "")
+    assert "--namer must be one of" in _said(result)
