@@ -43,10 +43,8 @@ def specs(tmp_path_factory) -> Path:
     """
     import make_fixture
 
-    out = tmp_path_factory.mktemp("specs")
-    with pytest.MonkeyPatch.context() as patch:
-        patch.setattr(make_fixture, "EXAMPLES", out)
-        make_fixture.main()
+    out = tmp_path_factory.mktemp("specs") / "generated"  # absent: main() creates it
+    make_fixture.main(out)
     return out
 
 

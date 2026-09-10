@@ -255,7 +255,7 @@ def _detect(messages: list[Message], config: DetectorConfig):
     return episodes, baseline, detected
 
 
-def _write_candidate(spec: Cluster, centroid: tuple, signal) -> Path:
+def _write_candidate(spec: Cluster, centroid: tuple, signal, out: Path) -> Path:
     trigger = {
         "centroid": [round(v, 6) for v in centroid],
         "embedder_id": FIXTURE_EMBEDDER.embedder_id,
@@ -266,19 +266,22 @@ def _write_candidate(spec: Cluster, centroid: tuple, signal) -> Path:
     doc = {
         "name": spec.name,
         "detected_from": {"signal": signal.kind, "occurrences": signal.occurrences,
-                          "episodes": len(spec.followups) and spec.occurrences},
+                          "episodes": spec.occurrences},
         "components": list(spec.components),
         "trigger": trigger,
     }
-    path = EXAMPLES / f"{spec.name}_agent.yaml"
+    path = out / f"{spec.name}_agent.yaml"
     path.write_text(yaml.safe_dump(doc, sort_keys=False))
     return path
 
 
-def main() -> None:
+def main(out: Path = EXAMPLES) -> None:
+    """Write every artifact under `out`: `examples/` when run as a script, a
+    temporary directory when a test needs the specs without touching the tree."""
+    out.mkdir(parents=True, exist_ok=True)
     config = DetectorConfig()
     messages = synthetic_history()
-    (EXAMPLES / "prompt_history.jsonl").write_text(
+    (out / "prompt_history.jsonl").write_text(
         "\n".join(json.dumps(m.model_dump(mode="json")) for m in messages) + "\n")
 
     episodes, baseline, detected = _detect(messages, config)
@@ -293,7 +296,7 @@ def main() -> None:
         occ = signal.occurrences if signal else len(eps)
         note = ""
         if spec and signal:
-            _write_candidate(spec, centroid, signal); emitted += 1
+            _write_candidate(spec, centroid, signal, out); emitted += 1
             note = f"-> {spec.name}_agent.yaml"
         elif spec and not signal:
             note = "(below threshold - no candidate)"
@@ -305,7 +308,7 @@ def main() -> None:
     # 2 reworded recap episodes, so weekly_recap captures 3/5 = 60% (topology
     # competition, BLUEPRINT §3.2) - a non-trivial capture_rate.
     status_centroid = FIXTURE_EMBEDDER.embed(REWORD)
-    (EXAMPLES / "status_report_agent.yaml").write_text(yaml.safe_dump({
+    (out / "status_report_agent.yaml").write_text(yaml.safe_dump({
         "name": "status_report",
         "detected_from": {"authored": "human", "note": "competes with weekly_recap"},
         "components": ["#blocks/recap_format", "#blocks/team_context"],
@@ -315,7 +318,7 @@ def main() -> None:
     print("wrote status_report_agent.yaml (hand-authored incumbent for capture competition)")
 
     adversarial = adversarial_history()
-    (EXAMPLES / "prompt_history_adversarial.jsonl").write_text(
+    (out / "prompt_history_adversarial.jsonl").write_text(
         "\n".join(json.dumps(m.model_dump(mode="json")) for m in adversarial) + "\n")
     print(f"\nwrote {emitted} candidate agent(s) + prompt_history[_adversarial].jsonl "
           f"({len(adversarial)} msgs with bridge)")
