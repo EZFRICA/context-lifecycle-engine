@@ -47,7 +47,8 @@ because it is semantically close.
   `cost_ratio 0.95`; the engine logs `would: hold` (promote rule: cost ≤ 0.7 and
   occurrences ≥ 3). The divergence is the calibration set for going live.
 - **Revalidation**: `gemini-3.5-flash-lite → gemini-3.6-flash` moves **5/5
-  probes** → `revalidation_failed`, auto-demote to trial. Deliberately
+  probes** → `revalidation_failed`, auto-demote to trial; `gemini-3.6-flash →
+  gemini-3.8-flash` moves 5/5 as well (2026-09-10, one run each). Deliberately
   conservative: a *better* model demotes too, because the fingerprint is a
   change detector, not a quality detector. Only extracted **text** is hashed, so
   proof does not expire on volatile response metadata.

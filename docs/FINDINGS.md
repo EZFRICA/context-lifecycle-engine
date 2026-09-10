@@ -72,7 +72,7 @@ Pinning key: `(2026-09-02, eca74ca+wt, google:gemini-embedding-2:768 @ 0.775,
 stub-model-1)`.
 
 ```bash
-python examples/bigquery/prepare_states.py && python examples/bigquery/run_state.py stackoverflow
+uv run python examples/bigquery/prepare_states.py && uv run python examples/bigquery/run_state.py stackoverflow
 ```
 
 ---
@@ -101,8 +101,8 @@ Pinning key: `(2026-09-01, eca74ca+wt, n/a, n/a)` for the 0.34%;
 for the 29/40, on a 40 user cohort.
 
 ```bash
-python examples/bigquery/wildchat_density.py
-python examples/bigquery/run_state.py wildchat
+uv run python examples/bigquery/wildchat_density.py
+uv run python examples/bigquery/run_state.py wildchat
 ```
 
 ---
@@ -125,8 +125,8 @@ Pinning key: `(2026-08-30, eca74ca+wt, google:gemini-embedding-2:768 @ 0.775,
 stub-model-1)`.
 
 ```bash
-python examples/make_multiuser.py && python examples/density_probe.py
-python examples/criterion_probe.py
+uv run python examples/make_multiuser.py && uv run python examples/density_probe.py
+uv run python examples/criterion_probe.py
 ```
 
 ---
@@ -158,7 +158,7 @@ would see ~0.55 everywhere and conclude nothing.**
 Pinning key: `(2026-09-02, eca74ca+wt, bigquery:gemini-embedding-001:768, n/a)`.
 
 ```bash
-python examples/bigquery/embed_pairs.py && python examples/bigquery/intent_bench.py
+uv run python examples/bigquery/embed_pairs.py && uv run python examples/bigquery/intent_bench.py
 ```
 
 ---
@@ -179,7 +179,7 @@ a 15.4 Ko witness table takes a median **1 363 ms** and bills **10.5 Mo**.
 Pinning key: `(2026-09-01, eca74ca+wt, bigquery:gemini-embedding-001:768, n/a)`.
 
 ```bash
-python examples/bigquery/vector_search_bench.py
+uv run python examples/bigquery/vector_search_bench.py
 ```
 
 ---
@@ -212,7 +212,7 @@ Pinning key: `(2026-09-02, eca74ca+wt, bigquery:gemini-embedding-001:768,
 gemini-3.6-flash for facet generation)`.
 
 ```bash
-python examples/bigquery/make_facets.py && python examples/bigquery/intent_bench.py
+uv run python examples/bigquery/make_facets.py && uv run python examples/bigquery/intent_bench.py
 ```
 
 ---
@@ -222,7 +222,7 @@ python examples/bigquery/make_facets.py && python examples/bigquery/intent_bench
 §6 measures facets on intent components. Level 2's task is different: read many
 independent topologies and decide whether two of them carry the SAME recurring
 intent. The negative is two strangers' unrelated intents, not two questions one
-person asked a week apart — and the negative turns out to decide the answer.
+person asked a week apart - and the negative turns out to decide the answer.
 
 Ground truth by construction: `make_multiuser.py` partitions the GDG corpus into
 12 synthetic users and every message carries its intent in `thread_id`. A
@@ -250,7 +250,7 @@ across users it is incidental. If facets are used, redact.
 
 **UPPER BOUND, NOT AN ESTIMATE, and it is not uniform.** `make_multiuser.py`
 states the bound: one generator, so two users sharing an intent sit closer than
-two real users would. That inflation favours the text methods specifically — raw
+two real users would. That inflation favours the text methods specifically - raw
 text from one generator shares surface vocabulary, which a facet abstracts away.
 On real users the gap should narrow, by an unmeasured amount.
 
@@ -258,8 +258,111 @@ Pinning key: `(2026-09-06, b9d9556+wt, bigquery:gemini-embedding-001:768,
 gemini-2.5-flash for facet generation)`.
 
 ```bash
-python examples/make_multiuser.py --users 12 --prefix ph12
-python examples/bigquery/facet_crossuser_bench.py
+uv run python examples/make_multiuser.py --users 12 --prefix ph12
+uv run python examples/bigquery/facet_crossuser_bench.py
+```
+
+---
+
+## 6b-bis. On real users, the ordering reverses
+
+§6b measured facets against raw text on 12 SYNTHETIC users and found raw text 15
+points ahead. That corpus states its own bound - one generator, so two users
+sharing an intent sit closer than two real users would, and the inflation
+favours the text methods specifically.
+
+Repeating the comparison on **40 real WildChat users** (130 clusters, 8,128
+cross-user pairs, facets generated once by `make_facets.py`) inverts it:
+
+| method | median | p99 | pairs ≥ 0.7 | ≥ 0.8 |
+|---|---:|---:|---:|---:|
+| raw episodes, embedded | 0.520 | 0.660 | **19** | 3 |
+| raw episodes, free word overlap | 0.023 | 0.111 | **0** | 0 |
+| facet, embedded | 0.563 | 0.716 | **135** | 5 |
+| facet after mechanical redaction | 0.563 | 0.716 | **135** | 5 |
+
+**Facets surface 7x more candidate cross-user matches than raw text.** The
+synthetic bench predicted the direction and understated the size: 40 strangers do
+not share a generator, so their raw-text similarity is dominated by style and
+register while the facet describes the task underneath.
+
+**This is not recall, and the distinction is the point.** Nobody has labelled
+which two real users share an intent, so 135 pairs above 0.7 is 135 candidates,
+not 135 correct matches. Facets are also the method that collapses two
+neighbouring tasks into one generic sentence, and over-merging produces this
+number too. The two readings are indistinguishable without cross-user ground
+truth on real users, which does not exist in this repository.
+
+**Free lexical overlap is not in the race here.** Median 0.023, and not one pair
+of 8,128 reaches 0.7 - against a Stack Overflow bench where the same baseline beat
+every embedding at a 1% budget. It grips when two texts say the same narrow thing
+in the same words; across 40 strangers writing in several languages, there is
+nothing to grip.
+
+**Redaction is free on this corpus for a different reason than on the last one.**
+`facet` and `facet-redacted` agree to four decimals: real WildChat facets carry
+almost no proper nouns, so the mechanical guard removes nothing. It still earns
+its place - the property is that it CANNOT leak, not that it usually does not.
+
+Pinning key: `(2026-09-06, 7231fec+wt, bigquery:gemini-embedding-001:768, facets
+generated earlier by make_facets.py)`.
+
+```bash
+uv run python dashboard_level_2/export_real.py
+```
+
+---
+
+## 6b-ter. Stack Overflow across authors: real users AND real labels
+
+§6b measured on synthetic users; §6b-bis on real users without labels. Stack
+Overflow has both, and this repository had the data all along without using it:
+**662,401 duplicate closures link questions written by DIFFERENT authors.** A
+moderator ruling that two strangers asked the same question is exactly level 2's
+positive. `corpus_a_selfdup` kept only the 15,026 same-author pairs, because it
+was built for the detector, which sees one user at a time.
+
+Controls come from the same tags the positives use, by different authors, with no
+duplicate link - so the bench measures *same intent* against *merely same
+subject*. 3,000 pairs, 5,808 titles, 5,808 facets.
+
+| method | @10.1% FP | @5% FP | @1% FP | AUC |
+|---|---:|---:|---:|---:|
+| title-jaccard | 39.2% | 28.5% | 14.3% | 0.6929 |
+| title-cosine | **64.9%** | **57.5%** | **37.9%** | 0.8623 |
+| facet-cosine | 54.9% | 44.0% | 21.9% | 0.8174 |
+| facet-redacted | 54.8% | 40.7% | 20.3% | 0.8103 |
+
+**This settles what §6b-bis left open.** WildChat showed facets surfacing 135
+cross-user pairs above 0.7 against raw text's 19, and two readings fitted: facets
+recover structure raw text cannot see, or facets over-merge. On real users with
+real rulings, raw text beats facets at every budget. Surfacing more candidates
+was not finding more matches.
+
+Both labelled cross-user benches now agree on the ordering:
+
+| corpus | users | text | facet | gap |
+|---|---|---:|---:|---:|
+| GDG, synthetic | 12, one generator | 90.7% | 71.4% | 19.3 |
+| Stack Overflow | thousands of real authors | 64.9% | 54.9% | 10.0 |
+
+The synthetic corpus overstated the gap, as its own caveat predicted. It did not
+invert it.
+
+**No threshold inversion on this corpus**, and it is the first here without one:
+free word overlap is last at 10.1%, at 5% and at 1%. Two questions the same person
+asked a week apart are often near-restatements, which is what made lexical overlap
+competitive in §1. Two strangers asking the same thing rarely reuse each other's
+words - 39.2% against 62.9% on the synthetic corpus.
+
+The absolute level is lower than §6b throughout (64.9% against 90.7%) because the
+control is harder: same-tag pairs by different authors, not a derangement.
+
+Pinning key: `(2026-09-09, 7231fec+wt, bigquery:gemini-embedding-001:768,
+gemini-2.5-flash for facet generation)`.
+
+```bash
+uv run python examples/bigquery/facet_crossuser_so_bench.py
 ```
 
 ---
@@ -275,7 +378,7 @@ Three independent datasets in this project, one behaviour.
 | intents, across users | 12.8 points behind facets | **22.8 points ahead** |
 
 Same corpus, same pairs, same protocol in each row; only the error budget moves.
-An aggregate rank metric hides this completely — AUC puts the embedding first in
+An aggregate rank metric hides this completely - AUC puts the embedding first in
 every one of the three.
 
 The consequence for level 2 is a design order, not a preference: **fix the error
@@ -284,9 +387,96 @@ deployed at a strict one is not a slightly worse choice, it is sometimes the
 wrong one.
 
 ```bash
-python examples/bigquery/model_bench.py          # row 1
-python examples/bigquery/facet_scale_bench.py    # row 2
-python examples/bigquery/facet_crossuser_bench.py  # row 3
+uv run python examples/bigquery/model_bench.py          # row 1
+uv run python examples/bigquery/facet_scale_bench.py    # row 2
+uv run python examples/bigquery/facet_crossuser_bench.py  # row 3
+```
+
+---
+
+## 6d. Discovering intents without labels: what a calibrated threshold does to real corpora
+
+Every section above measures against known positives. This one has none: it runs
+Clio's stages 2–4 over corpora where nobody has said which users share an intent,
+which is the situation a population layer is actually in.
+
+The threshold is the one calibrated on the only corpus with planted intents -
+0.78, chosen by sweep at purity 76% / completeness 80% / F 0.782. Applied
+unchanged to real corpora it does this:
+
+| corpus | users | groups | singletons | named | families @0.74 |
+|---|---:|---:|---:|---:|---:|
+| Stack Overflow, cross-author | real | 367 | **345** | 6 | 310 |
+| WildChat | 40 real | 116 | **105** | **0** | 71 |
+| GDG, synthetic, labelled | 12 | 9 | 2 | 4 | 1 |
+
+**Three things this says.**
+
+**1. The share of singletons is a property of the corpus at a threshold, not a
+verdict on the system.** At 0.78, 94.0% of Stack Overflow groups and 90.5% of
+WildChat groups are singletons. That is the 0.34%-of-users figure (§2) arriving
+from the other end: most real cross-user clusters have no counterpart among
+strangers. The threshold is a parameter (`cle population --threshold`, the
+first argument of `discover_intents.py`), and another corpus or another value
+gives another share. What these runs establish is that the stages run end to end
+on real data, and that the floor and the screen do what they are for.
+
+**2. The k-anonymity floor bites, visibly, on the corpus that most needed it.**
+WildChat names **nothing**. Two of its groups were large enough to describe and
+came from **two distinct people each**, so the floor suppressed both names. The
+group keeps its id and its position on the plot; only the vocabulary is
+withheld. This is BLUEPRINT §7c's *"a single global floor is insufficient, and
+is known to be"* observed rather than predicted - and it is the floor working,
+not failing.
+
+**3. Clio's stage 4 buys much less than the corpora suggest.** 367 groups reduce
+to 310 families (**15.5% fewer**) and 116 to 71 (**38.8% fewer**). The two
+numbers are not the same story and neither is "almost nothing": WildChat's
+reduction is real, Stack Overflow's is marginal. What both share is that the
+reduction is bounded by singletons - a group of one has nothing to be grouped
+with, and 94.0% of Stack Overflow groups and 90.5% of WildChat groups are
+singletons. Stage 4 is doing what it can with what stage 2 left it. The
+family threshold could not be calibrated against truth - no corpus here has a
+labelled hierarchy - so it was chosen structurally, on the rule *reduce the count
+without one family swallowing the corpus*:
+
+| gap | threshold | SO families (largest) | WildChat families (largest) |
+|---:|---:|---|---|
+| 0.02 | 0.76 | 337 (16) | 83 (23) |
+| **0.04** | **0.74** | **310 (31)** | **71 (33)** |
+| 0.06 | 0.72 | 271 (51) | 45 (58) |
+| 0.10 | 0.68 | 155 (74) | 10 (**106**) |
+
+At 0.10 WildChat puts 106 of its 116 groups in **one** family. That is not a
+hierarchy, it is a collapse, and it is why the chosen value is the conservative
+end of the sweep rather than the one that reduces most.
+
+**A non-measurement that looks like a result.** On WildChat the `facet` and
+`facet-redacted` rows are identical to four decimals at every statistic -
+median 0.5631, p99 0.7156, 135 pairs ≥ 0.7. Not a bug: mechanical redaction
+changed **0 of 130** WildChat facets, so the two rows embed the same strings.
+Read carelessly this says *redaction is free*; what it says is that this corpus
+never exercised it. Redaction does move the number on both labelled corpora
+(Stack Overflow 54.3 → 54.8, GDG 72.1 → 69.3, in opposite directions). Invariant
+7 of the contract, arriving unannounced in a table.
+
+**What this does not establish.** The naming step runs one frozen generation, and
+generation is not reproducible run to run (§7 below), so the six Stack Overflow
+names and the four GDG names are one draw, not a stable vocabulary. Purity is
+computable only on GDG (35/46, 76%) because it is the only corpus with planted
+intents; the two real corpora have no accuracy figure here at all, and inventing
+one is the failure this file exists to avoid.
+
+`discover_intents.py` runs the engine's `cle.population` stages (grouping,
+floor, screen, hierarchy); only the embedding and the namer run on BigQuery. Run
+through them, every figure in the table above and the GDG purity reproduced.
+
+Pinning key: `(2026-09-10, level2-facet-grouping-bench+wt,
+bigquery:gemini-embedding-001:768, threshold 0.78 / family 0.74)`.
+
+```bash
+uv run python dashboard_level_2/discover_intents.py                  # all three views
+uv run python dashboard_level_2/discover_intents.py 0.78 crossuser_view   # one view
 ```
 
 ---
@@ -306,10 +496,39 @@ The **generation** model is a different story: facets generated at T=0 vary
 between runs, which is why every facet figure above is measured on one frozen
 generation and says so.
 
-Pinning key: `(2026-09-02, eca74ca+wt, google:gemini-embedding-2:768, n/a)`.
+**Measured, not asserted.** The cross-user bench was run **five** times over the
+same 46 clusters, same corpus, same protocol. Recall at a matched false-positive
+rate, facet-redacted. Run 4 is the generation the committed
+`dashboard_level_2/data/crossuser_view.json` carries and the board renders; run 5
+was drawn afterwards as a check and did not replace it:
+
+| budget | run 1 | run 2 | run 3 | run 4 | run 5 | spread |
+|---|---:|---:|---:|---:|---:|---:|
+| 10.1% FP | 75.0 | 76.4 | 71.4 | **69.3** | 74.3 | 7.1 points |
+| 1% FP | 32.1 | 27.9 | 18.6 | **23.6** | 30.0 | **13.5 points** |
+| the text baseline, same runs | 90.7 | 90.7 | 90.7 | **90.7** | 90.7 | identical to the decimal |
+
+Run 5 landed inside the range the first four had already drawn at both budgets,
+which is the useful thing about it: five draws have not widened the spread, so
+the 7.1 and 13.5 are starting to look like the size of the effect rather than an
+artefact of too few samples. The text baseline reproduced to the decimal a fifth
+time.
+
+**The spread depends on the error budget chosen, and that is not a defect in
+itself.** It is 7.1 points at 10.1% false positives and 13.5 at 1%: a property of
+the operating point, read at the budget whoever deploys the layer sets. What it
+does require is that a deployment freeze its facets once and reuse them, so a
+lifecycle decision is never re-rolled by a new draw - which the engine does by
+construction, since a facet is generated at the agent's birth and never
+regenerated (`docs/CAPABILITIES.md` §12).
+
+Pinning key: `(2026-09-02, eca74ca+wt, google:gemini-embedding-2:768, n/a)` for
+the determinism block; `(2026-09-08, f39c631+wt,
+bigquery:gemini-embedding-001:768, gemini-flash @ T=0)` for the three runs.
 
 ```bash
-python examples/bigquery/space_identity.py
+uv run python examples/bigquery/space_identity.py          # the determinism block
+uv run python examples/bigquery/facet_crossuser_bench.py   # one run of the three; BILLS
 ```
 
 ---
@@ -333,7 +552,7 @@ frozen cache vs gemini-embedding-001 : 0.040084
 Reproduce the second line with:
 
 ```bash
-python examples/bigquery/space_identity.py
+uv run python examples/bigquery/space_identity.py
 ```
 
 which re-measures the comparison over 20 texts and reports the distribution
@@ -368,9 +587,12 @@ does not go through BigQuery.
   moderator closing one question as a duplicate of another is a judgment the
   detector never sees). Nothing plays that role for whether a demotion was
   correct, so lifecycle figures show the machinery running, not deciding well.
-- **Level 2 does not exist.** Nothing here aggregates across more than one
-  topology history. The closed vocabulary, the embedding key and the provenance
-  fields are necessary-condition work, not aggregation: no figure here is a
-  population figure.
+- **No figure here aggregates topology histories.** §6d does group real users
+  with each other, so this file now carries population figures in the corpus
+  sense. It carries none in the engine sense: that work reads generated facets
+  and its own exports, never `topology.yaml`, and lives entirely outside `cle/`.
+  The closed vocabulary, the embedding key and the provenance fields remain
+  necessary-condition work - the conditions under which aggregating topologies
+  would be safe, not an instance of it.
 
 See `docs/METRICS.md` for fixture era numbers, `docs/CAPABILITIES.md` for components.

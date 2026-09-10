@@ -7,7 +7,7 @@ __pycache__/
 dist/
 *.egg-info/
 # .claude/ holds BOTH shared project context and personal local state.
-# The skills and the reviewer agent are part of the repo — a clone without
+# The skills and the reviewer agent are part of the repo - a clone without
 # them gets a different reviewer and different contracts. settings.local.json
 # is per-developer (accumulated permission grants) and stays out.
 .claude/*
@@ -38,13 +38,13 @@ examples/*_agent.yaml
 # consented for RESEARCH; redistributing them from a public repository is not a
 # decision this project gets to make. Stack Overflow material is public, but it
 # is derived data that any run regenerates, so it is ignored on the same rule
-# rather than carved out — a narrower rule is one more thing to get right.
+# rather than carved out - a narrower rule is one more thing to get right.
 #
 # Nothing here was ever committed. The exposure was that a single `git add -A`
 # would have indexed all of it.
 examples/bigquery/data/
 
-# R36 task 0.b — the same exposure, one directory over. `prepare_states.py`
+# R36 task 0.b - the same exposure, one directory over. `prepare_states.py`
 # writes the CLI-shaped histories next to the corpus, not inside it, so the
 # rule above did not reach them: `history_wildchat.jsonl` is 3.5 Mo of raw
 # WildChat prompts, untracked and NOT ignored. R34's own audit had certified
@@ -55,7 +55,7 @@ examples/bigquery/data/
 # private one is a rule that misses the next one.
 examples/bigquery/states/
 
-# R36 task 1.b — probe fixtures, GENERATED, not corpus.
+# R36 task 1.b - probe fixtures, GENERATED, not corpus.
 # `make_multiuser.py` partitions the synthetic GDG corpus into N users, one
 # oplog each (R25 task 0, R26 tasks 1a-1c). 68 files, 4.8 Mo, all reproducible
 # by rerunning that script. Committing them would be committing the output of a
@@ -71,7 +71,7 @@ examples/ph[0-9]*_manifest.json
 examples/prompt_history_user[0-9]*.jsonl
 examples/prompt_history_manifest.json
 
-# R36 — working files, not deliverables.
+# R36 - working files, not deliverables.
 # The run journals record how each measurement was obtained; the published
 # figures already carry their reproduction command (docs/FINDINGS.md), so a
 # reader reproduces the result instead of reading how it was reached.
@@ -99,3 +99,7 @@ docs/VALIDATION.md
 # numbers to drift. Regenerate or edit them freely; nothing in the repo reads
 # them.
 blog/
+
+# How the system got here: history and legacy. Every tracked document describes
+# the code as it stands; this is the one file allowed to narrate the past.
+EVOLUTION.md
