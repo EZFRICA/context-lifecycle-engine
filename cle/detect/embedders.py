@@ -3,20 +3,20 @@
 CLE need (BLUEPRINT §9 decision 2, extended): clustering embeds episode
 openers into a vector space; the centroids that become agent triggers are
 only meaningful WITHIN the space that produced them. So an embedder is a
-substrate exactly like the agents' model is — and swapping it invalidates
+substrate exactly like the agents' model is - and swapping it invalidates
 centroids exactly as a model swap invalidates a `model_fingerprint`, one
 layer deeper (this one touches agent identity). Every vector therefore
 carries the provenance of the space that made it (`embedder_id`), and the
-suite runs OFFLINE against frozen vectors — never the network.
+suite runs OFFLINE against frozen vectors - never the network.
 
 Three implementations:
-  * RealEmbedder   — the live substrate (google-genai). Used ONLY by the
+  * RealEmbedder - the live substrate (google-genai). Used ONLY by the
     offline cache generator; importing it from a test is a banned dependency
     on the network + a key (asserted in tests/unit/test_embedder_provenance).
-  * CachedEmbedder — a pure dict lookup over committed vectors. THE SUITE
+  * CachedEmbedder - a pure dict lookup over committed vectors. THE SUITE
     DEFAULT. A cache miss is an ERROR (CacheMissError), never a silent
-    recompute — a missing vector means the fixtures and the cache diverged.
-  * StubEmbedder   — the deterministic bag-of-hashed-tokens embedder (the
+    recompute - a missing vector means the fixtures and the cache diverged.
+  * StubEmbedder - the deterministic bag-of-hashed-tokens embedder (the
     v1 substrate), for unit tests that use synthetic text not in any cache.
 
 Vectors are L2-normalized (or zero), so `cosine` is the dot product.
@@ -37,7 +37,7 @@ from cle.batch_guard import assert_batch_varied, assert_embeddable, assert_unit_
 from cle.detect.clusters import HashedTokenEmbedder, Vector
 
 # The frozen substrate for the realistic fixtures (user-selected in the
-# embedder-upgrade run). Provenance is provider:model:dim — there is NO
+# embedder-upgrade run). Provenance is provider:model:dim - there is NO
 # separate model_version: the google-genai embed response exposes no version
 # signal distinct from the id, and a placeholder would give false assurance.
 GEMINI_EMBED_MODEL = "gemini-embedding-2"
@@ -62,7 +62,7 @@ VECTOR_CACHE = Path(
 
 
 class CacheMissError(KeyError):
-    """A text was requested that is not in the committed vector cache — the
+    """A text was requested that is not in the committed vector cache - the
     fixtures and the cache have diverged. Never recompute silently."""
 
 
@@ -83,7 +83,7 @@ class SpaceMismatchError(Exception):
 
 def cache_key(embedder_id: str, text: str) -> str:
     # Keyed by (embedder_id, text): the SAME text under a different embedder
-    # is a different point in a different space, so it gets a different key —
+    # is a different point in a different space, so it gets a different key -
     # a model change makes every key miss rather than silently reuse stale
     # vectors.
     return hashlib.sha256(f"{embedder_id}\x00{text}".encode("utf-8")).hexdigest()
@@ -119,7 +119,7 @@ class StubEmbedder(HashedTokenEmbedder):
 
 
 class CachedEmbedder:
-    """Pure dict lookup over frozen vectors — the offline suite default."""
+    """Pure dict lookup over frozen vectors - the offline suite default."""
 
     def __init__(self, vectors: dict[str, Vector], embedder_id: str) -> None:
         self._vectors = vectors
@@ -146,7 +146,7 @@ class CachedEmbedder:
 
     def embed(self, text: str) -> Vector:
         # Same guard offline. Nothing is billed here, but without it an empty
-        # opener surfaces as `CacheMissError` — which names the wrong defect and
+        # opener surfaces as `CacheMissError` - which names the wrong defect and
         # sends the reader to regenerate a cache that is not the problem.
         assert_embeddable(text, where="CachedEmbedder.embed")
         key = cache_key(self.embedder_id, text)
@@ -188,7 +188,7 @@ def call_with_backoff(call: Callable[[], Any]) -> Any:
 
     Without this the sample size of a live measurement is set by the quota
     rather than by the operator. Measured: comparing 186 cached vectors against
-    AI Studio lost 32 of them to 429s, and an immediate second pass lost 86 — so
+    AI Studio lost 32 of them to 429s, and an immediate second pass lost 86 - so
     the figure that came back described whatever survived the quota, and a rerun
     described something else.
 
@@ -201,21 +201,24 @@ def call_with_backoff(call: Callable[[], Any]) -> Any:
     that lived on the class could only ever be tested against a copy of itself.
     """
     delay = RETRY_BASE_SECONDS
-    for attempt in range(RETRY_ATTEMPTS):
+    # Every attempt but the last may retry; the last one's error propagates as
+    # it is, with no re-raise needed. Bounded by construction - no path loops
+    # forever - and with no trailing raise that no input could reach.
+    for _ in range(RETRY_ATTEMPTS - 1):
         try:
             return call()
         except Exception as error:
-            if not _is_rate_limit(error) or attempt == RETRY_ATTEMPTS - 1:
+            if not _is_rate_limit(error):
                 raise
             # Full jitter: a batch that backs off in lockstep re-collides on
             # every wave, so each caller waits somewhere in [0, delay].
             time.sleep(random.uniform(0.0, delay))
             delay = min(delay * 2, RETRY_MAX_SECONDS)
-    raise AssertionError("unreachable: the loop either returns or raises")
+    return call()
 
 
 class RealEmbedder:
-    """Live google-genai substrate — OFFLINE-ONLY (cache generation).
+    """Live google-genai substrate - OFFLINE-ONLY (cache generation).
 
     ~20 lines over the official SDK, no framework: the governance rule
     rejects pulling langchain for a single embed call.
@@ -281,7 +284,7 @@ class RealEmbedder:
         # Outbound, before the billed call.
         assert_embeddable(text, where="RealEmbedder.embed")
         # One content per call: gemini-embedding-2 treats a list of contents as
-        # ONE multi-part document (returns a single embedding), not a batch — so
+        # ONE multi-part document (returns a single embedding), not a batch - so
         # batching by content-list silently collapses N texts to 1 vector.
         result = call_with_backoff(
             lambda: self._client.models.embed_content(
@@ -314,7 +317,7 @@ EMBEDDER_KINDS = ("stub", "cached", "real")
 
 
 def open_embedder(kind: str | None = None):
-    """Select the embedder this instance runs detection on — ONE selection point.
+    """Select the embedder this instance runs detection on - ONE selection point.
 
     `kind` defaults to $CLE_EMBEDDER, itself defaulting to "stub", so existing
     state and existing invocations keep working untouched. The default is NOT
@@ -327,18 +330,18 @@ def open_embedder(kind: str | None = None):
     THREE kinds, because "real" is two different things and conflating them
     would hide which one is being paid for:
 
-      * stub   — bag-of-hashed-tokens. Free, deterministic, and a vector space
+      * stub - bag-of-hashed-tokens. Free, deterministic, and a vector space
         in which the contradiction taxonomy only *appears* to work (era A).
-      * cached — the REAL `gemini-embedding-2` geometry, read from the frozen
+      * cached - the REAL `gemini-embedding-2` geometry, read from the frozen
         247-vector cache. Free, offline, reproducible; a text outside the cache
         is a CacheMissError, never a silent recompute. This is real detection
         for the corpus the cache was built from.
-      * real   — live `gemini-embedding-2`. Works on ANY text and costs money
+      * real - live `gemini-embedding-2`. Works on ANY text and costs money
         per call. The only kind that can embed text nobody has embedded before.
 
     `cached` and `real` share one `embedder_id`, so a topology written under one
     is comparable with the other: the vectors are the same geometry, only the
-    delivery differs. That is deliberate — it is why the cache is worth having.
+    delivery differs. That is deliberate - it is why the cache is worth having.
     """
     kind = (kind or os.environ.get("CLE_EMBEDDER") or "stub").lower()
     if kind == "stub":
@@ -354,7 +357,7 @@ def open_embedder(kind: str | None = None):
 # CLE need (level-2 preparation): two instances running the SAME embedder at
 # 0.775 and at 0.72 do not birth the same agents from the same usage. A
 # population report that aggregates topologies from different configurations
-# measures its own instrumentation, not its population — the v1 failure mode
+# measures its own instrumentation, not its population - the v1 failure mode
 # transposed, and this time with no test suite to catch it.
 #
 # So the configuration is a KEY, not metadata: a topology history without it is
@@ -364,7 +367,7 @@ def open_embedder(kind: str | None = None):
 from pydantic import BaseModel  # noqa: E402
 
 # Where each threshold came from. A configuration whose calibration nobody can
-# name is not a configuration, it is a guess — so this is required, and the
+# name is not a configuration, it is a guess - so this is required, and the
 # honest answer for the stub is that it was never swept.
 CALIBRATION_PROVENANCE: dict[str, str] = {
     "stub:hashed64":
@@ -372,13 +375,13 @@ CALIBRATION_PROVENANCE: dict[str, str] = {
         "because identical openers repeat (docs/METRICS.md, era A)",
     GEMINI_EMBEDDER_ID:
         "swept 0.60-0.95 on the realistic fixtures; adopted on ONE independent "
-        "confirmation — the process-independent holdout, never consulted to pick "
+        "confirmation - the process-independent holdout, never consulted to pick "
         "it (docs/METRICS.md, era C). The in-sample GDG peak is NOT evidence.",
 }
 
 
 class EmbeddingConfig(BaseModel, frozen=True):
-    """The vector space a topology was produced in — its aggregation key."""
+    """The vector space a topology was produced in - its aggregation key."""
 
     embedder_id: str
     cluster_threshold: float
@@ -395,7 +398,7 @@ class UnknownCalibrationError(KeyError):
 
 
 def embedding_config_for(embedder: object) -> EmbeddingConfig:
-    """Derive the config from the embedder actually in use — never hand-written."""
+    """Derive the config from the embedder actually in use - never hand-written."""
     from cle.detect.clusters import cluster_threshold_for
     from cle.detect.episodes import DetectorConfig
 

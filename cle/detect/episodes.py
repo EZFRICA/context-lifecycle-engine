@@ -1,4 +1,4 @@
-"""Episode segmentation — silence threshold + explicit markers (v1, no BOCPD).
+"""Episode segmentation - silence threshold + explicit markers (v1, no BOCPD).
 
 Contract (replay-validation skill, BLUEPRINT §9 decision 1 as settled in the
 approved P1 plan):
@@ -13,11 +13,11 @@ approved P1 plan):
 `Message` carries two optional capability fields, both pure decor the
 detector may READ but never act on: `requires_tool` (the capability the
 task needed) and `tool_result` (the frozen environmental outcome, e.g.
-"no_slot"). No code path executes a tool or asserts a result correct —
+"no_slot"). No code path executes a tool or asserts a result correct -
 tool output is answer-quality territory, which replay never validates
 (invariant 5).
 
-PROVISIONAL — closure completion. The skill's two labels are contradictory
+PROVISIONAL - closure completion. The skill's two labels are contradictory
 on the no-marker cells (success is "explicit marker / no return" while
 abandoned is "no marker AND no return to cluster": a silent non-returning
 episode satisfies both). Completion implemented here, pending maintainer
@@ -46,7 +46,7 @@ Closure = Literal["success", "reformulated", "abandoned"]
 
 
 class DetectorConfig(BaseModel, frozen=True):
-    """Detector thresholds — config with article defaults; the cost knobs
+    """Detector thresholds - config with article defaults; the cost knobs
     are RELATIVE to the per-user baseline, never absolute."""
 
     silence_floor: timedelta = timedelta(minutes=30)
@@ -58,7 +58,12 @@ class DetectorConfig(BaseModel, frozen=True):
     # An episode whose cluster sees the user again within this window was
     # a failed attempt (reformulation), not a closure.
     reformulation_window: timedelta = timedelta(hours=72)
-    reformulation_cost_multiplier: float = 1.5
+    # At least 1. Below it, an episode costing exactly its cluster's median
+    # would classify as `abandoned` - "struggled, then vanished" applied to an
+    # ordinary episode - and replay's cost baseline could come out empty. The
+    # arithmetic that keeps replay's all-abandoned guard unreachable holds for
+    # every value this field accepts, not only for the default.
+    reformulation_cost_multiplier: float = Field(default=1.5, ge=1.0)
     # Cold start (replay-validation skill): observe silently below these.
     min_history: timedelta = timedelta(days=14)
     min_episodes: int = 20
@@ -95,7 +100,7 @@ class DetectorConfig(BaseModel, frozen=True):
     # (approved adjustment 3).
     directive_divergence_threshold: float = 0.35
     severe_divergence_threshold: float = 0.10
-    # Time partition — TOTAL by construction (approved adjustment 1):
+    # Time partition - TOTAL by construction (approved adjustment 1):
     # <= instability_window -> intra_cluster; >= temporal_evolution_gap ->
     # temporal; the middle band -> grey_zone, unstable by default. The
     # band width is a calibration parameter for real data.
@@ -106,7 +111,7 @@ class DetectorConfig(BaseModel, frozen=True):
     # measure cannot resolve contradiction from lexical noise: any verdict
     # placed inside a degenerate bin is arbitrary. Logged as
     # resolution:degenerate, NEVER blocking (a weak measurement must not
-    # masquerade as a strong verdict — PreEvidence != Evidence). A finer
+    # masquerade as a strong verdict - PreEvidence != Evidence). A finer
     # embedder spreads the band; the gain is then measurable.
     degenerate_band_width: float = 0.05
     degenerate_min_pairs: int = 10
@@ -120,12 +125,12 @@ class Message(BaseModel, frozen=True):
     text: str
     thread_id: str | None = None
     # Capability decor (CLE need: a candidate can match an intent yet lack
-    # the capability the task requires — capability-aware triggering needs
+    # the capability the task requires - capability-aware triggering needs
     # the episode to declare it). Optional; absent in tool-less domains.
     requires_tool: str | None = None
     # FROZEN environmental result (e.g. "no_slot"). The system may READ it
     # to classify divergence (world-state vs user contradiction); no code
-    # path ever executes a tool or asserts this value correct — tool
+    # path ever executes a tool or asserts this value correct - tool
     # output is answer-quality territory, which replay never validates
     # (invariant 5).
     tool_result: str | None = None
@@ -164,14 +169,14 @@ class Episode(BaseModel, frozen=True):
 
     @property
     def tool_results(self) -> tuple[str, ...]:
-        # Frozen environmental decor, in order — readable, never asserted.
+        # Frozen environmental decor, in order - readable, never asserted.
         return tuple(m.tool_result for m in self.messages if m.tool_result)
 
 
 def silence_threshold(gaps: Sequence[timedelta], config: DetectorConfig) -> timedelta:
     """Decision 1: 2x the user's median gap, floor 30 min.
 
-    Median, not mean — overnight and weekend gaps are outliers, not
+    Median, not mean - overnight and weekend gaps are outliers, not
     rhythm. Sparse histories (<20 gaps) sit on the floor rather than
     trusting a meaningless median.
     """
@@ -197,7 +202,7 @@ def _contains_success_marker(text: str, config: DetectorConfig) -> bool:
 class CoarseTimestampError(ValueError):
     """Timestamps are coarser than the events they order.
 
-    Loud on purpose. A silence-based segmenter fed zero gaps does not fail — it
+    Loud on purpose. A silence-based segmenter fed zero gaps does not fail - it
     returns a segmentation that looks right, which is how a corpus can be
     processed for a whole campaign before anyone notices the rule never fired.
     """
@@ -237,7 +242,7 @@ def segment(messages: Sequence[Message], config: DetectorConfig) -> list[Episode
                 f"{zero_share:.0%} of inter-message gaps are zero (bar: "
                 f"{config.max_zero_gap_share:.0%}); silence-based segmentation "
                 "cannot cut on this history. The timestamps are coarser than the "
-                "events — segment on an explicit boundary instead."
+                "events - segment on an explicit boundary instead."
             )
 
     threshold = silence_threshold(gaps, config)
@@ -272,12 +277,12 @@ def classify_closure(
     user_baseline: float,
     config: DetectorConfig,
 ) -> Closure:
-    """Label how an episode ended — see the PROVISIONAL note in the module
+    """Label how an episode ended - see the PROVISIONAL note in the module
     docstring for the completion this implements.
 
     `returned_to_cluster` is cluster knowledge (did the same user open
     another episode in the same cluster within the reformulation window?)
-    computed by the caller; `user_baseline` is yesterday's baseline —
+    computed by the caller; `user_baseline` is yesterday's baseline -
     using today's would be circular, since baselines exclude the abandoned
     episodes this function identifies.
     """
@@ -302,7 +307,7 @@ def cold_start_is_over(
     """Gate candidate detection on history depth (replay-validation skill).
 
     Under 14 days of history or 20 episodes the detector observes
-    silently — visible in `cle log` via the detector_observing line.
+    silently - visible in `cle log` via the detector_observing line.
     """
     history_span = now - messages[0].ts if messages else timedelta(0)
     if history_span >= config.min_history and len(episodes) >= config.min_episodes:
