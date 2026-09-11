@@ -4,7 +4,7 @@ WHY A SECOND SHAPE. The noise problem measured on the synthetic corpus is a
 `make_gdg_fixture.py` artefact: its background categories draw from banks of
 8-12 phrases, so a background cluster is the same sentence repeated verbatim
 (0.33 distinct openers, against 1.00 for task intents). Real data has none of
-that — 0 duplicate titles in 7,898 Stack Overflow questions. What is missing is
+that - 0 duplicate titles in 7,898 Stack Overflow questions. What is missing is
 a real corpus with PER-USER episode structure. WildChat has it: `hashed_ip` is
 the closest thing to a user, and each conversation is a thread of turns.
 
@@ -32,8 +32,8 @@ FOUR THINGS THE STRAIGHTFORWARD LOADER GETS WRONG:
 
 PRIVACY, stated because it is not obvious. WildChat carries `hashed_ip`,
 `state`, `country` and request headers alongside real user text. That is a
-quasi-identifier set. It is loaded here for MEASUREMENT only. Invariant 4 —
-a population level reads topology history, never user text — applies to
+quasi-identifier set. It is loaded here for MEASUREMENT only. Invariant 4 -
+a population level reads topology history, never user text - applies to
 anything built on top of this, and nothing in this file writes to `.cle` or to
 any topology.
 """
@@ -47,8 +47,6 @@ import pandas as pd
 from google.cloud import bigquery
 
 import bqconfig
-PROJECT = bqconfig.project()
-DATASET = f"{PROJECT}.wildchat"
 
 TURN_SCHEMA = [
     bigquery.SchemaField("conversation_hash", "STRING", mode="REQUIRED"),
@@ -68,7 +66,7 @@ TURN_SCHEMA = [
 def flatten(row: dict, user_only: bool) -> list[dict]:
     """One record per turn. `created`/`timestamp` are null per turn in this
     dataset, so the conversation timestamp plus the turn index is the only
-    ordering available — carried explicitly rather than invented."""
+    ordering available - carried explicitly rather than invented."""
     out = []
     index = 0
     for turn in row.get("conversation") or []:
@@ -104,8 +102,11 @@ def main() -> None:
 
     from datasets import load_dataset
 
-    client = bigquery.Client(project=PROJECT)
-    table_id = f"{DATASET}.{args.table}"
+    # Resolved here, not at import: a module that reads its project at import
+    # cannot be imported on a box without CLE_BQ_PROJECT.
+    project = bqconfig.project()
+    client = bigquery.Client(project=project)
+    table_id = f"{project}.wildchat.{args.table}"
 
     # Truncate ONCE, up front, then append. Deciding the disposition from the
     # loop counter works only by an off-by-one that breaks the moment the batch

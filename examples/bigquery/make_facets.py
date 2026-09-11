@@ -1,8 +1,8 @@
-"""Generate agent facets from real clusters — PILOT, nothing integrated.
+"""Generate agent facets from real clusters - PILOT, nothing integrated.
 
 Implements the prompt half of `docs/proposals/facet-contract.md` and nothing
 else: no `Facet` type, no topology write, no CLI surface. The contract's four
-mechanical guards (§d) are deliberately NOT built here — this run measures what
+mechanical guards (§d) are deliberately NOT built here - this run measures what
 the prompt alone produces, which is exactly what §b says cannot be trusted.
 Task 3 measures the leak.
 
@@ -27,7 +27,7 @@ PROMPT = """You are writing a one-sentence description of a RECURRING TASK that 
 person asks an assistant to do. You will be shown several examples of that task.
 
 Write ONE sentence, in ENGLISH, 40 to 300 characters, starting with a verb,
-describing WHAT THE TASK IS — not who the person is, not the subject area.
+describing WHAT THE TASK IS - not who the person is, not the subject area.
 Good: "Drafts weekly project recaps for a team, listing shipped and blocked items."
 Bad: "Project management." / "A user who works in marketing."
 
@@ -91,7 +91,7 @@ def main() -> None:
     for i, g in enumerate(groups):
         ex = "\n".join(f"- {t[:300]}" for t in g["episodes"][:6])
         try:
-            # `.content` is a LIST OF BLOCKS, not a string — `.strip()` on it
+            # `.content` is a LIST OF BLOCKS, not a string - `.strip()` on it
             # raises AttributeError, and the first pilot recorded 52 fast
             # failures that looked exactly like 52 fast successes. The repo
             # already has the helper the fingerprinter uses.

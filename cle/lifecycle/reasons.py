@@ -1,8 +1,8 @@
-"""Closed vocabulary for descents and declines — and the boundary free text never crosses.
+"""Closed vocabulary for descents and declines - and the boundary free text never crosses.
 
 CLE need (level-2 preparation). A population report must be able to say WHY a
 population archives an agent, not only how many. Free text cannot be aggregated,
-and — the sharper problem — it carries user content into `topology.yaml`, the
+and - the sharper problem - it carries user content into `topology.yaml`, the
 one file level 2 reads. The shape of the leak, on a descent to `archived`:
 
     cause:
@@ -11,7 +11,7 @@ one file level 2 reads. The shape of the leak, on a descent to `archived`:
 A name, in the file destined for population aggregation, on the path that is
 level 2's principal signal (an agent's death) and therefore its most-read one.
 
-TWO AXES, TWO TYPE SEPARATIONS — deliberately not one common field:
+TWO AXES, TWO TYPE SEPARATIONS - deliberately not one common field:
 
   * ENGINE vs HUMAN. `substrate_drift` and `silence` are functions of metrics;
     `cost_regression` is a judgement. Aggregating them
@@ -32,7 +32,7 @@ reserved for later.
 
 `engine_disagrees` is kept but MUST stay isolable: it is a human who deferred to
 the engine. Aggregating it without being able to exclude it would count the
-engine's own influence as an independent human judgement — the Goodhart
+engine's own influence as an independent human judgement - the Goodhart
 constraint at population scale. Hence its own type, never merged into the other
 human reasons.
 
@@ -60,11 +60,11 @@ HUMAN_DECLINE_REASONS = frozenset(get_args(HumanDeclineReason))
 #: Every value the closed vocabulary admits, across both axes.
 ALL_REASONS = ENGINE_DEMOTION_REASONS | HUMAN_DEMOTION_REASONS | HUMAN_DECLINE_REASONS
 
-#: Reasons authored by the engine — a metric fired, nobody judged.
+#: Reasons authored by the engine - a metric fired, nobody judged.
 ENGINE_AUTHORED = ENGINE_DEMOTION_REASONS
 #: Reasons authored by a human exercising judgement.
 HUMAN_AUTHORED = HUMAN_DEMOTION_REASONS | HUMAN_DECLINE_REASONS
-#: Human, but deferring to the engine — isolable so it can be EXCLUDED from any
+#: Human, but deferring to the engine - isolable so it can be EXCLUDED from any
 #: aggregate that claims to measure independent human judgement.
 ENGINE_INFLUENCED = frozenset({"engine_disagrees"})
 
@@ -88,7 +88,7 @@ class FreeTextInTopologyError(ValueError):
 
 
 def classify_reason(reason: str) -> str:
-    """"engine" | "human" — which side authored this reason. Raises if unknown."""
+    """"engine" | "human" - which side authored this reason. Raises if unknown."""
     if reason in ENGINE_AUTHORED:
         return "engine"
     if reason in HUMAN_AUTHORED:
@@ -110,7 +110,7 @@ class TopologyReason(BaseModel, frozen=True):
 
     A frozen model over a closed Literal: there is no field able to hold prose,
     so no present or future write path can smuggle user text across the
-    boundary. That is the property asked for — not a sanitiser.
+    boundary. That is the property asked for - not a sanitiser.
     """
 
     reason: EngineDemotionReason | HumanDemotionReason | HumanDeclineReason
@@ -121,6 +121,6 @@ class TopologyReason(BaseModel, frozen=True):
 
     @property
     def engine_influenced(self) -> bool:
-        """True for a human decision taken on the engine's advice — excludable
+        """True for a human decision taken on the engine's advice - excludable
         from any aggregate claiming independent human judgement."""
         return self.reason in ENGINE_INFLUENCED

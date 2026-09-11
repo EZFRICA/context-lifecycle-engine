@@ -7,9 +7,10 @@ missing one reads as `None`.
 
 A hand comparison catches that once. This file catches it every run.
 
-SCOPE: bucket 1 (embedder-agnostic). The topology is written under the stub, but
-nothing here asserts anything about the space itself, only that both readers
-report the same one.
+SCOPE: bucket 2 (stub-as-a-tool) for the round-trip tests, whose topology is
+built through the stub; bucket 1 for the shell-inheritance test, which builds
+nothing. Measured by `tools/buckets.py`. Nothing here asserts anything about the
+space itself, only that both readers report the same one.
 """
 
 from __future__ import annotations
@@ -33,7 +34,7 @@ from tests.unit.test_runtime import _build_image
 #: to interpret what they are looking at. Enumerated rather than derived,
 #: because the point of the test is that the API's own enumeration drifted.
 RECORD_FIELDS = ("version", "embedding")
-AGENT_FIELDS = ("state", "image", "cause")
+AGENT_FIELDS = ("state", "image", "cause", "facet", "facet_status")
 
 
 @pytest.fixture()
@@ -46,6 +47,8 @@ def populated(tmp_path):
     topo = state / "topology.yaml"
     born_in = embedding_config_for(HashedTokenEmbedder())
 
+    from cle.population.facet import build_facet
+
     write_topology(
         backend=backend, path=topo, agent="recap", state="candidate",
         image_hash=image.hash,
@@ -54,6 +57,12 @@ def populated(tmp_path):
             historical_cost=4.0, window="30d",
         ).model_dump()},
         oplog=oplog, actor="human:test", embedding=born_in,
+        # Born with a facet, so the two later writes must carry it forward and
+        # the round trip below compares a real value, not two absences.
+        facet=build_facet(
+            "Drafts the weekly project recap for a team, with blockers and progress.",
+            sources=[], generator_id="test:v1",
+        ),
     )
     write_topology(
         backend=backend, path=topo, agent="recap", state="ephemeral",

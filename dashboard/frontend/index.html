@@ -12,7 +12,7 @@
 
   <!-- top bar -->
   <div class="topbar">
-    <div class="brand">CLE <small>· context lifecycle engine — live</small></div>
+    <div class="brand">CLE <small>· context lifecycle engine - live</small></div>
     <div class="spacer"></div>
     <label class="kv">pace
       <input class="pace mono" type="number" min="500" step="500" x-model="demo.pace" />ms
@@ -40,7 +40,7 @@
       <button class="btn coral" x-show="demo.running" @click="abortRun()"
               title="Stop the run in progress">stop run</button>
       <span class="eyebrow" x-show="!health.runnable"
-            style="color:var(--coral)">demo run unavailable on the live state — hover the button</span>
+            style="color:var(--coral)">demo run unavailable on the live state - hover the button</span>
     <button class="btn coral" @click="reinitSystem()" :disabled="demo.running">3. Clean / Reinit State</button>
   </div>
 
@@ -49,7 +49,7 @@
     <div class="eyebrow">
       <span x-text="pulseView === 'live' ? 'Pulse · live oplog' : 'Pulse · decisions only'"></span>
       <!-- Two READ views over ONE log. The sentence is rendered server-side by
-           the same render_decision() the CLI uses — the frontend only displays,
+           the same render_decision() the CLI uses - the frontend only displays,
            so the audit reading cannot drift between the two surfaces. -->
       <span class="pulse-toggle">
         <button class="tab" :class="{ on: pulseView === 'live' }"
@@ -115,21 +115,21 @@
             <span class="badge pre" x-text="'false-trigger ' + fmtPct(c.image.pre_evidence.false_trigger_rate)"></span>
             <span class="badge pre" x-text="'cost ' + c.image.pre_evidence.historical_cost.toFixed(1) + ' it/ep'"></span>
           </div>
-          <div class="caption">pre_evidence · trigger only — not answer quality · window <span x-text="c.image.pre_evidence.window"></span></div>
-          <!-- Disclosed gap (NOT an evidence badge — an absence): the
+          <div class="caption">pre_evidence · trigger only - not answer quality · window <span x-text="c.image.pre_evidence.window"></span></div>
+          <!-- Disclosed gap (NOT an evidence badge - an absence): the
                contradiction check could not run in this candidate's vector
                space. Styled distinctly so it never reads as a measurement. -->
           <div class="gap" x-show="c.image.stability_checked === false">
             <span class="gap-mark">⚠ contradiction check did not run</span>
             <div class="gap-note">Cosine measures topical relatedness, not contradiction, so the
               stability check is unavailable for <span class="mono" x-text="c.image.trigger_embedder_id"></span>.
-              This is a disclosed gap, not a clean result — you are deciding without it.</div>
+              This is a disclosed gap, not a clean result - you are deciding without it.</div>
           </div>
           <div class="row" style="margin-top:10px">
             <button class="btn amber" @click.stop="approve(c.agent)">Approve → trial</button>
             <button class="btn coral" @click.stop="decline(c.agent)">Decline</button>
           </div>
-          <div class="caption">Approve is the human gate (Force Override) — logged as human:dashboard.</div>
+          <div class="caption">Approve is the human gate (Force Override) - logged as human:dashboard.</div>
         </div>
       </template>
     </section>
@@ -188,7 +188,7 @@
       <!-- drift -->
       <div class="panel card drift" x-show="drift" :class="{ pulse2: drift && drift.pulse }">
         <div class="eyebrow" style="color:var(--coral)">Proof expired · persistence</div>
-        <div class="mono" x-show="drift">image <span x-text="drift?.image"></span> — <b x-text="drift?.deltas"></b> probes drifted</div>
+        <div class="mono" x-show="drift">image <span x-text="drift?.image"></span> - <b x-text="drift?.deltas"></b> probes drifted</div>
         <div class="hash" x-show="drift" x-text="'fingerprint ' + drift?.at + ' → ' + drift?.now"></div>
         <div class="caption">substrate changed → auto-demote to trial. proof is never final.</div>
       </div>
@@ -290,7 +290,7 @@
 
           <!-- pre_evidence -->
           <div class="modal-section">
-            <div class="eyebrow">Pre-evidence · replay (trigger only — not answer quality)</div>
+            <div class="eyebrow">Pre-evidence · replay (trigger only - not answer quality)</div>
             <div class="row">
               <span class="badge pre" x-text="'capture ' + fmtPct(modal.data.pre_evidence.capture_rate)"></span>
               <span class="badge pre" x-text="'false-trigger ' + fmtPct(modal.data.pre_evidence.false_trigger_rate)"></span>

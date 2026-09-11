@@ -22,8 +22,8 @@ So the headline is two numbers, not one:
     prose claims             : P, mapping is manual and is not attempted here
 
 Usage:
-    python tools/statements.py            # the ratio and the prose list
-    python tools/statements.py --prose    # the prose claims, with locations
+    uv run python tools/statements.py            # the ratio and the prose list
+    uv run python tools/statements.py --prose    # the prose claims, with locations
 """
 
 from __future__ import annotations
@@ -172,7 +172,7 @@ def main(argv: list[str]) -> int:
         for exception in orphan:
             print(f"  {exception}")
 
-    print(f"\nrun `python tools/mutate.py` for the enforcement verdict per site; "
+    print(f"\nrun `uv run python tools/mutate.py` for the enforcement verdict per site; "
           f"naming counts above are NOT coverage.")
 
     if args.prose:

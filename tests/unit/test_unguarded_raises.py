@@ -1,6 +1,6 @@
 """Build-stage guards, and two that cannot fire.
 
-`python tools/mutate.py` decides by experiment which guards a suite enforces.
+`uv run python tools/mutate.py` decides by experiment which guards a suite enforces.
 These are the build-stage ones it reaches.
 
 Two of them are the difference between a measurement and an invented number:
@@ -21,8 +21,9 @@ The last two tests are a different shape. They pin why two guards in
 `replay.py` are UNREACHABLE, and go red if the surrounding logic changes to make
 them reachable.
 
-SCOPE: bucket 1 (embedder-agnostic) except where a stub embedder is used as a
-tool; no assertion here depends on a vector space.
+SCOPE: bucket 1 (embedder-agnostic), except the no-in-cluster pin, which
+clusters three openers through the stub and is bucket 2. Measured by
+`tools/buckets.py`; no assertion here depends on a vector space.
 """
 
 from __future__ import annotations
@@ -46,7 +47,7 @@ def _spec(yaml_text: str) -> SourceSpec:
     return SourceSpec(yaml_raw=yaml_text)
 
 
-# ── assembler.py:76 — a source with no centroid ────────────────────────────
+# ── assembler.py:76 - a source with no centroid ────────────────────────────
 
 def test_a_source_without_a_trigger_centroid_is_refused() -> None:
     """The detector writes the centroid; a hand-written spec may forget it.
@@ -83,7 +84,7 @@ def test_a_well_formed_trigger_still_parses() -> None:
     assert trigger.embedder_id == "stub:hashed64"
 
 
-# ── assembler.py:117 — a component ref that is not a block ─────────────────
+# ── assembler.py:117 - a component ref that is not a block ─────────────────
 
 def test_a_component_ref_pointing_at_a_non_block_is_refused() -> None:
     """The store is content-addressed, not typed: any hash resolves.
@@ -125,7 +126,7 @@ class _StubFingerprinter:
         return tuple(content_hash({"probe": p}) for p in probes)
 
 
-# ── fingerprinter.py:75 — a failed probe must not become a fingerprint ─────
+# ── fingerprinter.py:75 - a failed probe must not become a fingerprint ─────
 def test_a_failed_probe_under_force_real_model_raises_instead_of_faking() -> None:
     """The guard that separates a measurement from an invented number.
 
@@ -176,7 +177,7 @@ def test_without_the_flag_a_failed_probe_falls_back_deterministically() -> None:
     assert first == second, "a failed probe must read as no signal, never as drift"
 
 
-# ── replay.py:172 and :222 — UNREACHABLE, and that is the finding ──────────
+# ── replay.py:172 and :222 - UNREACHABLE, and that is the finding ──────────
 
 def test_the_no_in_cluster_guard_cannot_fire_and_this_pins_why() -> None:
     """The "no in-cluster episodes" guard is structurally unreachable.
@@ -246,11 +247,20 @@ def test_the_all_abandoned_guard_cannot_fire_and_this_pins_why() -> None:
         "all-abandoned guard may now be reachable and needs a behavioural test"
     )
 
-    for iterations in ([1, 1, 1], [1, 2, 3], [1, 1, 50], [4, 9, 9, 100]):
-        baseline = float(statistics.median(iterations))
-        countable = [n for n in iterations
-                     if not n > DetectorConfig().reformulation_cost_multiplier * baseline]
-        assert countable, (
-            f"{iterations} produced an empty cost baseline, so the guard IS "
-            "reachable and this test is the wrong shape"
-        )
+    # The argument needs `multiplier >= 1`: the episode sitting AT the median
+    # must not exceed `multiplier * median`. The config refuses anything lower,
+    # so the argument covers every accepted value, not just the default.
+    import pydantic
+
+    with pytest.raises(pydantic.ValidationError):
+        DetectorConfig(reformulation_cost_multiplier=0.99)
+
+    weakest = DetectorConfig(reformulation_cost_multiplier=1.0).reformulation_cost_multiplier
+    for multiplier in (weakest, DetectorConfig().reformulation_cost_multiplier):
+        for iterations in ([1, 1, 1], [1, 2, 3], [1, 1, 50], [4, 9, 9, 100], [2, 7]):
+            baseline = float(statistics.median(iterations))
+            countable = [n for n in iterations if not n > multiplier * baseline]
+            assert countable, (
+                f"{iterations} at multiplier {multiplier} produced an empty cost "
+                "baseline, so the guard IS reachable and this test is the wrong shape"
+            )

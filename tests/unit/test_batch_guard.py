@@ -5,7 +5,7 @@ The third, `assert_embeddable`, is tested in
 OUTBOUND: these two check what came back, so an empty opener used to be billed
 and then clustered as if it named an intent.
 
-SCOPE — bucket 1 (embedder-agnostic): no vector space is under test, only the
+SCOPE - bucket 1 (embedder-agnostic): no vector space is under test, only the
 shape of a failure.
 
 CLE need. Both guards catch one failure family: nothing raises, the numbers look

@@ -47,7 +47,7 @@ def test_corrupt_fetch_logs_violation_then_heals_on_refetch() -> None:
     block_hash, data = _block_bytes()
     sink = io.StringIO()
     result = fetch_verified(FlakyBackend(data, corrupt_reads=1), block_hash, OpLog(sink))
-    # The caller still gets the good bytes — abort use of the corrupt copy,
+    # The caller still gets the good bytes - abort use of the corrupt copy,
     # refetch, carry on. Exactly one violation line fired.
     assert result == data
     ops = _logged_ops(sink)

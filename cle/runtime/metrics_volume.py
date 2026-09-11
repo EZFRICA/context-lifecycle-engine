@@ -1,15 +1,15 @@
-"""System-owned metrics volume — the write side of the Goodhart boundary.
+"""System-owned metrics volume - the write side of the Goodhart boundary.
 
 Contract (cle-core-contracts, invariant 2): the runtime records
 solicitations, iterations, and closure tags via
-`record(container_id, event)` — one-way. `MetricsVolume` deliberately has
+`record(container_id, event)` - one-way. `MetricsVolume` deliberately has
 NO read method: reading belongs to the lifecycle engine and the human via
 `read_events`, a module function on the other side of the boundary that
 container/agent code never receives. What crosses into a Container is the
 volume id string, nothing else.
 
 Storage: one JSONL file per volume under <root>/metrics/, events keyed by
-container_id — file-backed for the same reason as FileStore (the
+container_id - file-backed for the same reason as FileStore (the
 lifecycle outlives a process).
 """
 
@@ -40,7 +40,7 @@ class MetricsVolume:
 def read_events(
     root: Path | str, volume_id: str, container_id: str | None = None
 ) -> list[dict[str, Any]]:
-    """Engine/human-side read path. Never hand this to container code —
+    """Engine/human-side read path. Never hand this to container code -
     the reflection test guards the Container surface, this docstring and
     review guard the call sites."""
     path = Path(root) / "metrics" / f"{volume_id}.jsonl"

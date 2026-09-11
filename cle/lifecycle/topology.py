@@ -1,4 +1,4 @@
-"""topology.yaml writer — sole author of the topology file.
+"""topology.yaml writer - sole author of the topology file.
 
 Contract (BLUEPRINT §7): every change is a commit in the same DAG under
 the `topology/` ref prefix (one store, one audit trail). Entries carry
@@ -17,6 +17,17 @@ from cle.lifecycle.reasons import (  # noqa: E402
     FreeTextInTopologyError,
     TopologyReason,
 )
+from cle.population.facet import Facet, FacetStatus  # noqa: E402
+
+
+class FacetNotAtBirthError(ValueError):
+    """A facet was supplied for an agent the topology already holds.
+
+    Facet contract §c and §d-bis: a facet is generated once, at birth, and never
+    again. Regenerating it would replace a record of the birth with today's model
+    and today's prompt; back-generating one for an agent born before facets
+    existed would present an artefact as a record of something it did not witness.
+    """
 
 
 class EmbeddingConfigMismatchError(Exception):
@@ -24,7 +35,7 @@ class EmbeddingConfigMismatchError(Exception):
 
     Distinct from MissingEmbeddingConfigError on purpose: an ABSENT key and a
     LYING key are different failures. A key that lies is worse than one that is
-    missing — a missing key excludes the history from an aggregate, a lying key
+    missing - a missing key excludes the history from an aggregate, a lying key
     puts it in the wrong bucket while looking accounted for.
     """
 
@@ -67,7 +78,7 @@ def latest_version(backend: StoreBackend) -> tuple[int, dict | None]:
 
 def current_agents(backend: StoreBackend) -> dict[str, dict[str, Any]]:
     """The live agent index (name -> {state, image, since}) from the
-    latest topology version — the lifecycle's source of truth."""
+    latest topology version - the lifecycle's source of truth."""
     _, latest = latest_version(backend)
     return dict(latest["agents"]) if latest else {}
 
@@ -85,18 +96,26 @@ def write_topology(
     on_behalf_of: str | None = None,
     embedding: "EmbeddingConfig | None" = None,
     reason: "TopologyReason | None" = None,
+    facet: "Facet | None" = None,
+    facet_status: "FacetStatus | None" = None,
 ) -> str:
     """Record one agent change as a new topology version + file rewrite.
 
     `cause` is the evidence/pre_evidence payload (with its kind) that
-    justified the change — a topology entry without proof is exactly the
+    justified the change - a topology entry without proof is exactly the
     prediction-driven drift the CLE exists to refuse.
+
+    `facet` is level 2's input and the only prose a topology carries. It travels
+    as its own typed parameter, the way `reason` and `embedding` do, and only at
+    birth: a later write of the same agent carries the entry's facet forward
+    untouched. `facet_status="generation_failed"` records a birth whose facet
+    could not be produced; an entry with no status at all predates facets.
     """
     started = time.monotonic()
     # Decision (documented): downward moves may carry a bare human reason
-    # — evidence justifies gains; losses need accountability, not proof.
+    # - evidence justifies gains; losses need accountability, not proof.
     # STRUCTURAL BOUNDARY. A topology cause may carry proof, or a
-    # closed-vocabulary reason — never prose. Callers pass `reason` as a typed
+    # closed-vocabulary reason - never prose. Callers pass `reason` as a typed
     # TopologyReason; stuffing a raw string into cause["reason"] is refused, so
     # the leak has no route rather than being sanitised on the way out.
     if "reason" in cause:
@@ -107,6 +126,19 @@ def write_topology(
         )
     if reason is not None:
         cause = {**cause, "reason": reason.reason}
+    # Same boundary for the facet: prose enters only as a validated `Facet`.
+    if "facet" in cause:
+        raise FreeTextInTopologyError(
+            "cause['facet'] is not a writable key: pass facet=Facet(...), built and "
+            "validated by cle.population.facet"
+        )
+    if facet is not None and not isinstance(facet, Facet):
+        raise FreeTextInTopologyError(
+            f"facet must be a cle.population.facet.Facet, got {type(facet).__name__}; "
+            "prose does not enter topology.yaml any other way"
+        )
+    if facet is None and facet_status == "present":
+        raise ValueError("facet_status='present' was declared with no facet to store")
 
     if not cause or not any(
         k in cause for k in ("evidence", "pre_evidence", "persistence", "reason")
@@ -116,29 +148,45 @@ def write_topology(
     version_number, latest = latest_version(backend)
     agents = dict(latest["agents"]) if latest else {}
     previous_entry = agents.get(agent)
+    if previous_entry is not None and (facet is not None or facet_status is not None):
+        raise FacetNotAtBirthError(
+            f"{agent!r} is already in the topology; its facet was settled at birth "
+            "and is never regenerated or back-generated"
+        )
     agents[agent] = {
         "state": state,
         "image": image_hash,
         "since": datetime.now(timezone.utc).isoformat(),
         "cause": cause,
     }
+    if facet is not None:
+        agents[agent]["facet"] = facet.model_dump()
+        agents[agent]["facet_status"] = "present"
+    elif facet_status is not None:
+        agents[agent]["facet_status"] = facet_status
+    elif previous_entry is not None:
+        # A tag move rewrites the entry; the facet is data from the birth and
+        # must survive every later write of the same agent.
+        for key in ("facet", "facet_status"):
+            if key in previous_entry:
+                agents[agent][key] = previous_entry[key]
     # Embedding configuration is TOPOLOGY-scope, never per agent: it names the
     # vector space this whole history was produced in, and is therefore the key
     # any population-level aggregation must group by. Supplied at the first
     # write (the candidate birth, which knows the embedder) and INHERITED from
-    # the parent record afterwards — a later tag move does not re-derive it.
+    # the parent record afterwards - a later tag move does not re-derive it.
     inherited = (latest or {}).get("embedding")
     declared = embedding.model_dump() if embedding is not None else None
     # A caller that DECLARES its vector space must agree with the one this
     # topology was born in. Inheritance without this check would let a config
     # change mid-life propagate the original silently, and the field would
-    # assert something false — the one failure worse than having no key.
+    # assert something false - the one failure worse than having no key.
     if declared is not None and inherited is not None and declared != inherited:
         raise EmbeddingConfigMismatchError(
             f"topology was born under {inherited.get('embedder_id')!r} at threshold "
             f"{inherited.get('cluster_threshold')} but this write declares "
             f"{declared.get('embedder_id')!r} at {declared.get('cluster_threshold')}; "
-            "a topology cannot change vector space in place — start a new history"
+            "a topology cannot change vector space in place - start a new history"
         )
     embedding_record = declared if declared is not None else inherited
     if embedding_record is None:

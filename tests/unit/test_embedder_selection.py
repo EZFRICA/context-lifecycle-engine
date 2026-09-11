@@ -1,11 +1,12 @@
 """The detection vector space is selected at ONE point.
 
-SCOPE — bucket 2 (stub-as-a-tool): the assertions are about which embedder the
-selection point returns, never about any vector space's behaviour.
+SCOPE - bucket 1 (embedder-agnostic), measured by `tools/buckets.py`: the
+assertions are about which embedder the selection point returns, and not one of
+them embeds a text.
 
 CLE need. A hardcoded `_configured_embedder()` returning `HashedTokenEmbedder()`
 hardcoded, so no CLI invocation could run detection on the real embedding space
-— the one the operator chose and the one `cluster_threshold_for` is calibrated
+- the one the operator chose and the one `cluster_threshold_for` is calibrated
 against. "Real tests" could therefore only ever mean the fingerprinter.
 
 The selection point mirrors `open_store` deliberately: one factory, an env var
@@ -15,7 +16,7 @@ cannot be compared into one topology claiming one embedding config.
 
 NO LIVE CALL IS MADE HERE. `open_embedder("real")` constructs `RealEmbedder`,
 which needs a key and the network, so it is exercised through a monkeypatched
-attribute — never imported (the import ban in test_embedder_provenance still
+attribute - never imported (the import ban in test_embedder_provenance still
 holds; this module does not import it).
 """
 
@@ -41,7 +42,7 @@ def test_the_env_var_selects_and_the_argument_wins_over_it(
 ) -> None:
     monkeypatch.setenv("CLE_EMBEDDER", "cached")
     assert open_embedder().embedder_id == "google:gemini-embedding-2:768"
-    # An explicit argument overrides the ambient setting — the CLI callback
+    # An explicit argument overrides the ambient setting - the CLI callback
     # relies on this ordering.
     assert open_embedder("stub").embedder_id == "stub:hashed64"
 
@@ -59,7 +60,7 @@ def test_an_unknown_kind_raises_rather_than_falling_back(
 
 
 def test_real_reaches_the_live_embedder(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`real` must construct the live one — checked without a network call.
+    """`real` must construct the live one - checked without a network call.
 
     If this ever silently returned the cache, a run believed to be live would
     be reading frozen vectors, and the bill would be the only way to tell.
@@ -79,7 +80,7 @@ def test_real_reaches_the_live_embedder(monkeypatch: pytest.MonkeyPatch) -> None
 
 def test_every_kind_is_reachable_and_the_list_is_not_stale() -> None:
     # A kind named in EMBEDDER_KINDS that the factory rejects would be a name
-    # designating nothing — the pattern this codebase keeps reproducing.
+    # designating nothing - the pattern this codebase keeps reproducing.
     for kind in EMBEDDER_KINDS:
         if kind == "real":
             continue  # covered above without touching the network

@@ -1,19 +1,19 @@
 """The closed vocabulary, and the boundary free text cannot cross.
 
-SCOPE — 8 tests in bucket 1 (embedder-agnostic) and 2 in bucket 2
+SCOPE - 8 tests in bucket 1 (embedder-agnostic) and 2 in bucket 2
 (stub-as-a-tool). Every assertion is about which VALUES may be written and
 where; no vector space is involved. The two boundary tests that call
 `write_topology` instantiate the stub only because a topology write requires an
-embedding config — the stub is furniture, not the subject.
+embedding config - the stub is furniture, not the subject.
 
 CLE need. `topology.yaml` is the single file level 2 reads. Free text in it is
 two failures at once: unaggregatable (a population report can count descents but
 never say WHY), and a content leak (a colleague's name reproduced in a
-`cause.reason` on a descent to `archived` — the most-read path there is).
+`cause.reason` on a descent to `archived` - the most-read path there is).
 
 The requirement was a STRUCTURAL separation, not a sanitiser: a write-time
 filter is bypassed by the next path someone adds. So the tests below assert a
-TYPE property — that no representable route exists — plus an AST scrape that
+TYPE property - that no representable route exists - plus an AST scrape that
 fails when a new call site invents a value outside the vocabulary.
 
 FALSE FRIEND, deliberately not constrained: `stability.py`'s `cluster_stability`
@@ -100,7 +100,7 @@ def test_the_written_record_carries_the_vocabulary_value_only(tmp_path) -> None:
 
 def test_engine_and_human_reasons_do_not_overlap() -> None:
     # A metric that fired and a person who judged must never aggregate as one
-    # quantity — the same discipline as the three proof types.
+    # quantity - the same discipline as the three proof types.
     assert not (ENGINE_AUTHORED & HUMAN_AUTHORED)
 
 
@@ -126,7 +126,7 @@ def test_an_unknown_reason_raises_rather_than_falling_into_a_catch_all() -> None
 # ── the scrape: a new call site cannot invent a value ───────────────────────
 
 #: What an f-string `reason=` reports as. An interpolated string is free text by
-#: construction — it can never be a fixed vocabulary value — so it is reported
+#: construction - it can never be a fixed vocabulary value - so it is reported
 #: rather than skipped. Skipping it was the hole this constant closes: the one
 #: pre-existing `reason=f"..."` (fingerprint drift, cli/main.py) would have
 #: sailed past a scrape that only looked at plain literals.
@@ -152,7 +152,7 @@ def _reason_kwarg_sites() -> list[tuple[str, str, str]]:
                 ):
                     value = keyword.value.value
                 else:
-                    continue  # a variable — covered by the runtime validation
+                    continue  # a variable - covered by the runtime validation
                 first_arg = node.args[0] if node.args else None
                 op = (
                     first_arg.value
@@ -172,7 +172,7 @@ def test_every_literal_reason_in_the_package_is_in_the_vocabulary() -> None:
     assert not offenders, (
         f"free-text reason values at lifecycle call sites: {offenders}. "
         "Either use a value from cle/lifecycle/reasons.py, or add the new value "
-        "there in the same change — never widen by writing prose."
+        "there in the same change - never widen by writing prose."
     )
 
 
@@ -186,6 +186,6 @@ def test_the_technical_diagnostic_site_still_exists_as_declared() -> None:
     # must be deleted rather than left to excuse some future call site.
     seen = {(path, op) for path, op, _ in _reason_kwarg_sites()}
     assert TECHNICAL_REASON_SITES <= seen, (
-        "the declared technical exemption no longer matches any call site — "
+        "the declared technical exemption no longer matches any call site - "
         "remove it from TECHNICAL_REASON_SITES"
     )

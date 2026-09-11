@@ -1,4 +1,4 @@
-"""Run one lifecycle per synthetic user — one state dir, one oplog, one topology.
+"""Run one lifecycle per synthetic user - one state dir, one oplog, one topology.
 
 CLE need. `make_multiuser.py` writes the histories; this drives each of them
 through the CLI so that what lands on disk is produced by the same write path a
@@ -7,12 +7,12 @@ write surface), so nothing here calls `move_state_tag` or `write_topology`.
 
 TWO REAL SURFACES, and they are not equally priced:
 
-  * DETECTION — `--embedder cached` is the real `gemini-embedding-2` geometry,
+  * DETECTION - `--embedder cached` is the real `gemini-embedding-2` geometry,
     read from the frozen 247-vector cache. Same `embedder_id` as `--embedder
     real`, same vectors, zero calls, because every GDG text is cached. Passing
     `real` here would spend one call per text to recompute vectors that are
     already committed, for a byte-identical result.
-  * FINGERPRINT — `--model-id current` is the live model, and there is no cache
+  * FINGERPRINT - `--model-id current` is the live model, and there is no cache
     for it. That is where the real substrate actually costs: 4 probes per build.
 
 The live model is NOT deterministic at temperature 0 (measured, 3/3
@@ -75,7 +75,7 @@ def _derive_spec(history: Path, embedder_kind: str, out_dir: Path) -> tuple[Path
     for episode in episodes:
         members.setdefault(clusterer.assign(episode), []).append(episode)
 
-    # Largest cluster whose majority intent is a TASK intent — background
+    # Largest cluster whose majority intent is a TASK intent - background
     # traffic (`qa`, `noise`, `abandon`) is what an agent must NOT be born from.
     def majority(cluster) -> str:
         counts: dict[str, int] = {}

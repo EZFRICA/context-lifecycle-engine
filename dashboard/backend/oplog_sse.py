@@ -1,10 +1,10 @@
-"""Live oplog stream — tail `.cle/log.jsonl` and fan it out over SSE.
+"""Live oplog stream - tail `.cle/log.jsonl` and fan it out over SSE.
 
 One background task tails the log and publishes every new line to an
 in-process bus; SSE clients replay the last N lines on connect, then follow
 the bus. The demo runner publishes its own `demo_step` events onto the same
 bus, so the PULSE feed is a single unified stream. Unknown op types pass
-through untouched — the CLE will grow and the dashboard must not crash on
+through untouched - the CLE will grow and the dashboard must not crash on
 new events.
 """
 
@@ -94,7 +94,7 @@ async def tail_log_forever(log_path: Path, bus: EventBus) -> None:
             else:
                 size = log_path.stat().st_size
                 # Three events look alike from here, and reading from a stale
-                # offset splices the middle out of a line — which parses to
+                # offset splices the middle out of a line - which parses to
                 # nothing, so the opening events of a fresh run vanish with no
                 # error anywhere and the board starts partway through.
                 #
@@ -105,7 +105,7 @@ async def tail_log_forever(log_path: Path, bus: EventBus) -> None:
                 # Only the first is caught by comparing sizes. The second is not
                 # caught by comparing inodes either, which is what this used to
                 # do: a filesystem is free to hand the replacement the inode it
-                # just freed, and Linux commonly does — the check passed on APFS
+                # just freed, and Linux commonly does - the check passed on APFS
                 # and failed in CI for exactly that reason.
                 #
                 # What actually identifies an append-only file across polls is

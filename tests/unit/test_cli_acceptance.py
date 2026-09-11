@@ -1,18 +1,20 @@
 """End-to-end acceptance: the CLI itself, on the independent GDG fixture.
 
-SCOPE — bucket 2 (stub-as-a-tool): runs on `--embedder stub`, the space every
-existing topology was produced in. No assertion here is about the geometry.
+SCOPE - bucket 2 (stub-as-a-tool) for the nine tests that drive the CLI on
+`--embedder stub`, the space every existing topology was produced in; bucket 1
+for the one that only checks the console entry point. Measured by
+`tools/buckets.py`. No assertion here is about the geometry.
 
-CLE need — the gap this closes. Without this file **the whole CLI is dead
-code for the suite**: all 10 commands and every helper but `_store` are executed
+CLE need - the gap this closes. Without this file **the whole CLI is dead
+code for the suite**: every command and every helper but `_store` are executed
 by no test. The documented architecture says every write goes through the CLI,
 so the suite covered the bricks writes are made of and no write PATH. The
 question "does the system behave as intended end to end" therefore had no
 mechanical answer. This file is that answer.
 
 It drives the CLI through `CliRunner` (the Typer app, not the libraries beneath
-it) on `prompt_history_gdg.jsonl` — one of the two fixture generators declared
-independent of the detector — into a throwaway state dir. It never touches
+it) on `prompt_history_gdg.jsonl` - one of the two fixture generators declared
+independent of the detector - into a throwaway state dir. It never touches
 `.cle`, and it never invokes `cle clean`, which is `shutil.rmtree` without
 confirmation on a gitignored directory that is the only source a population
 level reads.
@@ -21,7 +23,7 @@ TWO TESTS BELOW FREEZE A KNOWN DEFECT ON PURPOSE. They assert what the commands
 DO, not what they should do, and say so in their names and bodies. A test
 asserting the intended behaviour would fail today and be disabled within a week;
 a test asserting the real behaviour makes the defect visible and fails loudly on
-the day it is fixed — which is when someone should be looking.
+the day it is fixed - which is when someone should be looking.
 """
 
 import json
@@ -59,7 +61,7 @@ def gdg_history(tmp_path_factory) -> Path:
     """A TRIMMED slice of the independent fixture.
 
     The full corpus is 516 texts / 246 episodes, and replaying it took ~5.5s per
-    command — the rest of the suite runs under 10ms per test, and a slow test is
+    command - the rest of the suite runs under 10ms per test, and a slow test is
     one people learn to skip. The slice keeps the corpus and its structure and
     only shortens it; nothing here asserts a detection quality figure, so the
     length is not load-bearing. Measure A (docs/METRICS.md) is where the full
@@ -123,8 +125,8 @@ def _isolate_cli_env(monkeypatch: pytest.MonkeyPatch):
     invocation silently governed every later one, and a build that should have
     written a topology was refused by the space gate instead.
 
-    Nothing in `cle/` resets it, so any long-lived in-process host — a test
-    runner, a notebook, an embedding application — inherits the last invocation's
+    Nothing in `cle/` resets it, so any long-lived in-process host - a test
+    runner, a notebook, an embedding application - inherits the last invocation's
     choice. Recorded here rather than fixed, because whether
     the callback should scope or reset is a design decision.
     """
@@ -137,7 +139,7 @@ def _isolate_cli_env(monkeypatch: pytest.MonkeyPatch):
     # Restore explicitly: `monkeypatch` cannot undo a variable the CODE set
     # during the test, and that is precisely what the callback does. Without
     # this, one `--embedder cached` invocation here leaked into OTHER test
-    # modules and failed them — the leak crosses files, not just tests.
+    # modules and failed them - the leak crosses files, not just tests.
     for key, value in saved.items():
         if value is None:
             os.environ.pop(key, None)
@@ -166,7 +168,7 @@ def test_build_births_a_candidate_and_records_what_caused_it(gdg_spec, gdg_histo
     document = _topology(state)
     entry = document["agents"]["gdg_agent"]
     assert entry["state"] == "candidate"
-    # Birth rides replay, never lived evidence — the ladder's whole point.
+    # Birth rides replay, never lived evidence - the ladder's whole point.
     assert set(entry["cause"]) == {"pre_evidence"}
     # The aggregation key: without it a topology compares to nothing.
     assert document["embedding"]["embedder_id"] == "stub:hashed64"
@@ -215,7 +217,7 @@ def test_descent_to_trial_records_its_reason_not_the_birth_evidence(
 
     `cle/cli/main.py` tested the DESTINATION (`to_state in ("trial",
     "candidate")`), so a descent into either state loaded the image's birth
-    `pre_evidence` and recorded THAT as the cause — the demotion reached the
+    `pre_evidence` and recorded THAT as the cause - the demotion reached the
     topology channel labelled "caused by the replay proof of its own birth",
     and the closed-vocabulary reason was silently dropped. A false field, not a
     missing one.
@@ -279,7 +281,7 @@ def test_decline_still_writes_no_topology_record_and_this_is_open(
     """A frozen defect, deliberately not corrected.
 
     `decline` moves no tag by design, so it writes no topology version: a human
-    refusal — the clearest signal a population report could carry — exists only
+    refusal - the clearest signal a population report could carry - exists only
     in the oplog, which level 2 never reads. Half the closed vocabulary
     (`engine_disagrees`, `defer`) can never reach the channel it was built for.
 
@@ -287,7 +289,7 @@ def test_decline_still_writes_no_topology_record_and_this_is_open(
     chain diff. `dashboard/backend/reads.py:topology_diff` classifies every
     entry-level difference as added / removed / retagged, so a decline record
     carrying an UNCHANGED state would surface as `retagged` with
-    `from_state == to_state` — a state change that did not happen, asserted in
+    `from_state == to_state` - a state change that did not happen, asserted in
     the audit surface. Choosing between "a record with a `declined` marker every
     diff consumer must learn to ignore" and "a distinct record kind in the
     chain" is a design decision, and it was escalated rather than taken.

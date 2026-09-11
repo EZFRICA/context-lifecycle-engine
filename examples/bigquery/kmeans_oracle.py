@@ -12,22 +12,28 @@ the recurrence signal in this corpus is vocabulary. If it gathers a window and
 separates periods, it is intent.
 """
 import sys, time
-from google.cloud import bigquery
+from google.cloud import bigquery  # noqa: F401  (kept for parity with the other benches)
 
 import bqconfig
-P = bqconfig.dataset()
-c = bigquery.Client(project=bqconfig.project())
-KS = [int(x) for x in (sys.argv[1:] or ["16", "48"])]
+P = bqconfig.lazy_dataset()
+c = bqconfig.lazy_client()
 
-for k in KS:
-    t0 = time.perf_counter()
-    j = c.query(f"""CREATE OR REPLACE MODEL `{P}.km_c_{k}`
-        OPTIONS(model_type='kmeans', num_clusters={k}, distance_type='COSINE',
-                standardize_features=FALSE) AS
-        SELECT v FROM `{P}.r23_c_emb`""", location="EU")
-    j.result()
-    e = list(c.query(f"SELECT * FROM ML.EVALUATE(MODEL `{P}.km_c_{k}`)",
-                     location="EU").result())[0]
-    print(f"k={k:<4} davies_bouldin={e.davies_bouldin_index:.4f} "
-          f"mean_sq_dist={e.mean_squared_distance:.4f} "
-          f"{time.perf_counter()-t0:.0f}s {(j.total_bytes_billed or 0)/1e9:.3f}Go")
+
+def main() -> None:
+    KS = [int(x) for x in (sys.argv[1:] or ["16", "48"])]
+    for k in KS:
+        t0 = time.perf_counter()
+        j = c.query(f"""CREATE OR REPLACE MODEL `{P}.km_c_{k}`
+            OPTIONS(model_type='kmeans', num_clusters={k}, distance_type='COSINE',
+                    standardize_features=FALSE) AS
+            SELECT v FROM `{P}.r23_c_emb`""", location="EU")
+        j.result()
+        e = list(c.query(f"SELECT * FROM ML.EVALUATE(MODEL `{P}.km_c_{k}`)",
+                         location="EU").result())[0]
+        print(f"k={k:<4} davies_bouldin={e.davies_bouldin_index:.4f} "
+              f"mean_sq_dist={e.mean_squared_distance:.4f} "
+              f"{time.perf_counter()-t0:.0f}s {(j.total_bytes_billed or 0)/1e9:.3f}Go")
+
+
+if __name__ == "__main__":
+    main()

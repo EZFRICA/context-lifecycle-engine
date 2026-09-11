@@ -29,10 +29,17 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras --dev
 
-      # The suite uses deterministic stub fingerprinters internally — no real
+      # The suite uses deterministic stub fingerprinters internally - no real
       # model, no API key, no network.
       - name: Run pytest
         run: uv run pytest
+
+      # The three test buckets of docs/TESTING.md are MEASURED, not counted by
+      # hand: the suite runs again with a probe recording which embedder each
+      # test invokes, and the documented numbers and every module's SCOPE header
+      # must agree with what it recorded.
+      - name: Test buckets match the measurement
+        run: uv run python tools/buckets.py --check
 
       # Smoke-test the whole lifecycle loop OFFLINE with fictional (stub)
       # substrates, so CI never calls a real model. Real Gemini is used only

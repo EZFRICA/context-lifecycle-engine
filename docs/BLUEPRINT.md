@@ -5,10 +5,17 @@ validation, three-stage evidence, anti-mimetism rule, APU lineage, TriggerSpec
 resolution, three phases). **This document is the contract for the v1 build.**
 
 It states what the system must *be*. What it was measured to *do* on realistic
-data is `docs/METRICS.md`: deliberately a separate document, because a
-contract that quietly rewrites itself to match its results is not a contract.
+data is `docs/METRICS.md`, a separate document: a design intent and a
+measurement answer different questions and are not interchangeable.
+
+**Every document in this repo describes the code as it stands, not its own
+history.** When the code moves, the document is rewritten to match; a section
+that has been overtaken is replaced, never annotated with what it used to say.
 Where measurement invalidated a design assumption, the assumption is marked
-**SETTLED / REVISED** here with a pointer, and the reason is kept.
+**SETTLED / REVISED** with the reason - that mark records *why the design is
+what it is*, which is still a fact about the present code, not a changelog.
+Change history belongs to git, and to `EVOLUTION.md`: gitignored, the one
+document allowed to trace how the system got here, legacy included.
 
 ## 0. Governance rule
 
@@ -182,7 +189,8 @@ to see it.
 
 ### 7b. The boundary free text does not cross
 
-`topology.yaml` is the only file a future population level reads. Two fields
+`topology.yaml` is the only file the population level reads
+(`cle/population/reader.py`). Two fields
 could carry a descent's motive across it, and they are separated by TYPE, not
 by a write-time filter, a filter is bypassed by the next path someone adds:
 
@@ -199,27 +207,48 @@ moment was not, counting it as a rejection would be a product contresens).
 `engine_disagrees` is human but stays isolable, so an aggregate claiming to
 measure independent human judgement can exclude the engine's own influence.
 
+Both axes are enforced where a reason is written, not only named: a tag move
+refuses a decline reason, only an `engine:` actor may write an engine-authored
+reason and only a non-engine actor a human-authored one
+(`cle/lifecycle/tags.py`), and `cle decline` accepts decline reasons alone.
+
 Out-of-vocabulary values raise (`UnknownReasonError`); there is no `other`
 bucket, which would silently absorb the distinction the field exists to make.
 `cluster_stability`'s `reason=` is a technical diagnostic on a technical op and
 is explicitly exempt, a coincidence of keyword, not a shared meaning.
 
-### 7c. Population minimum, decided, and insufficient
+### 7c. Population minimum, decided and insufficient
 
 An aggregate over a population must not become a way to read one person's
-usage. The decision taken: **a single global floor**: below it, the agent NAME
-is suppressed from any population output.
+usage. The decision: **a single global floor**: below it, a group's NAME is
+suppressed from any population output.
 
-Two properties of that decision are recorded here rather than softened:
+**Where it lives.** `cle/population/privacy.py`: `MIN_USERS = 3`, counted over
+distinct users (one CLE instance is one user), with `MIN_GROUP = 3` (a group
+must be big enough to describe at all) and a mechanical identifier screen that
+judges a name on its raw form and on the form shown. `cle/population/reader.py`
+refuses the same instance given twice, which would otherwise count one user as
+two.
 
-- **Suppression, not a warning.** A warning leaves the name on screen and asks
-  the reader to disregard it, which is not a protection.
-- **A single global floor is insufficient, and is known to be.** A rare agent
-  name can identify a team long before any global count is reached, and one
-  floor cannot express that. It is what this codebase implements; it is not
-  what the problem requires. No population output exists yet, so nothing
-  currently depends on it, the gap is stated now so it is not discovered as a
-  surprise by whoever builds level 2.
+**Suppression, not a warning.** A warning leaves the name on screen and asks
+the reader to disregard it, which is not a protection. Below the floor a group
+keeps its id and its position on the plot and loses only its name.
+
+**A single global floor is insufficient, and is known to be.** A rare agent
+name can identify a team long before any global count is reached, and one floor
+cannot express that. This is now observed rather than predicted: on WildChat two
+groups were large enough to describe and came from two distinct people each, so
+the floor suppressed both and the corpus names nothing at all. That is the floor
+working - and equally the evidence that one number cannot express *how rare is
+too rare*.
+
+**The facet crosses §7b as a type, never as prose.** It is the one descriptive
+text a topology carries, and it enters only as a validated `Facet`, only at
+birth (`docs/CAPABILITIES.md` §12); `cause["facet"]` and a bare string are
+refused with `FreeTextInTopologyError`, as `cause["reason"]` is.
+
+Pinned by `tests/unit/test_population_privacy.py` and
+`tests/unit/test_population_topology.py`, offline.
 
 ## 8. Test floor
 
@@ -242,7 +271,7 @@ Two properties of that decision are recorded here rather than softened:
   three-bucket classification).
 - **A guard counts only if removing it turns the suite red.** An exception class
   named in a test file says nothing about which of its raise sites is covered.
-  `python tools/mutate.py` decides that by experiment, per site, and its own
+  `uv run python tools/mutate.py` decides that by experiment, per site, and its own
   correctness is itself tested.
 - **The suite owns its environment.** `$CLE_STORE`, `$CLE_EMBEDDER`,
   `$CLE_VECTOR_CACHE` and `$CLE_FORCE_REAL_MODEL` select backends and substrates

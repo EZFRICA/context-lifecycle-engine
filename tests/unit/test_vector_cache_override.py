@@ -5,7 +5,7 @@ CLI without paying to re-embed on every build. Its danger is silent:
 `CachedEmbedder` reads its `embedder_id` FROM THE FILE, so pointing the variable
 at a cache built in another space swaps the geometry underneath a history born
 elsewhere. Centroids do not survive that, and nothing about the run looks
-different — same command, same exit code, different vector space.
+different - same command, same exit code, different vector space.
 
 Two things hold the line, and only one of them is designed to:
 
@@ -76,7 +76,7 @@ def test_uncalibrated_foreign_space_refused(tmp_path):
     path = _cache_file(tmp_path, ALIEN_ID, {"a" * 64: _unit(1)})
     assert ALIEN_ID not in CALIBRATION_PROVENANCE, (
         "if this id gained a calibration entry, the only remaining guard is the "
-        "topology mismatch below — which is why that test exists"
+        "topology mismatch below - which is why that test exists"
     )
     with pytest.raises(UnknownCalibrationError):
         embedding_config_for(CachedEmbedder.from_file(path))

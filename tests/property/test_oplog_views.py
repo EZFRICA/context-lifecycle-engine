@@ -1,11 +1,11 @@
-"""Two READ views over the one write path — classification + provenance.
+"""Two READ views over the one write path - classification + provenance.
 
-SCOPE — bucket 1 (embedder-agnostic): no embedder is involved anywhere here;
+SCOPE - bucket 1 (embedder-agnostic): no embedder is involved anywhere here;
 these assertions hold in any era and any vector space.
 
 Invariant 4 is what these guard indirectly: there is still exactly ONE writer
 (`OpLog.emit`). Splitting technical from decision is a read concern, so the
-risk is not duplication — it is an op that nobody classified silently vanishing
+risk is not duplication - it is an op that nobody classified silently vanishing
 from the audit view. That is what `test_every_emitted_op_classifies` exists to
 catch, by scraping the ops the CODE actually emits rather than a hand-kept list.
 """
@@ -32,7 +32,7 @@ def _ops_emitted_by_the_code() -> set[str]:
 
     Parsed from the AST, not grepped, so a multi-line call is seen and a
     commented-out one is not. A dynamic op name (there are none today) would
-    be invisible here — that is a known limit of this scrape, not a silent
+    be invisible here - that is a known limit of this scrape, not a silent
     pass: it would surface as an unclassified op at runtime instead.
     """
     found: set[str] = set()
@@ -56,7 +56,7 @@ def _ops_emitted_by_the_code() -> set[str]:
 
 def test_every_emitted_op_classifies_into_exactly_one_bucket() -> None:
     emitted = _ops_emitted_by_the_code()
-    assert emitted, "found no emit() call sites — the AST scrape is broken"
+    assert emitted, "found no emit() call sites - the AST scrape is broken"
     unclassified = [op for op in sorted(emitted) if op not in TECHNICAL_OPS | DECISION_OPS]
     assert not unclassified, (
         f"ops emitted but classified nowhere: {unclassified}. Classify them in "
@@ -125,7 +125,7 @@ def test_the_sentence_carries_actor_subject_and_on_behalf_of() -> None:
 
 
 def test_the_birth_path_actually_emits_on_behalf_of() -> None:
-    """Not just that the rule says it is required — that the code writes it.
+    """Not just that the rule says it is required - that the code writes it.
 
     Exercises the real `move_state_tag` used at candidate birth and reads the line
     back off the sink.

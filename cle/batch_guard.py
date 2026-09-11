@@ -8,12 +8,12 @@ that all succeed. A cosine computed across two vector spaces returns a number in
 
 Three guards, all loud, all cheap:
 
-  * `assert_batch_varied` — a batch whose outputs are all identical, or whose
+  * `assert_batch_varied` - a batch whose outputs are all identical, or whose
     error share crosses a bar, is a failed batch even when every call returned.
-  * `assert_unit_norm` — the CLE's `cosine` is a raw dot product and is a cosine
+  * `assert_unit_norm` - the CLE's `cosine` is a raw dot product and is a cosine
     only on unit vectors, so a vector whose norm is not 1 comes from a space the
     CLE does not compute in.
-  * `assert_embeddable` — the only OUTBOUND guard. The other two, and every
+  * `assert_embeddable` - the only OUTBOUND guard. The other two, and every
     other check on the embedding path, inspect what comes back; without this one
     an empty opener is billed and then clustered as if it named an intent.
 """
@@ -38,7 +38,7 @@ class UniformBatchError(RuntimeError):
 
     Raised when every output is identical, or when too many carry an error
     marker. Both shapes are indistinguishable from success by timing, by count,
-    and by the absence of an exception — which is why they need a check of their
+    and by the absence of an exception - which is why they need a check of their
     own rather than a `try`.
     """
 
@@ -137,7 +137,7 @@ def assert_embeddable(text: str, *, where: str) -> None:
     if not isinstance(text, str) or not text.strip():
         raise EmptyTextError(
             f"{where}: refusing to embed an empty text ({text!r}). An empty opener "
-            "is a defect upstream — in episode segmentation or in the corpus — and "
+            "is a defect upstream - in episode segmentation or in the corpus - and "
             "embedding it would put an arbitrary point into the clustering as if it "
             "named an intent."
         )

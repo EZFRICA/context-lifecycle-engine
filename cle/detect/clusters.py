@@ -3,7 +3,7 @@
 Contract (replay-validation skill, BLUEPRINT §9 decision 2 as adopted in
 the approved P1 plan):
 - Embed the episode opener with a dedicated embedder behind an `Embedder`
-  Protocol — centroids must survive agent-model swaps, so the embedder is
+  Protocol - centroids must survive agent-model swaps, so the embedder is
   never the agents' model. Two substrates ship: the deterministic local
   `HashedTokenEmbedder` (hashed token buckets, offline) and a real
   embedding model read from a committed vector cache
@@ -19,7 +19,7 @@ the approved P1 plan):
 
 MEASURED, so no reader repeats the original assumption: swapping the
 embedder is NOT "a config swap behind the same Protocol". It changes agent
-identity (centroids are only meaningful in the space that produced them —
+identity (centroids are only meaningful in the space that produced them -
 hence `TriggerSpec.embedder_id`), it requires its own threshold, and it
 makes the cosine-based contradiction check unsound. See docs/METRICS.md.
 - Per-user baseline: median iterations across the user's episodes,
@@ -47,7 +47,7 @@ class Embedder(Protocol):
 
 
 class HashedTokenEmbedder:
-    """Deterministic, offline, dedicated — decision 2's requirements
+    """Deterministic, offline, dedicated - decision 2's requirements
     exactly, with fixture-grade quality. Tokens are hashed into a fixed
     number of buckets; shared vocabulary yields cosine proximity."""
 
@@ -105,7 +105,7 @@ CLUSTER_THRESHOLD_BY_EMBEDDER: dict[str, float] = {
     # Swept 0.60-0.95 on the realistic fixtures; 0.775 is the only region where
     # purity and recall are simultaneously non-trivial. The credible evidence is
     # the process-independent HOLDOUT (3/3 planted patterns recovered, near-
-    # perfect purity), not the in-sample GDG peak — see docs/METRICS.md.
+    # perfect purity), not the in-sample GDG peak - see docs/METRICS.md.
     "google:gemini-embedding-2:768": 0.775,
 }
 
@@ -115,14 +115,22 @@ def cluster_threshold_for(embedder_id: str | None, default: float) -> float:
 
 
 class IntentClusterer:
-    """Incremental clustering of episode openers for one user."""
+    """Incremental clustering of episode openers for one user.
 
-    def __init__(self, embedder: Embedder, config: DetectorConfig) -> None:
+    `threshold`, when given, is used exactly. Level 1 never passes it and gets
+    the per-space value from `CLUSTER_THRESHOLD_BY_EMBEDDER`, calibrated on
+    episode openers. Level 2 (`cle.population.grouping`) clusters FACETS, a
+    different object whose right threshold depends on the corpus, so it passes
+    its own - and a table entry for the same space must not replace it silently.
+    """
+
+    def __init__(self, embedder: Embedder, config: DetectorConfig,
+                 threshold: float | None = None) -> None:
         self._embedder = embedder
         #: The space this clusterer's centroids live in. Public because a caller
         #: comparing them against anything else must be able to check it.
         self.embedder_id = getattr(embedder, "embedder_id", None)
-        self._threshold = cluster_threshold_for(
+        self._threshold = threshold if threshold is not None else cluster_threshold_for(
             getattr(embedder, "embedder_id", None), config.cluster_similarity_threshold
         )
         self.centroids: list[Vector] = []
@@ -182,7 +190,7 @@ def user_baseline(episodes_with_closures: Sequence[tuple[Episode, Closure]]) -> 
     """Median iterations across the user's episodes, excluding abandoned
     closures (replay-validation skill; recomputed daily by the pipeline).
 
-    None when nothing survives the exclusion — a user whose entire history
+    None when nothing survives the exclusion - a user whose entire history
     is abandonment has no meaningful baseline, and thresholds relative to
     it must not silently fall back to an absolute number.
     """

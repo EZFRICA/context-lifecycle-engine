@@ -1,4 +1,4 @@
-"""Partition the GDG corpus into N synthetic users — one oplog each.
+"""Partition the GDG corpus into N synthetic users - one oplog each.
 
 Used by the per-user density probes. It
 produced examples/sw3_*, sw6_*, sw12_*, sw24_* and ph12_*, the fixtures behind
@@ -10,14 +10,14 @@ CLE need. Every fixture so far is ONE user, so nothing in this repository has
 ever exercised the shape a population level reads: several independent
 topologies that may or may not share intents. This writes that shape.
 
-WHAT THIS IS AND IS NOT — stated here so no result built on it can quietly
+WHAT THIS IS AND IS NOT - stated here so no result built on it can quietly
 overclaim. The users are synthetic slices of a single generator's output, so two
 users sharing a planted intent carry text from the SAME generator and are
 therefore closer than two real users would be. Anything measured on this corpus
 is an upper bound, never an estimate.
 
 Overlap EMERGES from a seeded draw. Assigning one intent per user, or building
-the overlap by hand, would plant the answer — the exact shape of the v1 failure,
+the overlap by hand, would plant the answer - the exact shape of the v1 failure,
 one level up.
 
 The seven task intents are drawn from; `qa`, `noise` and `abandon` are
@@ -67,7 +67,7 @@ def _threads_by_intent(records: list[dict]) -> dict[str, list[str]]:
 
 
 def partition(records: list[dict], users: int, per_user: tuple[int, int], seed: int):
-    """(assignment, matrix) — which intents each user drew, and the records.
+    """(assignment, matrix) - which intents each user drew, and the records.
 
     Background threads are split disjointly across users so no two users share a
     literal thread: sharing an INTENT is the signal under test, sharing a thread
@@ -159,7 +159,7 @@ def main() -> None:
         }
 
     # The user x intent matrix. Without it no result on this corpus is
-    # interpretable — how many users hold each intent IS the ground truth a
+    # interpretable - how many users hold each intent IS the ground truth a
     # level-2 grouping would have to recover.
     shared = collections.Counter()
     for user in manifest["users"].values():

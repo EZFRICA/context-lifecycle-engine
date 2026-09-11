@@ -1,21 +1,21 @@
 """SourceSpec, Image, evidence types, and tag-target rules.
 
 Contract (cle-core-contracts, BLUEPRINT §4-§5):
-- `SourceSpec(yaml_raw, hash)` — the candidate's source, hashed as-is.
+- `SourceSpec(yaml_raw, hash)` - the candidate's source, hashed as-is.
 - `Image(source_hash, resolved_refs, assembled_prompt, trigger,
   model_fingerprint, pre_evidence, probe_set, mounted_tools,
-  probe_output_hashes, hash)` — the built artifact; `hash` covers ALL
+  probe_output_hashes, hash)` - the built artifact; `hash` covers ALL
   fields. Invariant 1: image.hash != source.hash, always (structural via
   cle_kind domain separation, see Storable).
-- `TriggerSpec(centroid, embedder_id, period)` — the entrypoint. A centroid
+- `TriggerSpec(centroid, embedder_id, period)` - the entrypoint. A centroid
   is only meaningful inside the vector space that produced it, so its
   provenance is recorded and covered by `Image.hash`: two images built on
   different embedders necessarily differ. Comparing centroids across
   provenance raises `SpaceMismatchError`. There is deliberately NO
-  `model_version` — the embedding API exposes no version signal distinct
+  `model_version` - the embedding API exposes no version signal distinct
   from the model id, and a placeholder would give false drift assurance.
 - Lifecycle tags attach to Image hashes only; tagging anything else raises
-  `TagTargetError` — `assert_tag_target` is the single guard every tagging
+  `TagTargetError` - `assert_tag_target` is the single guard every tagging
   path must route through.
 - Three evidence types, distinct at type level (invariant 5):
   `PreEvidence` (replay, retrospective) / `Evidence` (trial, lived) /
@@ -55,7 +55,7 @@ class SpaceMismatchError(Exception):
 
 
 class TriggerSpec(BaseModel, frozen=True):
-    """ENTRYPOINT of an image — immutable, in-image (BLUEPRINT §4).
+    """ENTRYPOINT of an image - immutable, in-image (BLUEPRINT §4).
 
     centroid is produced by detect/ and tested by replay; period is the
     optional temporal condition for recurrence agents.
@@ -63,7 +63,7 @@ class TriggerSpec(BaseModel, frozen=True):
     CLE need (provenance): `embedder_id` names the vector space the centroid
     lives in. A centroid is only meaningful within that space, so an embedder
     swap invalidates centroids exactly as a model swap invalidates a
-    `model_fingerprint` — one layer deeper, and this one touches agent
+    `model_fingerprint` - one layer deeper, and this one touches agent
     IDENTITY: the trigger is what the agent *is*. Because `Image.hash` covers
     the trigger, two images built on different embedders necessarily have
     different hashes, and cross-space centroid comparison raises rather than
@@ -82,21 +82,21 @@ class TriggerSpec(BaseModel, frozen=True):
         if self.embedder_id != other.embedder_id:
             raise SpaceMismatchError(
                 f"centroids from different vector spaces: {self.embedder_id!r} vs "
-                f"{other.embedder_id!r} — an embedder swap invalidates centroids"
+                f"{other.embedder_id!r} - an embedder swap invalidates centroids"
             )
 
 
 class PreEvidence(BaseModel, frozen=True):
-    """Replay output — retrospective, zero risk; gates the BUILD only.
+    """Replay output - retrospective, zero risk; gates the BUILD only.
 
     CLE need (BLUEPRINT §5): cold-start proof. Replay validates the
     trigger, never answer quality, so these numbers may never justify a
-    promotion — hence a type with no lineage to Evidence.
+    promotion - hence a type with no lineage to Evidence.
     """
 
     capture_rate: float = Field(ge=0.0, le=1.0)
     false_trigger_rate: float = Field(ge=0.0, le=1.0)
-    # Mean iteration cost of the cluster under the current topology — the
+    # Mean iteration cost of the cluster under the current topology - the
     # numeric justification of the birth.
     historical_cost: float = Field(ge=0.0)
     # The replay window as requested (e.g. "30d"); the replay report ties
@@ -105,13 +105,13 @@ class PreEvidence(BaseModel, frozen=True):
     # Scope flags (P1 arbitration): what this replay actually proved.
     # P1 tests the semantic trigger only; a period rides along untested.
     # Reading pre_evidence without reading its scope is how replay claims
-    # get silently overstated — hence in-band, not in a docstring.
+    # get silently overstated - hence in-band, not in a docstring.
     semantic_trigger_tested: bool = True
     period_tested: bool = False
 
 
 class Evidence(BaseModel, frozen=True):
-    """Trial output — lived value on natural occurrences; gates promotion.
+    """Trial output - lived value on natural occurrences; gates promotion.
 
     Mandatory on every upward tag move (invariant 4).
     """
@@ -124,7 +124,7 @@ class Evidence(BaseModel, frozen=True):
 
 
 class Persistence(BaseModel, frozen=True):
-    """Re-validation output — proof expiry on substrate drift (invariant 6)."""
+    """Re-validation output - proof expiry on substrate drift (invariant 6)."""
 
     fingerprint_at_build: str
     fingerprint_now: str
@@ -136,8 +136,8 @@ class Persistence(BaseModel, frozen=True):
 class SourceSpec(Storable, frozen=True):
     """The candidate's YAML source, exactly as detected/authored.
 
-    yaml_raw is embedded verbatim in the canonical record — no
-    parse-then-normalize — so the source hash names what the human or
+    yaml_raw is embedded verbatim in the canonical record - no
+    parse-then-normalize - so the source hash names what the human or
     detector actually wrote and a byte-level change is a new candidate
     identity.
     """
@@ -148,7 +148,7 @@ class SourceSpec(Storable, frozen=True):
 
 
 class Image(Storable, frozen=True):
-    """The built artifact — the only thing lifecycle tags may point at.
+    """The built artifact - the only thing lifecycle tags may point at.
 
     Contract fields per cle-core-contracts / BLUEPRINT §4; `hash` (the
     Storable property) covers ALL fields via the canonical encoding.
@@ -186,7 +186,7 @@ def assert_tag_target(backend: StoreBackend, target_hash: str, oplog: OpLog) -> 
     """Verify a hash addresses an image before any tag may touch it.
 
     Fetches the record (integrity-checked) and inspects its cle_kind
-    domain marker — a hash alone cannot be inverted, so the store record
+    domain marker - a hash alone cannot be inverted, so the store record
     is the authority on what kind of thing it names. Every tagging path
     (P3 `cle tag`, the shadow engine) must call this before move_ref.
     """

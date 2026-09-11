@@ -1,6 +1,6 @@
-/* CLE dashboard — Alpine component. Reads snapshots + follows the oplog SSE.
+/* CLE dashboard - Alpine component. Reads snapshots + follows the oplog SSE.
    The ONLY writes are Approve / Decline (and the demo runner), all via the API
-   which shells to the CLI. Metrics shown here are the HUMAN's window — never
+   which shells to the CLI. Metrics shown here are the HUMAN's window - never
    fed back to an agent (the Goodhart boundary lives in the copy too). */
 
 const OP_ACCENT = {
@@ -23,7 +23,7 @@ const KNOWN_OPS = [
 ];
 const LADDER = ["pinned", "ephemeral", "trial", "candidate", "archived"];
 
-function short(h) { return h ? h.slice(0, 8) + "…" : "—"; }
+function short(h) { return h ? h.slice(0, 8) + "…" : "-"; }
 function fmtTs(ts) { try { return new Date(ts).toLocaleTimeString(); } catch { return ""; } }
 function pct(x) { return (x * 100).toFixed(1) + "%"; }
 
@@ -132,7 +132,7 @@ function cleDashboard() {
         : `${data.from ?? "∅"} → ${data.to} on ${img}${data.reason ? " (" + data.reason + ")" : ""}`;
       if (op === "topology_write") return `topology v${data.version} ${data.to ?? ""} diff_size=${data.diff_size}`;
       if (op === "revalidate") return `${img} proof holds`;
-      if (op === "revalidation_failed") return `${img} DRIFT ${data.persistence?.probe_deltas?.length ?? "?"} probes — proof expires`;
+      if (op === "revalidation_failed") return `${img} DRIFT ${data.persistence?.probe_deltas?.length ?? "?"} probes - proof expires`;
       if (op === "integrity_violation") return `INTEGRITY VIOLATION component ${data.component ?? "?"}`;
       if (op === "candidate_declined") return `declined ${data.agent} (was ${data.from})`;
       if (op === "detector_observing") return `detector observing (${data.episodes ?? "?"} episodes)`;
@@ -152,7 +152,7 @@ function cleDashboard() {
         const would = data.would;
         const agree = human && (human === would);
         this.shadowPairs.unshift({ id: Math.random(), image: short(data.image),
-          human: human || "—", would, agree: !!agree });
+          human: human || "-", would, agree: !!agree });
         if (this.shadowPairs.length > 8) this.shadowPairs.pop();
       } else if (data.to) {
         this.lastHumanTag[data.image] = data.to;
@@ -223,8 +223,8 @@ function cleDashboard() {
       const raw = ok ? (result.stdout || "") : (result.stderr || result.stdout || "");
       const tail = raw.split("\n").map(l => l.trim()).filter(Boolean).slice(-8).join(" · ");
       const label = ok
-        ? `✓ ${pulseTitle} — exit 0${tail ? " | " + tail : ""}`
-        : `✗ ${pulseTitle} — exit ${result.code}${tail ? " | " + tail : ""}`;
+        ? `✓ ${pulseTitle} - exit 0${tail ? " | " + tail : ""}`
+        : `✗ ${pulseTitle} - exit ${result.code}${tail ? " | " + tail : ""}`;
       this.pushPulse(op, { title: label, step, total: 3, ts: new Date().toISOString() });
       this.demo.running = false;
       this.refresh();
@@ -237,7 +237,7 @@ function cleDashboard() {
     async runSolicitations() {
       // NOT _postAction: this one starts a background run and returns at once.
       // The button is released by the terminal demo_step/demo_error event on the
-      // SSE stream, not by this response — awaiting the script here is what used
+      // SSE stream, not by this response - awaiting the script here is what used
       // to freeze every control for the length of the run.
       const ts = new Date().toISOString();
       this.demo.running = true;
@@ -287,7 +287,7 @@ function cleDashboard() {
     },
     closeModal() { this.modal.open = false; },
     fmtPeriod(seconds) {
-      if (!seconds) return "—";
+      if (!seconds) return "-";
       const d = seconds / 86400;
       return d >= 1 ? `${d.toFixed(1)} d` : `${(seconds / 3600).toFixed(1)} h`;
     },

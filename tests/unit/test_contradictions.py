@@ -1,4 +1,4 @@
-"""The four-contradiction taxonomy — one focused section per type.
+"""The four-contradiction taxonomy - one focused section per type.
 
 intra_cluster -> unstable, NO candidate. temporal -> evolution, candidate
 from the recent segment. routing -> false_trigger_rate. world_state ->
@@ -7,14 +7,15 @@ approved adjustments: grey-zone (total partition, unstable by default),
 no-tool-never-world_state, and the ADVERSARIAL world_state case (severe
 directive flip + tool change -> unstable, not excused).
 
-SCOPE — `stub:hashed64` ONLY. These assertions describe the v1
-bag-of-tokens mechanism, not the production embedder. In a semantic space
-(`google:gemini-embedding-2:768`) they do not hold: the classifier returns
-`unavailable` and NO pair is ever divergent, so the whole taxonomy is inert.
-The tests here that explicitly call `default_embedder()` are the ones pinning
-that fact.
-They stay because they correctly pin v1; they are not general invariants.
-See docs/METRICS.md (embedder upgrade run).
+SCOPE - bucket 3 (`stub:hashed64` only) for the taxonomy tests, each marked
+`stub_only`: they describe the v1 bag-of-tokens mechanism, not the production
+embedder. In a semantic space (`google:gemini-embedding-2:768`) they do not
+hold: the classifier returns `unavailable` and NO pair is ever divergent, so
+the whole taxonomy is inert. Bucket 1 for the two tests that call
+`default_embedder()` to pin exactly that: the check reports `unavailable`
+without computing a single vector. Measured by `tools/buckets.py`.
+The bucket-3 tests stay because they correctly pin v1; they are not general
+invariants. See docs/METRICS.md (embedder upgrade run).
 """
 
 import io
@@ -63,6 +64,7 @@ LONG = "make the digest long and detailed with full session summaries"
 
 # ── intra_cluster ────────────────────────────────────────────────────────────
 
+@pytest.mark.stub_only
 def test_intra_cluster_flip_flags_unstable_and_blocks_candidate() -> None:
     eps = _episodes([(d, OP, SHORT if i % 2 == 0 else LONG, None, None)
                      for i, d in enumerate(range(0, 8, 2))])
@@ -73,16 +75,18 @@ def test_intra_cluster_flip_flags_unstable_and_blocks_candidate() -> None:
     assert signal is None  # don't automate a contradictory cluster
 
 
+@pytest.mark.stub_only
 def test_consistent_directives_stay_stable() -> None:
     eps = _episodes([(d, OP, SHORT, None, None) for d in range(0, 8, 2)])
     report, _ = _analyze(eps)
     assert not report.unstable and not any(report.counts.values())
 
 
+@pytest.mark.stub_only
 def test_gdg_newsletter_intent_is_unstable_no_candidate(gdg) -> None:
     # Grouped by the PLANTED intent (the detector fragments it). It carries a
     # real intra_cluster flip and, on realistic data, spurious lexical-variety
-    # divergence — either way it is flagged unstable, so no candidate is born.
+    # divergence - either way it is flagged unstable, so no candidate is born.
     eps = gdg.planted("newsletter")
     signal = detect_signal_gated(eps, 3.0, gdg.config, gdg.embedder, gdg.oplog(), actor="human:t")
     assert signal is None
@@ -90,6 +94,7 @@ def test_gdg_newsletter_intent_is_unstable_no_candidate(gdg) -> None:
 
 # ── grey zone (adjustment 1: total partition, conservative default) ─────────
 
+@pytest.mark.stub_only
 def test_grey_zone_gap_is_unstable_by_default() -> None:
     eps = _episodes([(0, OP, SHORT, None, None), (12, OP, LONG, None, None)])  # 7 < 12 < 21
     report, _ = _analyze(eps)
@@ -97,6 +102,7 @@ def test_grey_zone_gap_is_unstable_by_default() -> None:
 
 
 @pytest.mark.parametrize("gap,expected", [(3, "intra_cluster"), (12, "grey_zone"), (30, "temporal")])
+@pytest.mark.stub_only
 def test_time_partition_is_total(gap, expected) -> None:
     eps = _episodes([(0, OP, SHORT, None, None), (gap, OP, LONG, None, None)])
     report, _ = _analyze(eps)
@@ -110,6 +116,7 @@ OLD = "handle the logistics yourself and book everything directly"
 NEW = "always ask me for approval before booking anything"
 
 
+@pytest.mark.stub_only
 def test_temporal_evolution_keeps_cluster_stable_recency_wins() -> None:
     eps = _episodes([(d, PLAN, OLD, None, None) for d in (0, 2, 4)]
                     + [(d, PLAN, NEW, None, None) for d in (30, 33, 36, 39)])
@@ -120,6 +127,7 @@ def test_temporal_evolution_keeps_cluster_stable_recency_wins() -> None:
     assert signal is not None  # the recent stable sub-pattern still births
 
 
+@pytest.mark.stub_only
 def test_gdg_venue_policy_temporal_recovery_now_blocked(gdg) -> None:
     # MEASURED REGRESSION: with realistic follow-up variety the classifier
     # reads lexical spread as divergence and flags the venue-policy intent
@@ -132,8 +140,9 @@ def test_gdg_venue_policy_temporal_recovery_now_blocked(gdg) -> None:
 
 # ── routing (measured: fragments under realistic variety) ───────────────────
 
+@pytest.mark.stub_only
 def test_gdg_routing_intents_fragment_under_realistic_variety(gdg) -> None:
-    # The two near intents no longer form two clean clusters — each shatters
+    # The two near intents no longer form two clean clusters - each shatters
     # into many. Recovery is reported, not gated (the realism-run decision).
     for intent in ("agenda_meetup", "agenda_workshop"):
         _occurrences, _openers, clusters = gdg.recovery(intent)
@@ -147,6 +156,7 @@ OK = "great confirm the main room booking and send the invites"
 KO = "no room free find an alternative venue for the meetup evening"
 
 
+@pytest.mark.stub_only
 def test_world_state_divergence_is_not_a_contradiction() -> None:
     eps = _episodes([(d, EV, OK if i % 2 == 0 else KO, "calendar_api",
                       "slot_free" if i % 2 == 0 else "no_slot")
@@ -162,6 +172,7 @@ def test_world_state_divergence_is_not_a_contradiction() -> None:
     assert signal is not None                         # the candidate is still born
 
 
+@pytest.mark.stub_only
 def test_gdg_events_intent_unblinded_by_realistic_spread(gdg) -> None:
     # The tool-bearing events intent. On the OLD templated data every divergent
     # pair sat at ONE cosine (band 0.0000), world_state absorbed 100%, and no
@@ -178,6 +189,7 @@ def test_gdg_events_intent_unblinded_by_realistic_spread(gdg) -> None:
 
 # ── resolution diagnostic (Option B extended) ───────────────────────────────
 
+@pytest.mark.stub_only
 def test_events_intent_is_no_longer_degenerate(gdg) -> None:
     # Regression guard: if the fixture ever templates the events follow-ups
     # again, the band collapses and this flips back to degenerate.
@@ -189,6 +201,7 @@ def test_events_intent_is_no_longer_degenerate(gdg) -> None:
     assert lines[-1]["world_state_attribution"]["ws_would_be_intra"] == report.ws_would_be_intra
 
 
+@pytest.mark.stub_only
 def test_degenerate_band_is_flagged_when_directives_collapse() -> None:
     # Keeps the degenerate code path covered synthetically: >= 10 divergent
     # pairs all at ONE cosine (two alternating dissimilar directives) -> the
@@ -206,7 +219,7 @@ def test_degenerate_band_is_flagged_when_directives_collapse() -> None:
 
 def test_verdict_is_unavailable_in_an_unsound_vector_space() -> None:
     # Directive-divergence-by-cosine is unsound for a semantic embedder (it
-    # scores OPPOSING directives 0.62-0.86 — they are about the same thing).
+    # scores OPPOSING directives 0.62-0.86 - they are about the same thing).
     # The classifier must say "not measured", never a reassuring "stable".
     from cle.detect.embedders import default_embedder
 
@@ -221,8 +234,8 @@ def test_verdict_is_unavailable_in_an_unsound_vector_space() -> None:
 
 def test_unavailable_still_births_a_candidate_with_a_disclosed_gap() -> None:
     # The stability check is a VETO, not a precondition. When it cannot run,
-    # detection PROCEEDS — blocking would stop the first pillar producing
-    # anything at all — and the candidate carries the gap to the human gate.
+    # detection PROCEEDS - blocking would stop the first pillar producing
+    # anything at all - and the candidate carries the gap to the human gate.
     from cle.detect.embedders import default_embedder
 
     eps = _episodes([(d, OP, SHORT, None, None) for d in range(0, 8, 2)])
@@ -232,6 +245,7 @@ def test_unavailable_still_births_a_candidate_with_a_disclosed_gap() -> None:
     assert signal.stability == "unavailable"
 
 
+@pytest.mark.stub_only
 def test_provenance_never_claims_stable_when_the_check_did_not_run() -> None:
     # The negative: a non-measurement must never be recorded as a clean check.
     from cle.detect.embedders import default_embedder
@@ -245,6 +259,7 @@ def test_provenance_never_claims_stable_when_the_check_did_not_run() -> None:
     assert checked is not None and checked.stability == "stable"
 
 
+@pytest.mark.stub_only
 def test_unstable_is_still_a_hard_veto() -> None:
     # Reversing the unavailable block must NOT weaken the real veto.
     eps = _episodes([(d, OP, SHORT if i % 2 == 0 else LONG, None, None)
@@ -253,6 +268,7 @@ def test_unstable_is_still_a_hard_veto() -> None:
                                actor="human:t") is None
 
 
+@pytest.mark.stub_only
 def test_sound_space_still_returns_a_two_valued_verdict() -> None:
     stable = _episodes([(d, OP, SHORT, None, None) for d in range(0, 8, 2)])
     assert _analyze(stable)[0].verdict == "stable"
@@ -261,6 +277,7 @@ def test_sound_space_still_returns_a_two_valued_verdict() -> None:
     assert _analyze(flip)[0].verdict == "unstable"
 
 
+@pytest.mark.stub_only
 def test_spread_cluster_resolves() -> None:
     # A cluster with a genuine spread of divergent cosines is resolvable.
     eps = _episodes([(d, OP, SHORT if i % 2 == 0 else LONG, None, None)
@@ -270,10 +287,11 @@ def test_spread_cluster_resolves() -> None:
     assert lines[-1]["resolution"] == "resolved"
 
 
+@pytest.mark.stub_only
 def test_adversarial_world_state_severe_flip_is_unstable() -> None:
     # Approved adjustment 3: tool_result AND directive both change,
     # incompatibly (severe divergence). A world change must NOT excuse a
-    # near-total intent flip — prudence resolves to unstable.
+    # near-total intent flip - prudence resolves to unstable.
     eps = _episodes([
         (0, EV, "book big hall now every single time", "calendar_api", "slot_free"),
         (3, EV, "quit reserving spaces until my explicit approval arrives", "calendar_api", "no_slot"),
@@ -284,6 +302,7 @@ def test_adversarial_world_state_severe_flip_is_unstable() -> None:
     assert report.unstable                             # NOT excluded
 
 
+@pytest.mark.stub_only
 def test_no_tool_divergence_is_never_world_state() -> None:
     # Approved adjustment 2: with no external world in the frame (no
     # tool_result on either side), divergence IS a user signal.
@@ -293,9 +312,10 @@ def test_no_tool_divergence_is_never_world_state() -> None:
     assert report.counts["intra_cluster"] == 1 and report.unstable
 
 
+@pytest.mark.stub_only
 def test_one_sided_tool_result_is_not_world_state() -> None:
     # tool_result present on ONE side only: not attributable to a world
-    # change — falls through to the time-based classification.
+    # change - falls through to the time-based classification.
     eps = _episodes([(0, EV, "book big hall now every single time", "calendar_api", "slot_free"),
                      (3, EV, "quit reserving spaces until my explicit approval arrives", "calendar_api", None)])
     report, _ = _analyze(eps)

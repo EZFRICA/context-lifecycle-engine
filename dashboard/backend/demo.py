@@ -1,8 +1,8 @@
-"""Demo runner — walk the full CLE loop live, one paced step at a time.
+"""Demo runner - walk the full CLE loop live, one paced step at a time.
 
 Mirrors examples/full_loop.sh as a structured list so the backend can emit
 a `demo_step` event (with the zone it affects) before each step and pace
-the run so the audience can read the PULSE. Uses the LIVE model path — the
+the run so the audience can read the PULSE. Uses the LIVE model path - the
 build and the drift revalidation call the real configured LLM (temperature
 0 for the fingerprint), so "proof expires" is a genuine substrate change,
 not a simulation. Single-flight: a lock prevents two demos at once.
@@ -19,7 +19,7 @@ from typing import Any, Callable
 from .oplog_sse import EventBus
 
 # Drift is enacted by revalidating the pinned image against a DIFFERENT real
-# model — a true substrate change, not a fake id. Must be a model your key can
+# model - a true substrate change, not a fake id. Must be a model your key can
 # reach (distinct from the build model). Override per venue.
 DRIFT_MODEL = os.getenv("CLE_DEMO_DRIFT_MODEL", "gemini-3.6-flash")
 
@@ -38,17 +38,17 @@ def _steps(state_dir: Path) -> list[dict[str, Any]]:
         {"title": "Reset state", "zone": "pulse", "argv": [cle, "clean", "--yes", *sd]},
         {"title": "Detector writes candidates from usage (3 distinct agents)",
          "zone": "births", "argv": [_PY, "examples/make_fixture.py"]},
-        {"title": "Build status_report — hand-authored incumbent (owns 'status report')",
+        {"title": "Build status_report - hand-authored incumbent (owns 'status report')",
          "zone": "births", "argv": [cle, "build", "examples/status_report_agent.yaml", *win, *sd]},
-        {"title": "Build weekly_recap — capture 60%: status_report owns 2 of its episodes",
+        {"title": "Build weekly_recap - capture 60%: status_report owns 2 of its episodes",
          "zone": "births", "argv": [cle, "build", "examples/weekly_recap_agent.yaml", *win, *sd]},
-        {"title": "Build standup_digest — distinct centroid, distinct fingerprint",
+        {"title": "Build standup_digest - distinct centroid, distinct fingerprint",
          "zone": "births", "argv": [cle, "build", "examples/standup_digest_agent.yaml", *win, *sd]},
-        {"title": "Build incident_triage — reformulation-born, expensive",
+        {"title": "Build incident_triage - reformulation-born, expensive",
          "zone": "births", "argv": [cle, "build", "examples/incident_triage_agent.yaml", *win, *sd]},
         {"title": "Run workspace alpha (recap)", "zone": "lives",
          "argv": [cle, "run", "weekly_recap", "--workspace", "alpha", "--prompts", "2", *sd]},
-        {"title": "Run workspace beta (incident — divergent metrics)", "zone": "lives",
+        {"title": "Run workspace beta (incident - divergent metrics)", "zone": "lives",
          "argv": [cle, "run", "incident_triage", "--workspace", "beta", "--prompts", "5", *sd]},
         {"title": "Context-switch cost: alpha recap → incident (real diff)", "zone": "lives",
          "argv": [cle, "run", "incident_triage", "--workspace", "alpha", "--prompts", "1", *sd]},
@@ -65,10 +65,10 @@ def _steps(state_dir: Path) -> list[dict[str, Any]]:
         {"title": "…standup → ephemeral (cost 0.95 > 0.7 threshold)", "zone": "topology",
          "argv": [cle, "tag", "standup_digest", "ephemeral", "--cost-ratio", "0.95",
                   "--occurrences", "3", "--closures", "success,success,reformulated", *sd]},
-        {"title": f"Revalidate weekly_recap under a drifted model ({DRIFT_MODEL}) — proof expires",
+        {"title": f"Revalidate weekly_recap under a drifted model ({DRIFT_MODEL}) - proof expires",
          "zone": "lives",
          "argv": [cle, "revalidate", "weekly_recap", "--model-id", DRIFT_MODEL, *sd]},
-        {"title": "v2 is BORN from the drift — rebuild on the new substrate",
+        {"title": "v2 is BORN from the drift - rebuild on the new substrate",
          "zone": "births",
          "argv": [cle, "build", "examples/weekly_recap_agent.yaml", *win,
                   "--model-id", DRIFT_MODEL, *sd]},
@@ -142,7 +142,7 @@ class ScriptRunner:
 
     What this replaces. The Run test button used to `await proc.communicate()`
     inside the POST handler, so the request did not return until the script had
-    finished — 26 s with stub models, 131 s measured on real ones. The page kept
+    finished - 26 s with stub models, 131 s measured on real ones. The page kept
     every control disabled for that whole time with no output, which reads as a
     frozen dashboard rather than as work in progress.
 
@@ -152,7 +152,7 @@ class ScriptRunner:
     """
 
     #: Lines the script prints that are worth surfacing on their own. Everything
-    #: else is still captured for the failure report, just not narrated — a
+    #: else is still captured for the failure report, just not narrated - a
     #: full-loop run prints hundreds of lines and the feed is for reading.
     _BANNER = ("=== ", "--- ", "DRIFT", "refusing")
 

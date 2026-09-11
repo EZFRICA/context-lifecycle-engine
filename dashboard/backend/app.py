@@ -1,9 +1,13 @@
-"""FastAPI app — SSE + snapshot REST + the one write path + demo runner.
+"""FastAPI app - SSE + snapshot REST + the write routes + demo runner.
+
+Writes are Approve/Decline (the audience's) and the operator controls (init,
+run test, clean, the demo), each through the CLI; a write sent from another
+site is refused before any route runs (`refuse_cross_origin_writes`).
 
 Run:  cle dashboard --state-dir .cle-demo --port 8000
 
 That subcommand exports CLE_STATE_DIR and calls uvicorn on this module, so
-running uvicorn directly works too — but then the state directory comes from
+running uvicorn directly works too - but then the state directory comes from
 the ambient CLE_STATE_DIR (default `.cle/`) rather than from a flag, which is
 the reading everything else in the docs assumes. Serves the Alpine frontend
 at /.
@@ -16,9 +20,10 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from urllib.parse import urlsplit
+
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -50,9 +55,29 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="CLE Live Dashboard", lifespan=lifespan)
-app.add_middleware(
-    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
-)
+
+#: Methods that change nothing. Every other request is a write.
+_SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+
+
+@app.middleware("http")
+async def refuse_cross_origin_writes(request: Request, call_next):
+    """A write must come from this page, never from another site.
+
+    The dashboard serves its own frontend, so it needs no CORS at all; it used
+    to allow every origin, and the POST routes include `clean`, which deletes
+    the state. Removing CORS is not enough on its own: a POST with no body is a
+    "simple" request, which a browser sends cross-origin without asking. A
+    browser always names the page's origin on such a request, so a write whose
+    `Origin` is not this server is refused before any route runs. A client that
+    sends no `Origin` (curl, the tests) is not a page in someone's browser, and
+    is let through.
+    """
+    origin = request.headers.get("origin")
+    if request.method not in _SAFE_METHODS and origin is not None:
+        if urlsplit(origin).netloc != request.headers.get("host"):
+            return JSONResponse(status_code=403, content={"detail": "cross-origin write refused"})
+    return await call_next(request)
 
 
 # --- live stream ------------------------------------------------------------
@@ -92,7 +117,7 @@ def state_image(hash: str):
 
 @app.get("/state/decisions")
 def state_decisions():
-    """Read-only second view over the same log — no new write path."""
+    """Read-only second view over the same log - no new write path."""
     return reads.decisions(STATE_DIR)
 
 
@@ -114,7 +139,7 @@ def state_topology_diff(a: int, b: int):
         raise HTTPException(status_code=404, detail=str(error))
 
 
-# --- the ONE write path -----------------------------------------------------
+# --- writes: the audience's path, then the operator controls ----------------
 
 
 class AgentBody(BaseModel):
@@ -155,7 +180,7 @@ async def actions_run_workspaces():
     """Start `full_loop.sh` in the background and return at once.
 
     This used to await the subprocess, so the request held open for the whole
-    run — 26 s on stub models, 131 s measured on real ones — with every control
+    run - 26 s on stub models, 131 s measured on real ones - with every control
     on the page disabled and nothing printed until the end. Progress now arrives
     as `demo_step` events on the same SSE stream the rest of the board reads, and
     the button is released by the terminal event rather than by the response.
@@ -232,7 +257,7 @@ class _RevalidatingStaticFiles(StaticFiles):
 
     The visible consequence, and the reason this exists: a stylesheet fix shipped,
     the server served it, and an operator with the page already open kept seeing
-    the old rendering — a button that read as disabled. Nothing was wrong on
+    the old rendering - a button that read as disabled. Nothing was wrong on
     either side; the fix simply never crossed.
 
     `no-cache` does not mean "do not cache". It means "revalidate before use", so

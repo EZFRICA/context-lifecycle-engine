@@ -1,17 +1,17 @@
-"""Lifecycle tags — mobile states and immutable versions.
+"""Lifecycle tags - mobile states and immutable versions.
 
 Contract (cle-core-contracts, invariants 1, 4, 5):
 - Tags attach to Image hashes only (assert_tag_target guards every path).
 - Upward moves REQUIRE proof; require_evidence stays the ONLY promotion
   gate. Decision (documented, P3): pre-trial moves (birth->candidate,
-  candidate->trial, archived->trial resurrection) carry PreEvidence —
+  candidate->trial, archived->trial resurrection) carry PreEvidence -
   the only proof that can exist before an agent has lived; every move
   into `ephemeral` or `pinned` carries lived Evidence, no exception.
   Downward moves need no proof, only a logged reason.
 - FIVE states implemented (STATE_RANK):
   archived(0) -> candidate(1) -> trial(2) -> ephemeral(3) -> pinned(4).
   The published part-7 machine also names `pattern` and `deprecated`; they
-  are deliberately NOT in v1 — do not reference them as if they existed.
+  are deliberately NOT in v1 - do not reference them as if they existed.
   `ephemeral` = promoted on lived evidence; `pinned` = stable over ≥S
   solicitations / W days (engine rule, defaults 10/30, config).
 - Every tag op logs one JSON line; version refs are write-once
@@ -20,7 +20,7 @@ Contract (cle-core-contracts, invariants 1, 4, 5):
 
 import time
 
-from cle.lifecycle.reasons import validate_reason
+from cle.lifecycle.reasons import ENGINE_AUTHORED, HUMAN_DECLINE_REASONS, validate_reason
 from cle.oplog import OpLog
 from cle.store.backends import StoreBackend
 from cle.store.commits import Evidence, PreEvidence, assert_tag_target
@@ -50,6 +50,24 @@ class TagMoveError(Exception):
     """A state move that the ladder or its proof requirements reject."""
 
 
+def _check_reason_fits(reason: str, actor: str) -> None:
+    """The two axes of `cle/lifecycle/reasons.py`, enforced where a reason is written.
+
+    Membership in the vocabulary is not enough. A decline reason names a refusal,
+    not a descent, and belongs to `cle decline`. An engine reason names a metric
+    that fired, so only an `engine:` actor may write it; a judgement reason names
+    a person's call, so the engine may not. Without this, a human could file
+    `substrate_drift`, and an aggregate of what the engine concluded would count
+    a person.
+    """
+    if reason in HUMAN_DECLINE_REASONS:
+        raise TagMoveError(f"{reason!r} is a decline reason; a tag move is not a decline")
+    engine_reason = reason in ENGINE_AUTHORED
+    if engine_reason != actor.startswith("engine:"):
+        side = "engine" if engine_reason else "human"
+        raise TagMoveError(f"{reason!r} is {side}-authored; actor {actor!r} cannot write it")
+
+
 def move_state_tag(
     *,
     backend: StoreBackend,
@@ -75,13 +93,13 @@ def move_state_tag(
         raise TagMoveError(f"unknown state {to_state!r}; ladder is {sorted(STATE_RANK)}")
     if from_state is not None and from_state not in STATE_RANK:
         # A typo'd from_state would silently rank as 0 and flip the move's
-        # direction — fail loudly instead.
+        # direction - fail loudly instead.
         raise TagMoveError(f"unknown from_state {from_state!r}")
     assert_tag_target(backend, image_hash, oplog)
 
     upward = from_state is None or STATE_RANK[to_state] > STATE_RANK.get(from_state, 0)
     if to_state in ("ephemeral", "pinned"):
-        # THE promotion gate — lived evidence only, whatever the path.
+        # THE promotion gate - lived evidence only, whatever the path.
         if evidence is None:
             raise TagMoveError(f"promotion to {to_state} requires Evidence")
         require_evidence(evidence)
@@ -92,6 +110,7 @@ def move_state_tag(
         raise TagMoveError("downward moves must state a reason (it is logged)")
     if reason is not None:
         validate_reason(reason)  # raises on anything outside the closed vocabulary
+        _check_reason_fits(reason, actor)
 
     backend.move_ref(f"agents/{agent}/{to_state}", image_hash)
     oplog.emit(
@@ -105,7 +124,7 @@ def move_state_tag(
         pre_evidence=pre_evidence.model_dump() if pre_evidence else None,
         latency_ms=round((time.monotonic() - started) * 1000, 3),
         # `reason` is the closed vocabulary; `note` is the user's own prose. Both
-        # are legitimate HERE — the oplog is the local channel. Only `reason`
+        # are legitimate HERE - the oplog is the local channel. Only `reason`
         # crosses into topology.yaml (cle/lifecycle/reasons.py).
         # The conditional unpack OMITS the key when the value is absent, which
         # `reason=None` would not: it would emit `"reason": null` and change the

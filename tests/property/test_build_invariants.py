@@ -1,10 +1,10 @@
-"""Mandated tests 1 and 6 — two-hash inequality and build determinism.
+"""Mandated tests 1 and 6 - two-hash inequality and build determinism.
 
 Written against the full three-stage pipeline: same source + same resolved
 components + same fingerprint => same image hash; and the image hash can
 never equal the source hash.
 
-SCOPE — bucket 2 (stub-as-a-tool): the stub embedder is incidental. Two-hash
+SCOPE - bucket 2 (stub-as-a-tool): the stub embedder is incidental. Two-hash
 inequality and build determinism hold under ANY embedder; the stub is only a
 deterministic way to obtain a centroid.
 """
@@ -101,7 +101,7 @@ def test_build_determinism(payload: str) -> None:
 def test_probe_set_is_hash_covered_and_deterministically_selected() -> None:
     # P1 arbitration: probe_set participates in the image identity, and
     # selection is the first PROBE_SET_SIZE in-cluster openers,
-    # chronological — no sampling, no wall clock.
+    # chronological - no sampling, no wall clock.
     store = InMemoryStore()
     image = _build("recap format v1", store)
     tampered = image.model_copy(update={"probe_set": image.probe_set + ("extra probe",)})

@@ -36,9 +36,9 @@ FOUR WAYS TO GET THIS WRONG, all of them silent, all handled here:
 
 Usage:
 
-    python tools/mutate.py                  # every raise site in cle/ + dashboard/
-    python tools/mutate.py cle/detect       # one subtree
-    python tools/mutate.py --list           # sites only, no suite runs
+    uv run python tools/mutate.py                  # every raise site in cle/ + dashboard/
+    uv run python tools/mutate.py cle/detect       # one subtree
+    uv run python tools/mutate.py --list           # sites only, no suite runs
 """
 
 from __future__ import annotations
@@ -145,12 +145,37 @@ def _run_suite(extra: list[str] | None = None) -> tuple[tuple[str, ...], tuple[s
     They mean different things and conflating them is mistake 2: a FAILED is a
     guard doing its job, an ERROR is this tool having broken the tree.
     """
-    proc = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", "--no-header", "-p", "no:cacheprovider",
-         *(extra or [])],
-        cwd=ROOT, capture_output=True, text=True,
-    )
-    return classify_output(proc.stdout)
+    try:
+        proc = subprocess.run(
+            [sys.executable, "-m", "pytest", "-q", "--no-header", "-p", "no:cacheprovider",
+             *(extra or [])],
+            cwd=ROOT, capture_output=True, text=True, timeout=SUITE_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        return (), ("<timeout>",)
+    return abnormal_exit(proc.returncode, classify_output(proc.stdout))
+
+
+#: Far above a normal run (~25 s). A mutant that makes the suite HANG is not a
+#: guard doing its job, and it is not "unguarded" either; it is reported as a
+#: harness failure so a human looks at it.
+SUITE_TIMEOUT_SECONDS = 600
+
+
+def abnormal_exit(returncode: int, verdict: tuple[tuple[str, ...], tuple[str, ...]]
+                  ) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Turn an inner pytest that did not finish normally into a harness failure.
+
+    pytest exits 0 (all passed) or 1 (some failed) when it ran to the end.
+    Anything else - interrupted, internal error, or killed by a signal (negative)
+    - means its summary may be missing, and a missing summary has no FAILED line.
+    Read naively that is "no test failed", i.e. UNGUARDED: the verdict this tool
+    once gave for a mutant that looped until the inner pytest was killed.
+    """
+    failed, errored = verdict
+    if returncode not in (0, 1) and not errored:
+        errored = errored + (f"<exit {returncode}>",)
+    return failed, errored
 
 
 def classify_output(stdout: str) -> tuple[tuple[str, ...], tuple[str, ...]]:

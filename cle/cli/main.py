@@ -1,10 +1,10 @@
 """`cle` command-line interface.
 
-BLUEPRINT §1 surface — build | run | ps | tag | log | diff — plus four
+BLUEPRINT §1 surface - build | run | ps | tag | log | diff - plus four
 commands the build needed and the contract did not name:
 - `revalidate` (BLUEPRINT §5 / P3: the re-validator needs a human-invocable
   entry point until v2 schedules it),
-- `decline` (records a human refusal as one op line, moving no tag — the
+- `decline` (records a human refusal as one op line, moving no tag - the
   human/engine divergence must be auditable in both directions),
 - `dashboard` (serves the FastAPI read-mostly view),
 - `clean` (resets the state directory).
@@ -13,8 +13,8 @@ upward tag moves carry `evidence`.
 
 State model (decision, documented): the CLI persists on a store selected by
 `--store` / $CLE_STORE (FileStore by default, SqliteStore opt-in) under
---state-dir (default .cle/) — store objects+refs, containers.json,
-metrics/, log.jsonl — because the lifecycle outlives any process. The
+--state-dir (default .cle/) - store objects+refs, containers.json,
+metrics/, log.jsonl - because the lifecycle outlives any process. The
 visible topology.yaml is written next to the state dir root.
 """
 
@@ -30,23 +30,23 @@ import typer
 import yaml
 
 from cle.build import build_image
-from cle.detect.clusters import HashedTokenEmbedder
+from cle.detect.clusters import HashedTokenEmbedder, cluster_threshold_for
 from cle.detect.embedders import EMBEDDER_KINDS, open_embedder, embedding_config_for
 from cle.detect.episodes import DetectorConfig, Message
 from cle.lifecycle.engine import EngineThresholds, shadow_decide
 from cle.lifecycle.revalidator import revalidate as run_revalidation
 from cle.lifecycle.tags import STATE_RANK, move_state_tag
-from cle.lifecycle.reasons import TopologyReason, validate_reason
+from cle.lifecycle.reasons import HUMAN_DECLINE_REASONS, TopologyReason, validate_reason
 from cle.lifecycle.topology import current_agents, render_diff, render_log, write_topology
 from cle.oplog import OpLog, UnclassifiedOpError, classify_op, render_decision
 from cle.runtime.container import ensure_container, load_containers, load_image, run_prompts
 from cle.runtime.metrics_volume import read_events
 from cle.runtime.mounts import Mount
-from cle.store.backends import STORE_KINDS, StoreBackend, open_store
+from cle.store.backends import STORE_KINDS, StagedStore, StoreBackend, open_store
 from cle.store.commits import Evidence, SourceSpec
 from cle.store.objects import Block, content_hash
 
-app = typer.Typer(help="CLE — Context Lifecycle Engine.")
+app = typer.Typer(help="CLE - Context Lifecycle Engine.")
 
 _WINDOW = re.compile(r"^(\d+)([dh])$")
 _HASH = re.compile(r"^[0-9a-f]{64}$")
@@ -89,7 +89,7 @@ def cli(store: str = STORE_OPTION, embedder: str = EMBEDDER_OPTION) -> None:
 class StubFingerprinter:
     """Deterministic substrate stand-in (no live model in v1): per-probe
     output = hash(model_id, probe). Drift is simulated by changing
-    --model-id — same Protocol a live provider implements."""
+    --model-id - same Protocol a live provider implements."""
 
     def __init__(self, model_id: str = "stub-model-1") -> None:
         self.model_id = model_id
@@ -107,7 +107,7 @@ def _parse_window(label: str) -> timedelta:
 
 
 def _configured_embedder():
-    """The embedder this instance runs on — ONE source of truth.
+    """The embedder this instance runs on - ONE source of truth.
 
     Every topology write declares it, so an inherited configuration that no
     longer matches raises instead of quietly asserting the original.
@@ -115,8 +115,25 @@ def _configured_embedder():
     return open_embedder()
 
 
+def _facet_generator(model_id: str):
+    """The facet generator for this substrate - the same choice as the fingerprint.
+
+    Returns `None` when the live generator cannot even be constructed (no key):
+    the birth goes ahead and records `generation_failed`, because a facet gates
+    nothing (contract §e) and must never be the reason an agent is not born.
+    """
+    from cle.population.generator import LiveFacetGenerator, StubFacetGenerator
+
+    if model_id.startswith(("stub-", "drifted-")):
+        return StubFacetGenerator()
+    try:
+        return LiveFacetGenerator(None if model_id in ("current", "live") else model_id)
+    except Exception:  # an unconstructible generator is a recorded outcome
+        return None
+
+
 def _store(state_dir: Path) -> StoreBackend:
-    # Never construct a backend directly — open_store is the single selection
+    # Never construct a backend directly - open_store is the single selection
     # point the dashboard also uses (see backends.open_store).
     return open_store(state_dir)
 
@@ -128,7 +145,7 @@ def _oplog(state_dir: Path):
 
 
 def _actor() -> str:
-    # CLE_ACTOR overrides; otherwise the OS user — never a hardcoded name.
+    # CLE_ACTOR overrides; otherwise the OS user - never a hardcoded name.
     return f"human:{os.getenv('CLE_ACTOR') or getpass.getuser()}"
 
 
@@ -187,7 +204,11 @@ def build(
 
     from cle.build.fingerprinter import LiveModelFingerprinter
     store = _store(state_dir)
-    _seed_components(store, components)
+    # Staged, invariant 3: the seeds are writes, and a build that fails must
+    # leave the store as it found it. They and the build's own objects reach
+    # the store only once the three stages have succeeded.
+    staged = StagedStore(store)
+    _seed_components(staged, components)
     oplog, sink = _oplog(state_dir)
     try:
         if model_id.startswith("stub-") or model_id.startswith("drifted-"):
@@ -201,7 +222,8 @@ def build(
         # what this candidate would ACTUALLY intercept, not what it could in a
         # vacuum. A rebuild of the same agent excludes its own prior trigger.
         existing_triggers = []
-        for other, entry in current_agents(store).items():
+        agents_before = current_agents(store)
+        for other, entry in agents_before.items():
             if other == agent_name:
                 continue
             try:
@@ -209,16 +231,38 @@ def build(
             except Exception:
                 pass
         image = build_image(
-            source=source, backend=store, messages=window_messages,
+            source=source, backend=staged, messages=window_messages,
             window_label=replay_window, existing_triggers=existing_triggers,
             embedder=_configured_embedder(), fingerprinter=fingerprinter,
             config=DetectorConfig(), oplog=oplog, actor=_actor(),
         )
+        staged.commit()
         # Birth: the candidate tag and its topology entry, both carrying
         # the replay's pre_evidence (never more than that at birth) AND the
-        # provenance of WHOSE usage produced the detection — the history's own
+        # provenance of WHOSE usage produced the detection - the history's own
         # user, not the operator who happened to run the build.
         detected_for = all_messages[0].user_id
+        # Level 2's facet: generated ONCE, at the agent's true birth (facet
+        # contract §c), from the openers the replay attributed to its cluster.
+        # A rebuild of an agent the topology already holds generates nothing: a
+        # facet is never regenerated, and an agent born before facets never gets
+        # one (§d-bis).
+        from cle.population.facet import FacetOutcome
+        from cle.population.generator import facet_at_birth
+
+        outcome = None
+        if agent_name not in agents_before:
+            generator = _facet_generator(model_id)
+            outcome = (
+                facet_at_birth(generator, image.probe_set) if generator is not None
+                else FacetOutcome(facet=None, status="generation_failed",
+                                  failure="generator_error")
+            )
+            if outcome.facet is None:
+                # The KIND of failure, never the text: a refused text is exactly
+                # what must not outlive the build.
+                oplog.emit("facet_generation_failed", actor=_actor(),
+                           image=image.hash, failure=outcome.failure)
         move_state_tag(
             backend=store, agent=agent_name, image_hash=image.hash, from_state=None,
             to_state="candidate", pre_evidence=image.pre_evidence, oplog=oplog, actor=_actor(),
@@ -233,6 +277,10 @@ def build(
             # vector space, so it is the one that records it. Later writes
             # inherit it from the parent record.
             embedding=embedding_config_for(_configured_embedder()),
+            facet=outcome.facet if outcome is not None else None,
+            facet_status=(
+                outcome.status if outcome is not None and outcome.facet is None else None
+            ),
         )
     except Exception as error:
         typer.echo(f"build failed: {error}", err=True)
@@ -249,6 +297,9 @@ def build(
     typer.echo(f"image_hash          {image.hash}")
     typer.echo(f"two_hashes_distinct {image.hash != image.source_hash}")
     typer.echo(f"agent               {agent_name} -> candidate")
+    if outcome is not None:
+        suffix = f" ({outcome.failure})" if outcome.failure else ""
+        typer.echo(f"facet               {outcome.status}{suffix}")
 
 
 @app.command()
@@ -264,7 +315,7 @@ def run(
     oplog, sink = _oplog(state_dir)
     try:
         image = load_image(store, image_hash, oplog)
-        # Mount policy (decision): the image's own components, read-only —
+        # Mount policy (decision): the image's own components, read-only -
         # scopes come from what the image was built with, nothing more.
         mounts = [Mount(scope_ref=ref, mode="ro") for ref in image.resolved_refs.values()]
         container = ensure_container(
@@ -285,7 +336,7 @@ def run(
 @app.command()
 def ps(state_dir: Path = STATE_DIR_OPTION) -> None:
     """Containers and their per-container metrics (read from the system
-    volume — the human side of the Goodhart boundary)."""
+    volume - the human side of the Goodhart boundary)."""
     containers = load_containers(state_dir)
     if not containers:
         typer.echo("(no containers)")
@@ -366,7 +417,7 @@ def tag(
             cause["pre_evidence"] = pre_evidence.model_dump()
         else:
             # Downward move: accountability, not proof. The reason crosses the
-            # boundary as a closed-vocabulary VALUE — `note` stays local, in the
+            # boundary as a closed-vocabulary VALUE - `note` stays local, in the
             # oplog, which level 2 never reads.
             # `reason` cannot be None here: a downward move without one is
             # refused earlier ("downward moves must state a reason"), verified by
@@ -380,7 +431,7 @@ def tag(
             reason=topology_reason,
         )
         # The shadow engine judges the same evidence and logs its own call
-        # — the divergence log is the article-9 deliverable.
+        # - the divergence log is the article-9 deliverable.
         if evidence is not None:
             would = shadow_decide(
                 state=from_state, evidence=evidence, thresholds=EngineThresholds(),
@@ -411,7 +462,7 @@ def log(
     Two READ views over the one write path: the default prints every line as
     raw JSON (the operator's view), `--decisions-only` prints just the
     decision-classified lines as sentences (the audit view). Nothing is
-    written differently for either — see cle/oplog.py.
+    written differently for either - see cle/oplog.py.
     """
     if target == "topology.yaml":
         typer.echo(render_log(_store(state_dir)))
@@ -444,6 +495,78 @@ def log(
         return
     for sentence in rendered[-tail:]:
         typer.echo(sentence)
+
+
+#: Where a population threshold starts when the space has no calibrated value
+#: and none is passed: the value that grouped the planted intents of the GDG
+#: corpus best (docs/FINDINGS.md §6d). A starting point, not a constant - the
+#: right threshold depends on the corpus, which is why `--threshold` exists.
+POPULATION_DEFAULT_THRESHOLD = 0.78
+
+NAMER_KINDS = ("stub", "live")
+
+
+@app.command()
+def population(
+    state_dirs: list[Path] = typer.Argument(..., help="One state dir per user's CLE instance."),
+    threshold: float | None = typer.Option(
+        None, help="Grouping threshold in the population embedder's space. Default: that "
+                   "space's calibrated value, else 0.78. Tune it per corpus."),
+    namer: str = typer.Option("stub", help=f"Group namer {NAMER_KINDS}: 'live' calls the "
+                                           "configured model once per nameable group."),
+    out: Path = typer.Option(Path(".cle-population"), "--out",
+                             help="Where report.json and log.jsonl are written."),
+) -> None:
+    """Level 2: group the agents of many users by what they do (Clio's four stages).
+
+    Reads each instance's latest topology record and nothing else (BLUEPRINT
+    §7b), and writes only under `--out`: a population run never writes into the
+    instances it reads. The report carries group sizes, user counts and screened
+    names - a name only where at least 3 distinct users produced the group - and
+    never a facet's text.
+    """
+    from cle.population.naming import LiveNamer, StubNamer
+    from cle.population.reader import PopulationError, read_population
+    from cle.population.report import discover, write_report
+
+    if namer not in NAMER_KINDS:
+        raise typer.BadParameter(f"--namer must be one of {NAMER_KINDS}, got {namer!r}")
+    try:
+        data = read_population(state_dirs)
+    except PopulationError as error:
+        typer.echo(f"population refused: {error}", err=True)
+        raise typer.Exit(code=1)
+
+    embedder = _configured_embedder()
+    embedder_id = getattr(embedder, "embedder_id", None)
+    chosen = (threshold if threshold is not None
+              else cluster_threshold_for(embedder_id, POPULATION_DEFAULT_THRESHOLD))
+    report = discover(
+        data.entries, embedder=embedder,
+        namer=StubNamer() if namer == "stub" else LiveNamer(),
+        threshold=chosen, instances=data.instances, without_facet=data.without_facet,
+    )
+
+    report_path = write_report(report, out)
+    oplog, sink = _oplog(out)
+    try:
+        oplog.emit(
+            "population_report", actor=_actor(), instances=report.instances,
+            agents=report.agents, groups=report.groups, named=report.named,
+            families=report.families, below_user_floor=report.below_user_floor,
+            embedder_id=report.embedder_id, threshold=report.threshold,
+        )
+    finally:
+        sink.close()
+
+    typer.echo(f"instances           {report.instances}  (agents with a facet: {report.agents})")
+    typer.echo(f"without facet       {report.without_facet}")
+    typer.echo(f"space               {report.embedder_id} @ {report.threshold}")
+    typer.echo(f"groups              {report.groups}  ({report.singletons} singletons)")
+    typer.echo(f"named               {report.named}  (below the {report.min_users}-user "
+               f"floor: {report.below_user_floor}, refused by the screen: {report.refused_names})")
+    typer.echo(f"families            {report.families} @ {report.family_threshold}")
+    typer.echo(f"report              {report_path}")
 
 
 @app.command()
@@ -491,7 +614,7 @@ def revalidate(
             # Deterministic simulated drift (offline, reproducible).
             fingerprinter = StubFingerprinter(model_id)
         elif model_id in ("current", "live"):
-            # Probe the SAME configured model — proof holds unless it moved.
+            # Probe the SAME configured model - proof holds unless it moved.
             fingerprinter = LiveModelFingerprinter()
         else:
             # Probe a DIFFERENT real model to enact a genuine substrate drift.
@@ -516,7 +639,7 @@ def revalidate(
         #
         # The drift is still REPORTED: the operator sees it, and the oplog keeps
         # the technical line. Only the write and the demotion are withheld. The
-        # stub path — everything the suite exercises — is untouched, and the
+        # stub path - everything the suite exercises - is untouched, and the
         # noise-floor measurement will lift or confirm this.
         if agent is not None and model_id in ("current", "live"):
             typer.echo(
@@ -548,20 +671,27 @@ def revalidate(
 
 @app.command()
 def decline(
-    agent: str = typer.Argument(..., help="Candidate agent to refuse."),
+    agent: str = typer.Argument(..., help="Agent whose proposed move is refused."),
     reason: str | None = typer.Option(
         None, help="Closed vocabulary: engine_disagrees | defer."
     ),
     note: str | None = typer.Option(None, help="Free text, logged locally."),
     state_dir: Path = STATE_DIR_OPTION,
 ) -> None:
-    """Refuse a candidate — the human 'Decline' on the proposal menu.
+    """Refuse what the system proposes for an agent - the human 'Decline'.
 
+    The proposal is a candidate's birth on the dashboard, or a further
+    promotion (`full_loop.sh` step 7b declines one for an `ephemeral` agent).
     Writes no tag and moves nothing; it records the refusal as one op line
     so the divergence between what the system proposed and what the human
     accepted is auditable (the article-9 data). This is a write path, so
-    like every write it goes through the CLI and is logged.
+    like every write it goes through the CLI and is logged. Only a decline
+    reason is accepted: a demotion reason names a different act.
     """
+    if reason is not None and reason not in HUMAN_DECLINE_REASONS:
+        typer.echo(f"decline --reason must be one of {sorted(HUMAN_DECLINE_REASONS)}, "
+                   f"got {reason!r}", err=True)
+        raise typer.Exit(code=2)
     store = _store(state_dir)
     agents = current_agents(store)
     entry = agents.get(agent)

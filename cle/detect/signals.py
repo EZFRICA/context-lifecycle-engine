@@ -5,19 +5,19 @@ Contract (replay-validation skill):
 - Recurrence: stable period over >=3 occurrences; stability is a bounded
   coefficient of variation of the inter-arrival times.
 - Thresholds are config with article defaults, ALWAYS relative to the
-  per-user baseline, never absolute — a None baseline yields no
+  per-user baseline, never absolute - a None baseline yields no
   reformulation signal rather than an absolute fallback.
 
 The recurrence signal carries the PeriodSpec that becomes the temporal
 half of the candidate's TriggerSpec (BLUEPRINT §4).
 
 Two entry points:
-- `detect_signal` — the raw classifier over one cluster's episodes. Takes
+- `detect_signal` - the raw classifier over one cluster's episodes. Takes
   no embedder and runs no stability check.
-- `detect_signal_gated` — the same, preceded by cluster-stability analysis
+- `detect_signal_gated` - the same, preceded by cluster-stability analysis
   (BLUEPRINT §5b). An `unstable` cluster is VETOED (no candidate: don't
   automate a self-contradicting pattern). An `unavailable` verdict does
-  NOT veto — the candidate is born carrying `stability="unavailable"` in
+  NOT veto - the candidate is born carrying `stability="unavailable"` in
   its provenance, a disclosed gap surfaced at the human override gate.
   `Signal.stability` therefore records what the check CONCLUDED, and is
   never "stable" when the check could not run.
@@ -38,7 +38,7 @@ class Signal(BaseModel, frozen=True):
 
     `stability` records what the contradiction check actually concluded:
     "stable" (it ran and found no contradiction) or "unavailable" (it could not
-    run in this vector space). The distinction is the whole point — a candidate
+    run in this vector space). The distinction is the whole point - a candidate
     born with `stability="unavailable"` carries a DISCLOSED GAP to the human
     gate, and must never be presented as one whose cluster was checked and
     found clean. A signal is never constructed with stability="unstable":
@@ -65,7 +65,7 @@ def detect_signal_gated(
 
     The stability check is a safety VETO, never a precondition for a candidate
     to exist: an unstable cluster (genuine intra-cluster contradiction, or
-    grey-zone divergence) yields NO candidate — "don't automate yet". Temporal
+    grey-zone divergence) yields NO candidate - "don't automate yet". Temporal
     evolution restricts signal detection to the post-flip segment (recency
     wins). world_state divergence is environmental and gates nothing.
 
@@ -75,13 +75,13 @@ def detect_signal_gated(
     its provenance, surfaced to the human at the override gate.
 
     Why not block: making the check's ABSENCE a hard block would give it weight
-    it never had, and would stop the first pillar producing anything at all —
+    it never had, and would stop the first pillar producing anything at all -
     a system that detects nothing is worse than one that proposes with a
     documented gap. Compare the failure modes: treating "unavailable" as a pass
     risks a candidate born on a contradictory cluster, which the human gate AND
     the trial both catch downstream; treating it as a block kills detection
     outright, with nothing to compensate. The non-measurement is still never a
-    verdict — it is a DISCLOSED GAP rather than a silent pass.
+    verdict - it is a DISCLOSED GAP rather than a silent pass.
     """
     from cle.detect.stability import analyze_cluster_stability
 
@@ -94,7 +94,7 @@ def detect_signal_gated(
     signal = detect_signal(window, user_baseline, config)
     if signal is None:
         return None
-    # Carry what the check actually concluded — never "stable" when it could
+    # Carry what the check actually concluded - never "stable" when it could
     # not run. This is the field the human override gate reads.
     return signal.model_copy(update={"stability": report.verdict})
 

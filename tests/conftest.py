@@ -51,8 +51,8 @@ def _neutral_environment():
 
     CONSEQUENCE, and it surprises people: **the suite cannot be aimed at a live
     substrate from outside.** `CLE_EMBEDDER=real pytest` is popped here before
-    any test runs, so it produces a run byte-identical to the plain one — same
-    count, same duration — and reports success for a measurement that never
+    any test runs, so it produces a run byte-identical to the plain one - same
+    count, same duration - and reports success for a measurement that never
     happened. There is no flag that makes the suite live, by design.
 
     Live coverage comes from the CLI and script paths, which DO read these
@@ -72,3 +72,84 @@ def _neutral_environment():
         for name, value in saved.items():
             if value is not None:
                 os.environ[name] = value
+
+
+# ── the bucket probe (tools/buckets.py) ─────────────────────────────────────
+# Records which embedder each test invokes: in its body, in any fixture it
+# depends on, or when its module is imported. Off unless `CLE_BUCKET_REPORT`
+# names a file, so an ordinary run is untouched. The context is a stack because
+# a fixture is set up INSIDE the protocol of the first test that requests it.
+#
+# A REGISTERED PLUGIN, not conftest-level hooks. A conftest's hooks are scoped to
+# its directory, and pytest calls `pytest_fixture_setup` for a session-scoped
+# fixture on the Session node, at the repository root, where this file's hooks
+# are not visible. Written as bare hooks, the probe never saw the session
+# fixture `gdg` being set up: its embeddings landed on whichever test happened
+# to request it first, and every later user of it measured as embedding nothing.
+
+_BUCKET_REPORT = os.environ.get("CLE_BUCKET_REPORT")
+
+
+class _BucketProbe:
+    def __init__(self, report: str) -> None:
+        self.report = report
+        self.context: list[tuple] = []
+        self.calls: dict[tuple, set[str]] = {}
+
+    def record(self, embedder_id: str) -> None:
+        key = self.context[-1] if self.context else ("session",)
+        self.calls.setdefault(key, set()).add(embedder_id)
+
+    def _within(self, key: tuple):
+        self.context.append(key)
+        try:
+            yield
+        finally:
+            self.context.pop()
+
+    @pytest.hookimpl(hookwrapper=True)
+    def pytest_make_collect_report(self, collector):
+        if isinstance(collector, pytest.Module):
+            yield from self._within(("module", str(collector.path)))
+        else:
+            yield
+
+    @pytest.hookimpl(hookwrapper=True)
+    def pytest_fixture_setup(self, fixturedef, request):
+        yield from self._within(("fixture", fixturedef.baseid, fixturedef.argname))
+
+    @pytest.hookimpl(hookwrapper=True)
+    def pytest_runtest_protocol(self, item, nextitem):
+        yield from self._within(("test", item.nodeid))
+
+    def pytest_sessionfinish(self, session, exitstatus):
+        import json
+        from pathlib import Path
+
+        records = {}
+        for item in session.items:
+            keys = [("test", item.nodeid), ("module", str(item.path))]
+            info = getattr(item, "_fixtureinfo", None)
+            for defs in (info.name2fixturedefs.values() if info else ()):
+                keys.extend(("fixture", d.baseid, d.argname) for d in defs)
+            used = set().union(*(self.calls.get(k, set()) for k in keys))
+            records[item.nodeid] = {"embedders": sorted(used),
+                                    "stub_only": item.get_closest_marker("stub_only") is not None}
+        Path(self.report).write_text(json.dumps(records))
+
+
+def pytest_configure(config):
+    if not _BUCKET_REPORT:
+        return
+    from cle.detect import clusters, embedders
+
+    probe = _BucketProbe(_BUCKET_REPORT)
+    for cls in (clusters.HashedTokenEmbedder, embedders.CachedEmbedder, embedders.RealEmbedder):
+        original = cls.embed
+
+        def probed(self, text, _original=original):
+            probe.record(getattr(self, "embedder_id", type(self).__name__))
+            return _original(self, text)
+
+        cls.embed = probed
+    config.pluginmanager.register(probe, "cle-bucket-probe")

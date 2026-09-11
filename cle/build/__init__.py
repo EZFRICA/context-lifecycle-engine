@@ -64,7 +64,7 @@ def build_image(
         oplog=oplog,
     )
 
-    # All three stages succeeded — only now does anything touch the store.
+    # All three stages succeeded - only now does anything touch the store.
     backend.put(source.hash, source.canonical_bytes())
     backend.put(image.hash, image.canonical_bytes())
     oplog.emit(

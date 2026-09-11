@@ -5,7 +5,7 @@ description: Colors, typography, and component styling for the CLE dashboard, ma
 
 # CLE Visual Identity
 
-The dashboard must look like the series artwork come alive — the audience
+The dashboard must look like the series artwork come alive - the audience
 has seen the article covers; the live system should be recognizably the
 same object.
 
@@ -23,7 +23,7 @@ same object.
 - Lifecycle states. FIVE exist in the code and only these may be rendered
   as chips: archived #6b7784 (dashed border) · candidate #5aa9e6 ·
   trial #9b8cf2 · ephemeral #3dbf9b · pinned #e8a33d (filled chip, dark
-  text — the only filled state, it "earned its place").
+  text - the only filled state, it "earned its place").
   The published part-7 machine also names `pattern` (#8a97a3) and
   `deprecated` (#e8705a); their colors are reserved but the store cannot
   hold those states, so the UI must not show them as if it could.
@@ -46,15 +46,15 @@ same object.
   type; switch cost badges: `Δ 1 blk · 10 tok` format.
 - Disclosed gaps are NOT badges. An absent measurement (e.g. the
   contradiction check that could not run) renders as a dashed amber rule +
-  dashed marker + muted note — deliberately unlike the solid evidence
+  dashed marker + muted note - deliberately unlike the solid evidence
   chips, so a missing value can never be misread as a measured one.
 - Buttons: outline style in the accent color; the Approve button is amber
   (it IS the Force Override); destructive/decline is coral outline.
-- Motion: subtle only — PULSE lines slide in 150ms; zone flash in demo
+- Motion: subtle only - PULSE lines slide in 150ms; zone flash in demo
   mode = 1px border glow 600ms; the revalidation failure may pulse coral
   twice. Nothing else animates. prefers-reduced-motion disables all.
 
 ## Copy tone
 Short, mono-adjacent, honest. Captions state limits inline
-("trigger only — not answer quality", "synthetic closures"). No marketing
+("trigger only - not answer quality", "synthetic closures"). No marketing
 adjectives anywhere in the UI.

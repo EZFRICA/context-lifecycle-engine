@@ -1,4 +1,4 @@
-/* CLE dashboard — dark theme, per the visual-identity skill. */
+/* CLE dashboard - dark theme, per the visual-identity skill. */
 :root {
   --bg0: #0d1117; --bg1: #131a22; --panel: #171d23;
   --border: #2a333c; --grid: #1c2530;
@@ -8,7 +8,7 @@
   --sans: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   /* FIVE implemented lifecycle states; --s-deprecated and --s-pattern are
      reserved for the published part-7 theory and are never rendered (the
-     store cannot hold those states — see docs/CAPABILITIES.md §6). */
+     store cannot hold those states - see docs/CAPABILITIES.md §6). */
   --s-archived: #6b7784; --s-candidate: #5aa9e6; --s-trial: #9b8cf2;
   --s-ephemeral: #3dbf9b; --s-pinned: #e8a33d; --s-deprecated: #e8705a; --s-pattern: #8a97a3;
 }
@@ -111,7 +111,7 @@ input.pace { width: 64px; background: var(--bg1); border: 1px solid var(--border
 .badge.per { color: var(--coral); border-color: rgba(232,112,90,0.5); }
 .badge.cost { color: var(--amber); border-color: rgba(232,163,61,0.5); }
 
-/* Disclosed gap — an ABSENCE of measurement, deliberately NOT a badge.
+/* Disclosed gap - an ABSENCE of measurement, deliberately NOT a badge.
    Left rule + dashed square marker + muted body, so it never reads as an
    evidence pill. Amber = caution, not the coral of a failure/drift. */
 .gap { margin-top: 8px; padding: 6px 0 2px 10px; border-left: 2px dashed var(--amber); }
@@ -215,7 +215,7 @@ select { background: var(--bg1); border: 1px solid var(--border); color: var(--i
 }
 
 
-/* Pulse view toggle — two READ views over one log. The decision view is
+/* Pulse view toggle - two READ views over one log. The decision view is
    the audit reading; the live view stays the operator's raw stream. */
 .pulse-toggle { float: right; display: inline-flex; gap: 4px; }
 .pulse-toggle .tab {

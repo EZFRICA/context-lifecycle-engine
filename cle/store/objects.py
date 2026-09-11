@@ -1,7 +1,7 @@
 """Content hashing and stored blocks.
 
 Contract (cle-core-contracts):
-- `content_hash(obj) -> str` is THE hashing function — canonical JSON
+- `content_hash(obj) -> str` is THE hashing function - canonical JSON
   (sorted keys, no whitespace, UTF-8), sha256 hexdigest. Never inline
   hashlib elsewhere in the codebase.
 - Every component fetched from a backend is re-hashed against the requested
@@ -22,7 +22,7 @@ from cle.oplog import OpLog
 def content_hash(obj: Any) -> str:
     """Hash any storable value into its content address.
 
-    bytes are hashed as-is — backends store canonical encodings, and
+    bytes are hashed as-is - backends store canonical encodings, and
     verify-on-read must reproduce the address from the stored bytes without
     a decode/re-encode round trip. Everything else is canonicalized first:
     pydantic models via model_dump, then canonical JSON (sorted keys, no
@@ -47,16 +47,16 @@ class Storable(BaseModel, frozen=True):
     """Base for every model the store addresses by content.
 
     Each storable kind stamps a `cle_kind` domain marker into its canonical
-    encoding. CLE need: invariant 1 (two hashes) becomes structural — a
+    encoding. CLE need: invariant 1 (two hashes) becomes structural - a
     source spec and an image with identical inner content still live at
-    different addresses — and the tag-target guard can tell what a hash
+    different addresses - and the tag-target guard can tell what a hash
     points at by inspecting the stored record.
     """
 
     _cle_kind: ClassVar[str]
 
     def canonical_bytes(self) -> bytes:
-        """The exact encoding a backend stores — hashing it yields self.hash."""
+        """The exact encoding a backend stores - hashing it yields self.hash."""
         return _canonical_json_bytes({"cle_kind": self._cle_kind, **self.model_dump(mode="json")})
 
     @property
@@ -80,7 +80,7 @@ class Block(Storable, frozen=True):
 
 
 class _ReadableBackend(Protocol):
-    # Structural view of the store Protocol (backends.py, commit 3) — the
+    # Structural view of the store Protocol (backends.py, commit 3) - the
     # integrity check only ever needs the read path.
     #
     # The parameter is named `object_hash`, matching `StoreBackend.get`, and
@@ -95,7 +95,7 @@ class IntegrityError(Exception):
     """A component failed verification twice; the operation must abort.
 
     Raised as a typed, catchable failure (the build treats it as a failed
-    resolve that writes nothing) — "never crash" means no uncontrolled
+    resolve that writes nothing) - "never crash" means no uncontrolled
     process death, not that corruption is survivable.
     """
 

@@ -5,7 +5,7 @@ matched controls, a free lexical baseline at 62.2% / 10.1%, and
 `gemini-embedding-001` at 73.9% recall at matched false positives.
 
 No public leaderboard answers "which model is right for THIS task". This bench
-does. Same corpus, same protocol, same presentation for every model — the only
+does. Same corpus, same protocol, same presentation for every model - the only
 thing that varies is the model.
 """
 import time

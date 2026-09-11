@@ -1,7 +1,7 @@
 [project]
 name = "cle"
 version = "0.1.0"
-description = "Context Lifecycle Engine — reference implementation of the Agent OS series (parts 7-8)."
+description = "Context Lifecycle Engine - reference implementation of the Agent OS series (parts 7-8)."
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.7",
@@ -27,10 +27,10 @@ dev = [
 # reader installs to run the engine and every line added there is a claim that
 # the engine needs it.
 #
-#   dashboard — `cle dashboard` (cle/cli/main.py:451) imports uvicorn, and the
+#   dashboard - `cle dashboard` (cle/cli/main.py:451) imports uvicorn, and the
 #     FastAPI backend imports fastapi. Undeclared, so `pip install -e .` gave a
 #     CLE whose dashboard command crashed on import.
-#   measure   — the exploratory scripts under examples/bigquery/. Every figure
+#   measure - the exploratory scripts under examples/bigquery/. Every figure
 #     the README publishes carries the command that reproduces it, and a command
 #     whose dependencies are not installable is not a reproduction. That is the
 #     whole reason this group exists rather than a line in the README saying
@@ -73,16 +73,19 @@ packages = ["cle"]
 pythonpath = [".", "examples"]
 testpaths = ["tests"]
 addopts = "-q --strict-markers"
+markers = [
+    "stub_only: bucket 3 of docs/TESTING.md - the assertion holds ONLY in stub:hashed64 and pins the v1 mechanism, not the production system. Checked by tools/buckets.py.",
+]
 
-# The repository has THREE first-party import roots, not one, and only the first
-# was ever written down:
+# The repository has FOUR first-party import roots, not one:
 #
 #   .                   the `cle` and `dashboard` packages
 #   examples            `phrasing`, `gdg_demo`, `make_gdg_fixture`, `make_multiuser`
 #   examples/bigquery   `bqconfig`, `make_facets`
+#   dashboard_level_2   `discover_intents`, `export_real`, `build`
 #
-# The last two work at runtime by accident of how the code is entered: pytest
-# injects `examples` via `pythonpath`, and `python examples/bigquery/foo.py`
+# The last three work at runtime by accident of how the code is entered: pytest
+# injects `examples` via `pythonpath`, and `uv run python examples/bigquery/foo.py`
 # puts that script's own directory on `sys.path` as a side effect of being run
 # directly. Neither is visible to anything that reads the project rather than
 # running it, so a type checker reports `bqconfig` and friends as missing while
@@ -92,13 +95,13 @@ addopts = "-q --strict-markers"
 # layout needs the roots, a test session importing from them does not, and the
 # note above says what that import would cost.
 [tool.pyrefly]
-search-path = ["examples", "examples/bigquery"]
+search-path = ["examples", "examples/bigquery", "dashboard_level_2"]
 
 [tool.pyright]
-extraPaths = ["examples", "examples/bigquery"]
+extraPaths = ["examples", "examples/bigquery", "dashboard_level_2"]
 
 [tool.ty.environment]
-extra-paths = ["examples", "examples/bigquery"]
+extra-paths = ["examples", "examples/bigquery", "dashboard_level_2"]
 
 # `examples/` is exploratory tooling, not the engine, and it is typed like it:
 # pandas frames, heterogeneous dicts, BigQuery job objects whose stubs declare

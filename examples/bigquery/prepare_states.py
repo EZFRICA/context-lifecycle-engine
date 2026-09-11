@@ -3,17 +3,17 @@
 TWO STATES, NEVER MIXED. They test different capacities and a mixed topology
 would say nothing about either:
 
-  A. Stack Overflow — reformulation. A connected component of the self-duplicate
+  A. Stack Overflow - reformulation. A connected component of the self-duplicate
      graph is one intent a MODERATOR attested. Split in two disjoint halves, so
      the measurable question is: do the two halves land in the SAME detected
      cluster?
-  B. WildChat — recurrence on real background. 40 dense monolingual users.
+  B. WildChat - recurrence on real background. 40 dense monolingual users.
 
 Both are written as `prompt_history` JSONL, the format `cle build --history`
 reads, so the texts go through the CLI and not through a measurement script.
 
 Empty texts are FILTERED AND COUNTED here (task 1ter). The embed path has three
-guards — CacheMissError, dimension, norm — and none applies before the network:
+guards - CacheMissError, dimension, norm - and none applies before the network:
 they check what comes back, not what goes out. One empty string in 4,448 aborts
 a whole batch from the API side.
 """
@@ -29,7 +29,7 @@ import pandas as pd  # noqa: E402
 from cle.detect.embedders import GEMINI_EMBEDDER_ID, RealEmbedder, cache_key  # noqa: E402
 
 D = Path("examples/bigquery/data")
-OUT = Path("examples/bigquery/states"); OUT.mkdir(parents=True, exist_ok=True)
+OUT = Path("examples/bigquery/states")
 
 
 def stack_overflow(n_components: int = 40):
@@ -69,6 +69,9 @@ def wildchat(n_users: int = 40):
 
 
 if __name__ == "__main__":
+    # Created when the script runs, not at import: importing a module must
+    # not write into whatever directory it was imported from.
+    OUT.mkdir(parents=True, exist_ok=True)
     so_rows, so_truth = stack_overflow()
     wc_rows = wildchat()
     stats = {}

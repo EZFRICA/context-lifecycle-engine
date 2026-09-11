@@ -1,15 +1,16 @@
-"""Re-validator — proof expires (invariant 6).
+"""Re-validator - proof expires (invariant 6).
 
 Contract (BLUEPRINT §5): replay the image's frozen probe set against the
 currently served model. Fingerprint drift -> auto-demote to trial and log
 {"op":"revalidation_failed", "persistence": {...}}. Outputs are
-`Persistence` — the third evidence type; it can demote, never promote.
+`Persistence` - the third evidence type; it can demote, never promote.
 
 Drift is LOCALIZED: the image froze per-probe output hashes at build, so
 probe_deltas names exactly which probes moved under the new substrate.
 """
 
 import time
+from itertools import zip_longest
 
 from cle.build.assembler import ModelFingerprinter, fingerprint_from_outputs
 from cle.oplog import OpLog
@@ -31,7 +32,7 @@ def revalidate(
 
     Logs op:"revalidate" when proof holds, op:"revalidation_failed" when
     it drifted. The DEMOTION itself is the caller's move (cle revalidate
-    routes it through move_state_tag + topology like any tag op) — one
+    routes it through move_state_tag + topology like any tag op) - one
     op, one line, no hidden writes here."""
     started = time.monotonic()
     image = load_image(backend, image_hash, oplog)
@@ -39,10 +40,14 @@ def revalidate(
         content_hash(output) for output in fingerprinter.outputs(image.probe_set)
     )
     fingerprint_now = fingerprint_from_outputs(current_output_hashes)
+    # `zip_longest`, not `zip`: a probe whose output went missing, or an output
+    # with no frozen counterpart, is a probe that moved. `zip` stopped at the
+    # shorter side, so a truncated answer changed the fingerprint while naming
+    # no delta, and the proof was reported as holding.
     probe_deltas = tuple(
         f"probe-{index}"
         for index, (frozen, current) in enumerate(
-            zip(image.probe_output_hashes, current_output_hashes)
+            zip_longest(image.probe_output_hashes, current_output_hashes)
         )
         if frozen != current
     )

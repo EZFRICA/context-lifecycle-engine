@@ -1,14 +1,14 @@
 """P1 arbitration: the adversarial fixture must yield a NON-trivial
-false_trigger_rate — the demo may not only ever show 0.000.
+false_trigger_rate - the demo may not only ever show 0.000.
 
 Consumes the COMMITTED history artifacts (not the make_fixture generator), so
 there is no import from examples/ (which a static analyzer can't resolve) and
 the test runs on exactly the data that ships.
 
-SCOPE — `stub:hashed64` ONLY. These assertions describe the v1
+SCOPE - `stub:hashed64` ONLY. These assertions describe the v1
 bag-of-tokens mechanism, not the production embedder. In a semantic space
 (`google:gemini-embedding-2:768`) they do not hold: capture/false_trigger are
-lexical outcomes of the templated era-A fixture — the bridge fires because it
+lexical outcomes of the templated era-A fixture - the bridge fires because it
 SHARES TOKENS, not because it is semantically close.
 They stay because they correctly pin v1; they are not general invariants.
 See docs/METRICS.md (embedder upgrade run).
@@ -23,6 +23,11 @@ from cle.detect.clusters import HashedTokenEmbedder, IntentClusterer
 from cle.detect.episodes import DetectorConfig, Message, segment
 from cle.oplog import OpLog
 from cle.store.commits import TriggerSpec
+import pytest
+
+#: Bucket 3 (docs/TESTING.md): true ONLY in `stub:hashed64`. Declared here,
+#: checked by tools/buckets.py against the embedder the tests actually invoke.
+pytestmark = pytest.mark.stub_only
 
 EXAMPLES = Path(__file__).resolve().parent.parent.parent / "examples"
 RECAP_OPENER = "write the weekly recap of my project for the team"
@@ -62,7 +67,7 @@ def test_adversarial_window_produces_false_triggers() -> None:
         oplog=OpLog(io.StringIO()),
         actor="human:test",
     )
-    # EXACT VALUE — LEGACY TEMPLATED SOURCE (make_fixture.py, era A). capture
+    # EXACT VALUE - LEGACY TEMPLATED SOURCE (make_fixture.py, era A). capture
     # is 1.000 because every recap opener is the SAME string; the bridge fires
     # on shared tokens, not on meaning. This pins the rejection MECHANISM on
     # the committed window, never a realistic-usage rate. See docs/METRICS.md.
