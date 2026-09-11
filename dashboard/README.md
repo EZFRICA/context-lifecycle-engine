@@ -138,6 +138,7 @@ abortable via `POST /demo/abort`.
 | `POST /actions/approve {agent}` · `/actions/decline {agent,reason?}` | the audience-facing write path |
 | `POST /actions/init` | rebuild the demo fixture and agent |
 | `POST /actions/run_workspaces` | **spends**: forces the real model (`CLE_FORCE_REAL_MODEL=1`) |
+| `POST /actions/abort_run` | stops the run in progress; aborting nothing is not an error |
 | `POST /actions/clean` | **destroys**: `cle clean --yes` on the state dir |
 | `POST /demo/start {pace_ms}` · `/demo/abort` | demo runner |
 | `GET /health` | liveness |

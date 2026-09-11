@@ -28,6 +28,11 @@ will grow; the dashboard must not crash on new event types.
   if available, else parse run/switch ops from the log).
 - `GET /state/candidates` - images in candidate state + their PreEvidence.
 - `GET /state/images` - all images with current lifecycle tag and version.
+- `GET /state/image?hash=` - one image: pre_evidence, trigger, probe count.
+- `GET /state/decisions` - the op log rendered as decisions, for audit; a
+  second read view over the same log, never a write path.
+- `GET /state/topology/versions` - the version chain of `topology.yaml`.
+- `GET /health` - liveness, and whether "Run test" may run on this state dir.
 - `GET /state/topology?v=` - one topology version, parsed. The payload MUST
   carry `embedding` (the vector space the history was born in). It is built as
   an explicit whitelist, which is how the field went missing until R36: the
