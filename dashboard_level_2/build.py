@@ -67,6 +67,17 @@ GDG_GAP_01 = _gap(DATA["scores"], "text", "0.01")
 GDG_FACET_101 = DATA["scores"]["facet-redacted"]["0.101"]
 GDG_FACET_01 = DATA["scores"]["facet-redacted"]["0.01"]
 
+
+def _recall(scores: dict | None, row: str, budget: str) -> str:
+    """One recall figure for a headline card, read from the export like the gaps."""
+    return "n/a" if scores is None else f"{scores[row][budget]:.1f}%"
+
+
+#: The two headline cards. They were typed once and one of them (64.9%) outlived
+#: the export it came from.
+SO_TEXT_101 = _recall(SO and SO["scores"], "title-cosine", "0.101")
+SO_FACET_101 = _recall(SO and SO["scores"], "facet-redacted", "0.101")
+
 HEAD = """<meta charset="utf-8">
 <title>Level 2 Cluster Board</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -229,7 +240,7 @@ cannot rank them at all.</p>
   <div class="card a">
     <h3>Read the episodes</h3>
     <div class="id">raw text &middot; embed what people wrote</div>
-    <div class="big">64.9%</div>
+    <div class="big">{SO_TEXT_101}</div>
     <div class="big-l">recall at a 10.1% false-positive budget, on real labelled pairs
       (90.7% on the synthetic corpus, which flatters it)</div>
     <p class="h">strengths</p>
@@ -247,15 +258,15 @@ cannot rank them at all.</p>
       <li>Every privacy question moves to storage and access control, where it is
           harder to check than a generated sentence.</li>
       <li>Part of its lead is an artefact of the synthetic corpus - one generator,
-          shared surface vocabulary - but not all: it still leads by 10 points on real
-          Stack Overflow authors who share nothing.</li>
+          shared surface vocabulary - but not all: it still leads by {SO_GAP_101} points on
+          real Stack Overflow authors who share nothing.</li>
     </ul>
     <p class="stores">Level 2 stores: <b>the episodes themselves</b>.</p>
   </div>
   <div class="card b">
     <h3>Read a generated facet</h3>
     <div class="id">clio layer 1 &middot; one sentence per cluster</div>
-    <div class="big">54.8%</div>
+    <div class="big">{SO_FACET_101}</div>
     <div class="big-l">recall at the same budget, after mechanical redaction
       (69&ndash;76% on the synthetic corpus, and it moves per run)</div>
     <p class="h">strengths</p>
@@ -272,11 +283,11 @@ cannot rank them at all.</p>
           and {SO_GAP_01} at a 1% budget. The synthetic corpus puts the same gap at
           {GDG_GAP_101} and {GDG_GAP_01}, so the cost depends on how hard the negatives
           are - and synthetic negatives are the easy kind.</li>
-      <li><b>Not reproducible run to run.</b> Four generations of the same 46 clusters,
-          same corpus and same protocol, gave 75.0 / 76.4 / 71.4 / {GDG_FACET_101} at this
-          budget and 32.1 / 27.9 / 18.6 / {GDG_FACET_01} at 1%. The last of those is the
-          draw this table renders. The embedding rows are identical every time; the
-          generation step is the only thing that moves.</li>
+      <li><b>Not reproducible run to run.</b> Five generations of the same 46 clusters,
+          same corpus and same protocol, gave 75.0 / 76.4 / 71.4 / {GDG_FACET_101} / 74.3
+          at this budget and 32.1 / 27.9 / 18.6 / {GDG_FACET_01} / 30.0 at 1%. The fourth
+          is the draw this table renders. The embedding rows are identical every time;
+          the generation step is the only thing that moves.</li>
       <li>Adds an LLM call per cluster, with its cost and its latency.</li>
       <li>Abstraction is the mechanism and the risk - it removes the detail that
           separates two neighbouring tasks.</li>
@@ -289,11 +300,11 @@ cannot rank them at all.</p>
 synthetic and one real, agree that raw text groups better. If your setting allows the
 population layer to hold user text, the left column groups better, costs less to run, and
 gives the same answer every time. If it does not - regulation, consent, or a promise
-you made - the right column is the only one of the two available at all, and 71&ndash;76%
-is what it costs.
+you made - the right column is the only one of the two available at all, and 69&ndash;76%
+is what it costs on the synthetic corpus.
 <br><br>
 Note which column is stable. The text rows reproduce to the decimal across runs; the facet
-rows move by up to 13 points at the strict budget. A lifecycle decision that retires an
+rows move by up to 13.5 points at the strict budget. A lifecycle decision that retires an
 agent should not depend on which draw of a generation it landed on, so a facet deployment
 needs its facets frozen once and reused - not regenerated per report.</p>
 
@@ -389,9 +400,9 @@ closer than two real users would. The inflation is not uniform: it favours the t
 methods, which share the surface vocabulary a facet abstracts away. On real users the gap
 should narrow, by an unmeasured amount.<br>
 Facet generation is not deterministic at temperature 0, and the spread is not small:
-four runs of the same 46 clusters gave 75.0 / 76.4 / 71.4 / {GDG_FACET_101} at the 10.1%
-budget and 32.1 / 27.9 / 18.6 / {GDG_FACET_01} at 1%. The table shows the last of those.
-The text rows are identical across all four.<br>
+five runs of the same 46 clusters gave 75.0 / 76.4 / 71.4 / {GDG_FACET_101} / 74.3 at the
+10.1% budget and 32.1 / 27.9 / 18.6 / {GDG_FACET_01} / 30.0 at 1%. The table shows the
+fourth. The text rows are identical across all five.<br>
 Rebuild: <code>uv run python dashboard_level_2/export_view.py &amp;&amp; uv run python dashboard_level_2/build.py</code>
 </p>
 </div>

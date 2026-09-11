@@ -324,14 +324,14 @@ was built for the detector, which sees one user at a time.
 
 Controls come from the same tags the positives use, by different authors, with no
 duplicate link - so the bench measures *same intent* against *merely same
-subject*. 3,000 pairs, 5,808 titles, 5,808 facets.
+subject*. 3,000 pairs, 1,500 of them cross-author duplicates.
 
 | method | @10.1% FP | @5% FP | @1% FP | AUC |
 |---|---:|---:|---:|---:|
-| title-jaccard | 39.2% | 28.5% | 14.3% | 0.6929 |
-| title-cosine | **64.9%** | **57.5%** | **37.9%** | 0.8623 |
-| facet-cosine | 54.9% | 44.0% | 21.9% | 0.8174 |
-| facet-redacted | 54.8% | 40.7% | 20.3% | 0.8103 |
+| title-jaccard | 38.0% | 28.4% | 14.2% | 0.6938 |
+| title-cosine | **61.1%** | **51.7%** | **35.8%** | 0.8491 |
+| facet-cosine | 54.3% | 42.7% | 24.3% | 0.8203 |
+| facet-redacted | 54.8% | 41.1% | 24.2% | 0.8045 |
 
 **This settles what §6b-bis left open.** WildChat showed facets surfacing 135
 cross-user pairs above 0.7 against raw text's 19, and two readings fitted: facets
@@ -341,10 +341,13 @@ was not finding more matches.
 
 Both labelled cross-user benches now agree on the ordering:
 
-| corpus | users | text | facet | gap |
+| corpus | users | text | facet, redacted | gap |
 |---|---|---:|---:|---:|
-| GDG, synthetic | 12, one generator | 90.7% | 71.4% | 19.3 |
-| Stack Overflow | thousands of real authors | 64.9% | 54.9% | 10.0 |
+| GDG, synthetic | 12, one generator | 90.7% | 69.3% | 21.4 |
+| Stack Overflow | thousands of real authors | 61.1% | 54.8% | 6.3 |
+
+The GDG facet figure is the generation the board renders; §7 gives the spread of
+five generations around it.
 
 The synthetic corpus overstated the gap, as its own caveat predicted. It did not
 invert it.
@@ -353,13 +356,15 @@ invert it.
 free word overlap is last at 10.1%, at 5% and at 1%. Two questions the same person
 asked a week apart are often near-restatements, which is what made lexical overlap
 competitive in §1. Two strangers asking the same thing rarely reuse each other's
-words - 39.2% against 62.9% on the synthetic corpus.
+words - 38.0% against 62.9% on the synthetic corpus.
 
-The absolute level is lower than §6b throughout (64.9% against 90.7%) because the
+The absolute level is lower than §6b throughout (61.1% against 90.7%) because the
 control is harder: same-tag pairs by different authors, not a derangement.
 
-Pinning key: `(2026-09-09, 7231fec+wt, bigquery:gemini-embedding-001:768,
-gemini-2.5-flash for facet generation)`.
+Pinning key: `(2026-09-10, output committed in 25c6e0c,
+bigquery:gemini-embedding-001:768, the gen_gemini_flash remote model for facet
+generation)`. The figures are the ones `dashboard_level_2/data/so_view.json`
+carries.
 
 ```bash
 uv run python examples/bigquery/facet_crossuser_so_bench.py

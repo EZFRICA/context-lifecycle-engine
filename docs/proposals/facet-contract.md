@@ -1,26 +1,24 @@
 # The agent facet, contract
 
-**Status: PROPOSAL, for review before anything is generated.** Nothing here is
-implemented.
+**Status: implemented** in `cle/population/facet.py` and
+`cle/population/generator.py` (`docs/CAPABILITIES.md` §12). Each section states
+a rule the code enforces.
 
-## Why this document exists before any code
+## Why the facet has a contract
 
-The CLE has **no naming mechanism and no description**. The
-only text in `topology.yaml` is an agent name, typed by a human or hardcoded in
-a fixture template. Every level-2 design so far assumes a *facet*, a
-descriptive text, written by the engine, that a population level embeds and
-groups.
+A *facet* is a descriptive text, written by the engine, that the population
+layer embeds and groups. Apart from it, the only text in `topology.yaml` is an
+agent name, typed by a human or written by a fixture.
 
-That component does not exist, and it would be **the first in this project to
-produce prose by model**. Two properties of the codebase make writing the
-contract first non-optional:
+The facet is **the first component in this project to produce prose by model
+and store it**. Two properties of the codebase made a contract non-optional:
 
 - `FreeTextInTopologyError` exists precisely to keep prose out of
   `topology.yaml`. A facet is prose. Adding it without a contract would reopen,
   by hand, the boundary the closed vocabulary shuts structurally.
-- An open question: Clio embeds summaries of
-  **conversations**; a facet is a summary of an **agent**, which is a more
-  abstract object. Nothing establishes that they group as well.
+- Clio embeds summaries of **conversations**; a facet is a summary of an
+  **agent**, which is a more abstract object. Whether they group as well is
+  measured in `docs/FINDINGS.md` §6 to §6d.
 
 ---
 
@@ -35,8 +33,8 @@ contract first non-optional:
 
 ## b. Where it is produced from, and the leak this creates
 
-The facet is generated **from the episodes of the cluster**, which are **raw
-user text**. This is Clio's layer 1, and it is the only place in the CLE where
+The facet is generated **from the openers of the episodes the replay attributed
+to the agent's cluster**, which are **raw user text**. This is Clio's layer 1, and it is the only place in the CLE where
 user text passes through a model to produce something that will be stored.
 
 The prompt must therefore, explicitly and in its own words:
@@ -75,8 +73,8 @@ preserved like data. Losing it means losing it.
 
 ## d. Where it lives, and under what type
 
-**Proposal: a distinct type, `Facet`, engine-written only, with its own guard.
-The difference from free text must be mechanical, not documentary.**
+**A distinct type, `Facet`, engine-written only, with its own guard. The
+difference from free text is mechanical, not documentary.**
 
 Four mechanisms, each of which fails loudly:
 
@@ -89,9 +87,11 @@ Four mechanisms, each of which fails loudly:
    the check the prompt instruction cannot make. It lives in the builder rather
    than the type, because only the builder has the source.
 
-3. **One construction site, asserted by an AST scrape.** `Facet(` may appear in
-   exactly one module, the generator, exactly as
-   `tests/property/test_closed_vocabulary.py` asserts for the reason vocabulary.
+3. **One construction module, asserted by an AST scrape.** A `Facet` is built
+   only in `cle/population/facet.py`: `build_facet` for a new one,
+   `facet_from_record` when reading one back from a topology, which re-validates
+   it. `tests/unit/test_population_facet.py` asserts it, as
+   `tests/property/test_closed_vocabulary.py` does for the reason vocabulary.
    A human path to constructing one would make every other guard decorative.
 
 4. **No CLI surface.** There is no flag by which a human supplies a facet. The
@@ -129,7 +129,10 @@ So: **KNOWN DIVERGENCE, with a cut-off date**, recorded the same way as for the
 topology records that keep a false cause. A population aggregate must be able to
 tell "no facet because the agent predates facets" from "no facet because
 generation failed", and that distinction has to be representable, not inferred
-from a null.
+from a null. It is: a topology entry carries `facet_status: present` or
+`generation_failed` (the kind of failure goes to the oplog, never the text), an
+entry with no status predates facets, and the population report counts the two
+apart.
 
 ## e. What the facet is not
 
@@ -147,10 +150,15 @@ from a null.
 
 ## What this contract does not settle
 
-- **Whether facets group at all.** Open, and the lexical baseline
-  is the bar: on Stack Overflow, Jaccard separated at 62.2% / 10.1% and the
-  embedding gained only 11.7 points. A facet mechanism that does not beat a free
-  lexical method would mean level 2 needs no embeddings at all.
-- **Which vector space.** Still open, and three exist.
-- **The minimum population threshold.** Tied to scale: at 0.34% of users
-  producing a topology, 340 topologies presume ~100,000 users.
+- **Whether a deployment should store facets at all.** Measured, not decided:
+  on real users with real labels raw text groups better (61.1% against 54.8% for
+  the redacted facet at a 10.1% budget, `docs/FINDINGS.md` §6b-ter), and the
+  ranking of methods depends on the error budget (§6c). Whether the population
+  layer may hold user text is the deployer's constraint, not a score.
+- **Which vector space.** `cle population` embeds in the instance's configured
+  space; every bench figure above was measured in BigQuery's. No facet threshold
+  is calibrated in the engine's space.
+- **The right population floor.** The one that exists is a single global floor
+  of 3 distinct users (`cle/population/privacy.py`), and it is known to be
+  insufficient (BLUEPRINT §7c). It is also tied to scale: at 0.34% of users
+  producing a topology, 340 topologies presume about 100,000 users.
