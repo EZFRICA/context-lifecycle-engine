@@ -24,8 +24,9 @@ will grow; the dashboard must not crash on new event types.
 ## Backend surface
 - `GET /events` - SSE. Tails log.jsonl from offset; replays last N on
   connect (N=50) so the UI is never empty. Event name = op.
-- `GET /state/ps` - running containers with metrics (shell `cle ps --json`
-  if available, else parse run/switch ops from the log).
+- `GET /state/ps` - running containers with per-container metrics, read
+  directly from the state dir: the containers file, then each container's
+  metrics volume (`reads.ps`: `load_containers`, then `read_events`).
 - `GET /state/candidates` - images in candidate state + their PreEvidence.
 - `GET /state/images` - all images with current lifecycle tag and version.
 - `GET /state/image?hash=` - one image: pre_evidence, trigger, probe count.
