@@ -90,7 +90,7 @@ Point the CLI at a live substrate instead. These read the variables the suite
 refuses:
 
 ```bash
-uv run cle build <src.yaml> --embedder real          # live embedding space
+uv run cle --embedder real build <src.yaml>          # live embedding space
 uv run cle revalidate <agent> --model-id current     # live fingerprint probe
 CLE_FORCE_REAL_MODEL=1 ./examples/full_loop.sh       # raises instead of falling back
 ```
