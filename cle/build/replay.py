@@ -210,6 +210,8 @@ def _replay(
     # bootstrap as the detector: closure needs a baseline, so the first
     # pass uses the unclassified median.
     return_flags = returned_to_cluster(in_cluster, config)
+    # Not redundant: `median` of ints returns an int for an odd count.
+    # pyrefly: ignore[unnecessary-type-conversion]
     provisional_baseline = float(statistics.median(e.iterations for e in in_cluster))
     closures = [
         classify_closure(

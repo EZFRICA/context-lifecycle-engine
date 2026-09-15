@@ -301,7 +301,7 @@ def main() -> None:
     target.write_text(json.dumps({
         "source": "Stack Overflow, cross-author moderator duplicates",
         "labelled": True, "views": views, "scores": scores,
-        "pairs": int(len(kept)), "positives": int(is_a.sum()),
+        "pairs": len(kept), "positives": int(is_a.sum()),
     }, ensure_ascii=False), encoding="utf-8")
     print(f"\n  -> {target.relative_to(ROOT)}")
 

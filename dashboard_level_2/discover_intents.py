@@ -127,9 +127,9 @@ def discover(view_path: pathlib.Path, threshold: float) -> dict:
 
     for view_name in view["views"]:
         for point, gid, pid in zip(view["views"][view_name]["points"], ids, parents):
-            point["group"] = int(gid)
+            point["group"] = gid
             point["discovered"] = names.get(gid, "")
-            point["family"] = int(pid)
+            point["family"] = pid
             point["family_name"] = family_name.get(pid, "")
 
     sizes = sorted((len(m) for m in members.values()), reverse=True)

@@ -258,6 +258,8 @@ def test_the_all_abandoned_guard_cannot_fire_and_this_pins_why() -> None:
     weakest = DetectorConfig(reformulation_cost_multiplier=1.0).reformulation_cost_multiplier
     for multiplier in (weakest, DetectorConfig().reformulation_cost_multiplier):
         for iterations in ([1, 1, 1], [1, 2, 3], [1, 1, 50], [4, 9, 9, 100], [2, 7]):
+            # The same conversion replay makes: `median` of ints can be an int.
+            # pyrefly: ignore[unnecessary-type-conversion]
             baseline = float(statistics.median(iterations))
             countable = [n for n in iterations if not n > multiplier * baseline]
             assert countable, (
