@@ -12,12 +12,14 @@ from typing import Any
 
 from cle.detect.stability import divergence_check_available
 from cle.lifecycle.topology import current_agents, latest_version
+from cle.logs import get_logger
 from cle.oplog import OpLog, UnclassifiedOpError, classify_op, render_decision
 from cle.runtime.container import load_containers, load_image
 from cle.runtime.metrics_volume import read_events
 from cle.store.backends import StoreBackend, open_store
 
 _VOID = OpLog(io.StringIO())  # reads never pollute the real oplog
+logger = get_logger(__name__)
 
 
 def store(state_dir: Path) -> StoreBackend:
@@ -34,7 +36,11 @@ def _image_view(backend: StoreBackend, image_hash: str) -> dict[str, Any]:
     """Public image facts for a card: pre_evidence, trigger, probe count."""
     try:
         image = load_image(backend, image_hash, _VOID)
-    except Exception:
+    except Exception as error:
+        # The card says "missing"; the reason would otherwise exist nowhere, since
+        # integrity checks during reads go to a throwaway oplog.
+        logger.warning("image %s could not be loaded for a card (%s)",
+                       image_hash[:12], type(error).__name__)
         return {"hash": image_hash, "short": _short(image_hash), "missing": True}
     period = image.trigger.period.interval.total_seconds() if image.trigger.period else None
     return {

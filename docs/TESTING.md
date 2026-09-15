@@ -18,7 +18,7 @@ written to fix the drift.
 
 ---
 
-## Test coverage: **521 tests** across 53 files, 1 skipped
+## Test coverage: **533 tests** across 54 files, 1 skipped
 
 Five more run only where the private WildChat corpus is present, so they are not counted here: a suite size a reader cannot reproduce is not a suite size. The skip is that corpus-gated module.
 
@@ -144,7 +144,7 @@ observe; the probe then checks that every marked test really did embed in
 
 | Bucket | Tests | Meaning |
 |---|---|---|
-| **1. Embedder-agnostic** | **398** | No embedder ran for the test. Hashing, store and backends, integrity, resolver, evidence types, the Goodhart boundary, staged failure, lifecycle, episode segmentation, signals, the level 2 facet and privacy guards, the dashboard routes, the structural guards. They hold in **any** vector space. |
+| **1. Embedder-agnostic** | **410** | No embedder ran for the test. Hashing, store and backends, integrity, resolver, evidence types, the Goodhart boundary, staged failure, lifecycle, episode segmentation, signals, the level 2 facet and privacy guards, the dashboard routes, logging, the structural guards. They hold in **any** vector space. |
 | **2. Stub-as-a-tool** | **94** | An embedder ran, but the claim is space-independent: two-hash inequality, build determinism, both rates always computed, tool gating, embedder provenance, CLI acceptance, the level 2 end-to-end run. |
 | **3. Stub-as-the-subject** | **29** | Declared `stub_only`, and checked: true **only** in `stub:hashed64`, so they do **not** describe the production system. The contradiction taxonomy, the stability property tests, the adversarial and demo exact rates, the directive-band check. |
 
@@ -185,6 +185,7 @@ bench modules, and run `sleep` under bash to test an abort; none of them embeds.
 | Vector contract | `test_vector_contract_bites` (12), `test_batch_guard` (9) | the three guards on the compare path fire per site, not merely exist |
 | `CLE_VECTOR_CACHE` | `test_vector_cache_override` (4) | a cache pointed at a foreign space is refused, never silently consulted |
 | Rate-limit backoff | `test_rate_limit_backoff` (11) | 429/`RESOURCE_EXHAUSTED` retries with full jitter; every other failure raises at once |
+| Logging | `test_logs` (12) | diagnostics go to stderr, never stdout; WARNING unless `CLE_LOG_LEVEL` asks; no file unless `CLE_LOG_FILE` names one, and an unopenable one degrades to stderr; colour never reaches the record or the file; a probe is logged by position and a generator failure by type, never by text; a rate-limited retry is logged |
 | Live revalidation | `test_live_revalidation_guard` (2) | revalidation against a live model cannot run inside the offline suite |
 | Dashboard | `test_dashboard_routes` (34), `test_dashboard_matches_disk` (7) | every route; a write sent from another site is refused before any route runs; and the API payload matches what is actually on disk, whitelist included |
 | Unguarded-raise closures | `test_unguarded_raises` (10), `test_unguarded_contracts` (7), `test_refusals_bite` (13) | the raise sites the mutation sweep found unreachable, closed one at a time |
@@ -202,12 +203,12 @@ bench modules, and run `sleep` under bash to test an abort; none of them embeds.
 
 | Bucket measurement | `test_bucket_measurement` (7) | the rules `tools/buckets.py` classifies by: buckets 1 and 2 measured, bucket 3 declared and checked, SCOPE headers compared |
 
-The rows sum to **526** across 54 files, against the **521** in the heading: the
+The rows sum to **538** across 55 files, against the **533** in the heading: the
 difference is `test_real_state_regression`, whose 5 tests run only where the
 private WildChat corpus is present and are therefore excluded from the
 reproducible count. A file absent from this table is a file that does not exist.
 
-The 54 files split **14 under `tests/property/`** - `test_bench_imports_offline`, `test_build_invariants`, `test_closed_vocabulary`, `test_clustering`, `test_content_hash`, `test_evidence_types`, `test_goodhart_boundary`, `test_oplog_views`, `test_replay`, `test_scripts_resolve`, `test_stability_classifier`, `test_staged_failure`, `test_structural_guards`, `test_tag_targets` - and **40
+The 55 files split **14 under `tests/property/`** - `test_bench_imports_offline`, `test_build_invariants`, `test_closed_vocabulary`, `test_clustering`, `test_content_hash`, `test_evidence_types`, `test_goodhart_boundary`, `test_oplog_views`, `test_replay`, `test_scripts_resolve`, `test_stability_classifier`, `test_staged_failure`, `test_structural_guards`, `test_tag_targets` - and **41
 under `tests/unit/`**.
 
 ---

@@ -111,6 +111,14 @@ the suite uses stub fingerprinters and a committed vector cache. Pin a command's
 `.env` is gitignored. Fingerprint probes run at temperature 0, so a delta means
 the model drifted, not that the sampler rolled differently.
 
+**Logs.** Diagnostics (a retry, a fallback, an error a run survives) go to stderr
+through `cle/logs.py`; what a command reports stays on stdout, where scripts and
+tests read it, and the oplog stays the audit record. Nothing below WARNING is
+shown unless `CLE_LOG_LEVEL` asks for it (`DEBUG`, `INFO`, `WARNING`, `ERROR`),
+and nothing is written to disk unless `CLE_LOG_FILE` names a file. A log line
+never carries user text: a probe is logged by its position, a failure by its
+exception type.
+
 ---
 
 ## Quick start
@@ -370,6 +378,7 @@ cle/
   runtime/      container, mounts, metrics_volume
   lifecycle/    tags, engine (shadow), topology, revalidator, reasons (closed vocabulary)
   batch_guard.py  the three silent-failure guards
+  logs.py       diagnostics to stderr; level and file from the environment
   cli/main.py   typer
 dashboard/      backend/ (FastAPI + SSE), frontend/ (HTML + Alpine)
 examples/       fixture generators, full_loop.sh, the committed vector cache
@@ -385,7 +394,7 @@ tests/          property/ + unit/, hypothesis for the invariants
 uv run pytest -q
 ```
 
-**521 tests across 53 files**, fully offline. Five more run only where the private WildChat corpus is present, so they are not counted here: a suite size a reader cannot reproduce is not a suite size. A green suite pins the
+**533 tests across 54 files**, fully offline. Five more run only where the private WildChat corpus is present, so they are not counted here: a suite size a reader cannot reproduce is not a suite size. A green suite pins the
 **contract**, not the production vector space: 161 assertions are embedder
 agnostic and hold in any era, while 31 pin the v1 stub mechanism only and do not
 describe the production system. Details in `docs/TESTING.md`.

@@ -13,6 +13,10 @@ import json
 from pathlib import Path
 from typing import Any, AsyncIterator
 
+from cle.logs import get_logger
+
+logger = get_logger(__name__)
+
 REPLAY_ON_CONNECT = 50
 _POLL_SECONDS = 0.4
 
@@ -85,6 +89,9 @@ async def tail_log_forever(log_path: Path, bus: EventBus) -> None:
     """
     offset = log_path.stat().st_size if log_path.exists() else 0
     prefix = _prefix(log_path)
+    #: The last failure logged, so a persistent one is reported once rather
+    #: than on every poll, and reported again if it comes back after a success.
+    last_failure: str | None = None
     while True:
         try:
             if not log_path.exists():
@@ -131,10 +138,16 @@ async def tail_log_forever(log_path: Path, bus: EventBus) -> None:
                         except json.JSONDecodeError:
                             event = {"op": "unparsed", "raw": line}
                         bus.publish(event)
-        except Exception:
-            # A read race against a concurrent CLI write is transient;
-            # never let the tailer die.
-            pass
+            last_failure = None
+        except Exception as error:
+            # A read race against a concurrent CLI write is transient; never let
+            # the tailer die. A failure that persists (permissions, a vanished
+            # mount) would otherwise leave the board frozen with no trace.
+            failure = type(error).__name__
+            if failure != last_failure:
+                logger.warning("oplog tailer cannot read %s (%s); retrying every %.1fs",
+                               log_path.name, failure, _POLL_SECONDS)
+                last_failure = failure
         await asyncio.sleep(_POLL_SECONDS)
 
 

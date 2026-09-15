@@ -11,14 +11,14 @@ residual nondeterminism (backend/version). Rare, and itself a truthful
 signal that the substrate is not fixed.
 """
 
-import logging
 import os
 from typing import Any, Sequence
 
 from cle.llm_provider import get_fingerprint_llm
+from cle.logs import get_logger
 from cle.store.objects import content_hash
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def response_text(content: Any) -> str:
@@ -57,7 +57,7 @@ class LiveModelFingerprinter:
 
     def outputs(self, probes: Sequence[str]) -> tuple[str, ...]:
         output_hashes: list[str] = []
-        for probe in probes:
+        for index, probe in enumerate(probes, 1):
             prompt = (
                 "You are a system verification probe. Output a short, concise "
                 "response to the following query. Do not add conversational "
@@ -67,8 +67,14 @@ class LiveModelFingerprinter:
                 response = self.model.invoke(prompt)
                 output_hashes.append(content_hash(response_text(response.content)))
             except Exception as error:
-                logger.error("probe call failed for %r: %s", probe, error)
-                if os.environ.get("CLE_FORCE_REAL_MODEL"):
+                # A probe is an opener from the user's history: its position goes
+                # to the log, never its text (cle/logs.py).
+                forced = bool(os.environ.get("CLE_FORCE_REAL_MODEL"))
+                logger.error("probe %d of %d failed (%s); %s", index, len(probes),
+                             type(error).__name__,
+                             "failing the build (CLE_FORCE_REAL_MODEL=1)" if forced
+                             else "hashing the probe instead, which reads as no signal")
+                if forced:
                     # Hard failure: the caller explicitly demanded a live model.
                     # Re-raise so the build fails immediately and visibly rather
                     # than producing a fake fingerprint that looks like success.
