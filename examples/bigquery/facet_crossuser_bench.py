@@ -50,11 +50,13 @@ import pandas as pd
 from google.cloud import bigquery
 
 import bqconfig
+from cle.logs import get_logger  # noqa: E402
 from cle.population.lexical import jaccard  # noqa: E402
 from facet_prompt_bench import long_numbers, proper_nouns, redact
 
 P = bqconfig.lazy_dataset()
 c = bqconfig.lazy_client()
+log = get_logger("facet_crossuser_bench")
 
 BUDGETS = (0.101, 0.05, 0.01)
 
@@ -204,7 +206,7 @@ def main() -> None:
     facets = generate_facets(clusters)
     missing = [k for k in clusters if k not in facets]
     if missing:
-        print(f"  {len(missing)} clusters got no facet; dropped from the facet rows")
+        log.warning("%d clusters got no facet; dropped from the facet rows", len(missing))
 
     joined = {k: " ".join(v[:12]) for k, v in clusters.items()}
     red = {k: redact(v) for k, v in facets.items()}

@@ -40,8 +40,11 @@ sys.path.insert(0, str(ROOT))
 from cle.detect.clusters import IntentClusterer  # noqa: E402
 from cle.detect.embedders import open_embedder  # noqa: E402
 from cle.detect.episodes import DetectorConfig, Message, segment  # noqa: E402
+from cle.logs import get_logger  # noqa: E402
 
 from make_multiuser import BACKGROUND, planted_intent  # noqa: E402
+
+log = get_logger("run_multiuser")
 
 CLI = [sys.executable, "-m", "cle.cli.main"]
 
@@ -135,7 +138,7 @@ def main() -> None:
         if args.model_id in ("current", "live"):
             calls += 4  # one generateContent per probe
         if built.returncode != 0:
-            print(f"{user}: build FAILED\n{built.stdout}{built.stderr}")
+            log.error("%s: build FAILED\n%s%s", user, built.stdout, built.stderr)
             summary[user] = {"intent": intent, "born": False}
             continue
 

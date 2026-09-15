@@ -11,6 +11,10 @@ read. That makes the full-corpus answer cheap enough to actually get.
 import time
 import pandas as pd
 
+from cle.logs import get_logger
+
+log = get_logger("wildchat_density")
+
 REPO = "allenai/WildChat-4.8M"
 COLS = ["conversation_hash", "hashed_ip", "timestamp", "turn", "language", "country"]
 OUT = "examples/bigquery/data/wildchat_identity.parquet"
@@ -34,7 +38,7 @@ def main() -> None:
             except Exception as error:
                 if attempt == 4:
                     raise
-                print(f"  shard {i}: retry {attempt+1} ({type(error).__name__})", flush=True)
+                log.warning("shard %d: retry %d (%s)", i, attempt + 1, type(error).__name__)
                 time.sleep(5)
         frames.append(pd.read_parquet(path, columns=COLS))
         if (i + 1) % 10 == 0:

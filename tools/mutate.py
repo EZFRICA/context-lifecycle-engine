@@ -53,7 +53,13 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from cle.logs import get_logger
+
 ROOT = Path(__file__).resolve().parent.parent
+
+#: The two diagnostics this tool emits. Its report - one verdict per site and
+#: the tally - is its output and stays on stdout.
+log = get_logger("mutate")
 
 #: Marker left in the mutant. Distinctive so a leaked one is greppable.
 MARKER = "pass  # MUTATED-BY-tools/mutate.py"
@@ -211,8 +217,8 @@ def restore_all() -> list[Path]:
 
 def _on_signal(signum, _frame):
     restored = restore_all()
-    print(f"\ninterrupted; restored {len(restored)} file(s): "
-          f"{', '.join(str(p.name) for p in restored) or 'none'}", flush=True)
+    log.warning("interrupted; restored %d file(s): %s", len(restored),
+                ", ".join(p.name for p in restored) or "none")
     raise SystemExit(130)
 
 
@@ -287,12 +293,10 @@ def main(argv: list[str]) -> int:
 
     baseline = baseline_failures(extra)
     if baseline:
-        print("!! THE SUITE IS NOT GREEN BEFORE THE SWEEP. These tests already "
-              "fail and are subtracted from every verdict; fix them first, "
-              "because a sweep over a red suite measures nothing:", flush=True)
-        for test in baseline:
-            print(f"     {test}", flush=True)
-        print(flush=True)
+        log.error("THE SUITE IS NOT GREEN BEFORE THE SWEEP. These tests already fail "
+                  "and are subtracted from every verdict; fix them first, because a "
+                  "sweep over a red suite measures nothing:\n%s",
+                  "\n".join(f"     {test}" for test in baseline))
 
     unguarded, broken = [], []
     print(f"{len(sites)} raise sites\n", flush=True)

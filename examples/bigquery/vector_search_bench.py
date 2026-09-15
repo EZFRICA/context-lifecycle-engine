@@ -10,8 +10,11 @@ import time
 from google.cloud import bigquery
 
 import bqconfig
+from cle.logs import get_logger
+
 P = bqconfig.lazy_dataset()
 c = bqconfig.lazy_client()
+log = get_logger("vector_search_bench")
 
 
 def timed(sql: str, dry: bool = False):
@@ -57,7 +60,7 @@ def main() -> None:
                 location="EU").result()
         print(f"  CREATE VECTOR INDEX accepté en {time.perf_counter()-t0:.1f}s (construction asynchrone)")
     except Exception as e:
-        print(f"  refusé : {str(e)[:200]}")
+        log.warning("CREATE VECTOR INDEX refusé : %s", str(e)[:200])
 
     rows = list(c.query(f"""
       SELECT index_name, coverage_percentage, last_refresh_time, disable_reason
