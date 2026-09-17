@@ -15,8 +15,11 @@ carrying `facet_status: generation_failed` and the KIND of the failure.
 
 from typing import Protocol, Sequence
 
+from cle.logs import get_logger
 from cle.population.facet import FacetOutcome, FacetRefusedError, build_facet
 from cle.population.lexical import content_words
+
+logger = get_logger(__name__)
 
 #: Bump when the prompt changes: a facet's provenance names it, and two facets
 #: from two prompts are two measurements.
@@ -108,7 +111,11 @@ def facet_at_birth(generator: FacetGenerator, sources: Sequence[str]) -> FacetOu
     """
     try:
         text = generator.generate(list(sources))
-    except Exception:  # any generator failure is a recorded outcome, not a crash
+    except Exception as error:  # any generator failure is a recorded outcome, not a crash
+        # The topology keeps only `generator_error`; the log keeps which error it
+        # was. Never the sources, never what the generator returned.
+        logger.warning("facet generation failed at birth (%s); recorded as generator_error",
+                       type(error).__name__)
         return FacetOutcome(facet=None, status="generation_failed", failure="generator_error")
     try:
         facet = build_facet(text, sources=list(sources), generator_id=generator.generator_id)

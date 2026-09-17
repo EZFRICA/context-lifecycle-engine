@@ -199,4 +199,7 @@ def user_baseline(episodes_with_closures: Sequence[tuple[Episode, Closure]]) -> 
         for episode, closure in episodes_with_closures
         if closure != "abandoned"
     ]
+    # Not redundant: `median` of ints returns an int for an odd count, and this
+    # function is declared to return a float.
+    # pyrefly: ignore[unnecessary-type-conversion]
     return float(statistics.median(costs)) if costs else None

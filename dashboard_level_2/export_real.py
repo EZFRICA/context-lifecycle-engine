@@ -116,7 +116,7 @@ def main() -> None:
         "labelled": False,
         "views": views,
         "spread": spread,
-        "users": int(frame.user.nunique()),
+        "users": frame.user.nunique(),
         "clusters": len(frame),
     }
     target = HERE / "data" / "real_view.json"

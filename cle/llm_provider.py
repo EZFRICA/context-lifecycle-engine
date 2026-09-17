@@ -9,11 +9,12 @@ Usage:
     from llm_provider import get_main_llm, get_extractor_llm
 """
 
-import logging
 import os
 from dotenv import load_dotenv
 from langchain_ollama import ChatOllama
 from langchain_google_genai import ChatGoogleGenerativeAI
+
+from cle.logs import get_logger
 
 # Load .env file if it exists
 load_dotenv()
@@ -32,7 +33,7 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 # The FINGERPRINTER always runs at 0 regardless - see get_fingerprint_llm().
 MAIN_TEMPERATURE = float(os.getenv("MAIN_TEMPERATURE", "1"))
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 _GEMINI_KEY_VALID = bool(GEMINI_API_KEY)
 

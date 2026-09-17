@@ -20,6 +20,9 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "hypothesis>=6.100",
+    # PyYAML ships no type information; without its stubs a checker sees every
+    # `yaml` call in the 14 modules that use it as untyped.
+    "types-PyYAML>=6.0",
 ]
 
 # R36 task 1.e. Three groups of imports were undeclared. They are split by who
@@ -133,6 +136,10 @@ no-matching-overload = false
 not-iterable = false
 unbound-name = false
 unsupported-operation = false
+# `int((frame.col == x).sum())` is a numpy.int64 at runtime, which json.dumps
+# refuses; the pandas stubs type it `int`, so the checker calls the conversion
+# unnecessary.
+unnecessary-type-conversion = false
 
 # `tests/` and `tools/` deliberately pass the wrong types: that is what a
 # negative test IS. `test_pre_evidence_not_evidence` hands a `PreEvidence` to a

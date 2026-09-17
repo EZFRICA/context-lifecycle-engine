@@ -28,6 +28,9 @@ os.environ["CLE_VECTOR_CACHE"] = str(CACHE)
 from cle.detect.clusters import IntentClusterer  # noqa: E402
 from cle.detect.embedders import open_embedder  # noqa: E402
 from cle.detect.episodes import DetectorConfig, Message, segment  # noqa: E402
+from cle.logs import get_logger  # noqa: E402
+
+log = get_logger("run_state")
 
 CFG = DetectorConfig()
 CLI = [sys.executable, "-m", "cle.cli.main"]
@@ -86,15 +89,15 @@ def main(argv: list[str]) -> int:
     default = ROOT / f".cle-r36-{corpus}"
     state = Path(argv[argv.index("--state-dir") + 1]) if "--state-dir" in argv else default
     if state.resolve() == (ROOT / ".cle").resolve():
-        print("refusing to run on .cle: pass --state-dir a scratch directory")
+        log.error("refusing to run on .cle: pass --state-dir a scratch directory")
         return 1
 
     history = S / f"history_{corpus}.jsonl"
     if not history.exists():
-        print(f"{history} is missing. Run prepare_states.py first (it needs BigQuery).")
+        log.error("%s is missing. Run prepare_states.py first (it needs BigQuery).", history)
         return 1
     if not CACHE.exists():
-        print(f"{CACHE} is missing. Without it this replay would go to the network.")
+        log.error("%s is missing. Without it this replay would go to the network.", CACHE)
         return 1
 
     from cle.detect.episodes import CoarseTimestampError

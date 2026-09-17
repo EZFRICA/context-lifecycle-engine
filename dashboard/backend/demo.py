@@ -16,7 +16,11 @@ import sys
 from pathlib import Path
 from typing import Any, Callable
 
+from cle.logs import get_logger
+
 from .oplog_sse import EventBus
+
+logger = get_logger(__name__)
 
 # Drift is enacted by revalidating the pinned image against a DIFFERENT real
 # model - a true substrate change, not a fake id. Must be a model your key can
@@ -232,6 +236,8 @@ class ScriptRunner:
                                    "title": f"full_loop.sh failed (exit {code})",
                                    "stderr": "\n".join(tail[-8:])[-600:]})
         except Exception as error:  # never leave the page stuck on `running`
+            # The page gets one line; the traceback belongs to the server log.
+            logger.exception("full_loop.sh could not run")
             self._bus.publish({"op": "demo_error", "argv": argv, "state": "done",
                                "title": f"full_loop.sh could not run: {error}",
                                "stderr": "\n".join(tail[-8:])[-600:]})

@@ -117,6 +117,10 @@ def assert_batch_varied(
 def assert_unit_norm(vector: Sequence[float], *, where: str,
                      tolerance: float = NORM_TOLERANCE) -> None:
     """Refuse a vector whose norm is not 1. See `UnnormalisedVectorError`."""
+    # The annotation is what callers promise, not what a JSON cache or a
+    # BigQuery row delivers: this is the boundary, so each component is made a
+    # float before it is squared.
+    # pyrefly: ignore[unnecessary-type-conversion]
     norm = math.sqrt(sum(float(x) * float(x) for x in vector))
     if norm == 0.0:
         return  # a zero vector is a documented "matches nothing", not a surface bug

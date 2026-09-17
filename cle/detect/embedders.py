@@ -35,6 +35,9 @@ from typing import Any, Callable, Iterable
 
 from cle.batch_guard import assert_batch_varied, assert_embeddable, assert_unit_norm
 from cle.detect.clusters import HashedTokenEmbedder, Vector
+from cle.logs import get_logger
+
+logger = get_logger(__name__)
 
 # The frozen substrate for the realistic fixtures (user-selected in the
 # embedder-upgrade run). Provenance is provider:model:dim - there is NO
@@ -204,12 +207,16 @@ def call_with_backoff(call: Callable[[], Any]) -> Any:
     # Every attempt but the last may retry; the last one's error propagates as
     # it is, with no re-raise needed. Bounded by construction - no path loops
     # forever - and with no trailing raise that no input could reach.
-    for _ in range(RETRY_ATTEMPTS - 1):
+    for attempt in range(1, RETRY_ATTEMPTS):
         try:
             return call()
         except Exception as error:
             if not _is_rate_limit(error):
                 raise
+            # A run that slows down for minutes with nothing on screen reads as
+            # a hang; the retry is what it is doing.
+            logger.warning("rate limited (%s); retry %d of %d within %.1fs",
+                           type(error).__name__, attempt, RETRY_ATTEMPTS - 1, delay)
             # Full jitter: a batch that backs off in lockstep re-collides on
             # every wave, so each caller waits somewhere in [0, delay].
             time.sleep(random.uniform(0.0, delay))

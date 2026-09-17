@@ -38,6 +38,7 @@ from cle.lifecycle.revalidator import revalidate as run_revalidation
 from cle.lifecycle.tags import STATE_RANK, move_state_tag
 from cle.lifecycle.reasons import HUMAN_DECLINE_REASONS, TopologyReason, validate_reason
 from cle.lifecycle.topology import current_agents, render_diff, render_log, write_topology
+from cle.logs import get_logger
 from cle.oplog import OpLog, UnclassifiedOpError, classify_op, render_decision
 from cle.runtime.container import ensure_container, load_containers, load_image, run_prompts
 from cle.runtime.metrics_volume import read_events
@@ -47,6 +48,10 @@ from cle.store.commits import Evidence, SourceSpec
 from cle.store.objects import Block, content_hash
 
 app = typer.Typer(help="CLE - Context Lifecycle Engine.")
+
+#: Diagnostics only. What a command reports to the operator stays on stdout
+#: through `typer.echo`: scripts and tests read it (cle/logs.py).
+logger = get_logger(__name__)
 
 _WINDOW = re.compile(r"^(\d+)([dh])$")
 _HASH = re.compile(r"^[0-9a-f]{64}$")
@@ -128,7 +133,9 @@ def _facet_generator(model_id: str):
         return StubFacetGenerator()
     try:
         return LiveFacetGenerator(None if model_id in ("current", "live") else model_id)
-    except Exception:  # an unconstructible generator is a recorded outcome
+    except Exception as error:  # an unconstructible generator is a recorded outcome
+        logger.warning("the live facet generator cannot be built (%s); this birth "
+                       "records generation_failed", type(error).__name__)
         return None
 
 
@@ -228,8 +235,12 @@ def build(
                 continue
             try:
                 existing_triggers.append(load_image(store, entry["image"], oplog).trigger)
-            except Exception:
-                pass
+            except Exception as error:
+                # The incumbent drops out of the competition, which moves this
+                # candidate's capture_rate: the one thing that must not be silent.
+                logger.warning("incumbent %s (image %s) could not be loaded (%s); it does "
+                               "not compete in this replay", other, entry["image"][:12],
+                               type(error).__name__)
         image = build_image(
             source=source, backend=staged, messages=window_messages,
             window_label=replay_window, existing_triggers=existing_triggers,
@@ -477,10 +488,12 @@ def log(
             typer.echo(line)
         return
     rendered = []
-    for line in lines:
+    for number, line in enumerate(lines, 1):
         try:
             record = json.loads(line)
         except json.JSONDecodeError:
+            logger.warning("oplog line %d is not JSON; it is left out of the decision view",
+                           number)
             continue
         # An op nobody classified must not vanish from the audit view.
         try:
