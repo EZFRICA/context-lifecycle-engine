@@ -5,6 +5,9 @@ Contract (cle-core-contracts):
   `list_refs(prefix)`.
 - Refs: `agents/<name>/<state>` (mobile), `agents/<name>/v<semver>`
   (immutable - moving one raises), `topology/<version>`.
+- Addresses: 64 lowercase hex characters, refused otherwise on both `put` and
+  `get` (`assert_object_address`) - an address is an untrusted path component in
+  `FileStore` and an untrusted key everywhere else.
 - Semver rule (applied by P3 tagging, recorded here): major = trigger
   changed, minor = component ref swapped, patch = lifecycle thresholds only.
 Implementations, all behind the same Protocol and all exercised by the
@@ -33,9 +36,43 @@ from cle.store.objects import content_hash
 # are not a namespace we mint (a decision, not an oversight).
 _VERSION_REF = re.compile(r"^agents/.+/v\d+\.\d+\.\d+$")
 
+#: An object address is a sha-256 hex digest, lowercase, and nothing else.
+_OBJECT_ADDRESS = re.compile(r"^[0-9a-f]{64}$")
+
 
 class ImmutableRefError(Exception):
     """An `agents/<name>/v<semver>` ref already exists and cannot move."""
+
+
+class InvalidAddressError(ValueError):
+    """An object address that is not a sha-256 hex digest.
+
+    A `ValueError` because that is what `put` already raises for an address that
+    does not match its content: one refusal kind for "this address is not a
+    thing this store will accept".
+    """
+
+
+def assert_object_address(object_hash: str) -> None:
+    """Shared address rule for every backend, checked BEFORE the address is used.
+
+    `FileStore` turns an address into a path, so an address is an untrusted path
+    component: `../../etc/passwd` read outside the store, and the refusal was a
+    `KeyError` that read as "no such object". Measured before this guard, a
+    `get("../../witness.txt")` returned the file's 15 bytes.
+
+    Addresses are produced by `content_hash`, so nothing legitimate is refused
+    here. What this catches is an address that came from somewhere else: a
+    tampered `refs.json`, an HTTP parameter, a corpus field. It is checked on
+    every backend rather than only on `FileStore`, because "which backend is
+    open" is a runtime setting and a guard that depends on it is not a contract.
+    """
+    if not _OBJECT_ADDRESS.match(object_hash):
+        raise InvalidAddressError(
+            f"{object_hash[:16]!r} is not an object address (expected 64 hex "
+            "characters). Addresses come from `content_hash`; one that does not "
+            "have this shape did not come from the store."
+        )
 
 
 def assert_ref_movable(name: str, current_refs: dict[str, str]) -> None:
@@ -69,11 +106,13 @@ class InMemoryStore:
     def put(self, object_hash: str, data: bytes) -> None:
         # The store never willingly holds mislabeled data: an address that
         # doesn't match its content is rejected at the door.
+        assert_object_address(object_hash)
         if content_hash(data) != object_hash:
             raise ValueError(f"content does not hash to requested address {object_hash[:8]}")
         self._objects[object_hash] = data
 
     def get(self, object_hash: str) -> bytes:
+        assert_object_address(object_hash)
         return self._objects[object_hash]
 
     def move_ref(self, name: str, object_hash: str) -> None:
@@ -158,11 +197,15 @@ class FileStore:
         self._refs_path.write_text(json.dumps(refs, indent=1, sort_keys=True))
 
     def put(self, object_hash: str, data: bytes) -> None:
+        # Checked before the address becomes a path component: see
+        # `assert_object_address`.
+        assert_object_address(object_hash)
         if content_hash(data) != object_hash:
             raise ValueError(f"content does not hash to requested address {object_hash[:8]}")
         (self._objects_dir / object_hash).write_bytes(data)
 
     def get(self, object_hash: str) -> bytes:
+        assert_object_address(object_hash)
         path = self._objects_dir / object_hash
         if not path.exists():
             raise KeyError(object_hash)
@@ -208,6 +251,7 @@ class SqliteStore:
         self._db.commit()
 
     def put(self, object_hash: str, data: bytes) -> None:
+        assert_object_address(object_hash)
         if content_hash(data) != object_hash:
             raise ValueError(f"content does not hash to requested address {object_hash[:8]}")
         self._db.execute(
@@ -216,6 +260,7 @@ class SqliteStore:
         self._db.commit()
 
     def get(self, object_hash: str) -> bytes:
+        assert_object_address(object_hash)
         row = self._db.execute(
             "SELECT data FROM objects WHERE hash = ?", (object_hash,)
         ).fetchone()
