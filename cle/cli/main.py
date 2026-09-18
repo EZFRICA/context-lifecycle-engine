@@ -38,7 +38,7 @@ from cle.lifecycle.revalidator import revalidate as run_revalidation
 from cle.lifecycle.tags import STATE_RANK, move_state_tag
 from cle.lifecycle.reasons import HUMAN_DECLINE_REASONS, TopologyReason, validate_reason
 from cle.lifecycle.topology import current_agents, render_diff, render_log, write_topology
-from cle.logs import get_logger
+from cle.logs import configure_logging, get_logger
 from cle.oplog import OpLog, UnclassifiedOpError, classify_op, render_decision
 from cle.runtime.container import ensure_container, load_containers, load_image, run_prompts
 from cle.runtime.metrics_volume import read_events
@@ -72,6 +72,10 @@ EMBEDDER_OPTION = typer.Option(
 @app.callback()
 def cli(store: str = STORE_OPTION, embedder: str = EMBEDDER_OPTION) -> None:
     """The lifecycle CLI: evidence in, tags moved, everything logged."""
+    # This is an application, so this is where logging gets configured - importing
+    # a cle module installs nothing (cle/logs.py). Before any command runs, so a
+    # diagnostic from the first store call already has somewhere to go.
+    configure_logging()
     # Set once, before any command runs, so every _store() call in this process
     # AND any subprocess (the dashboard) agree on the backend. Selecting it per
     # command would let two commands in one session write to different stores.

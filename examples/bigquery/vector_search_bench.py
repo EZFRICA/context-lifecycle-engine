@@ -10,7 +10,7 @@ import time
 from google.cloud import bigquery
 
 import bqconfig
-from cle.logs import get_logger
+from cle.logs import configure_logging, get_logger
 
 P = bqconfig.lazy_dataset()
 c = bqconfig.lazy_client()
@@ -40,6 +40,9 @@ def search(n_base: int, k: int = 10) -> str:
 
 
 def main() -> None:
+    # A script is an application: it configures logging, importing it does not
+    # (cle/logs.py).
+    configure_logging()
     # VECTOR_SEARCH allows only SELECT expressions and WHERE in its table
     # arguments - no LIMIT. A row number is materialised once so size can be
     # varied with a WHERE clause.

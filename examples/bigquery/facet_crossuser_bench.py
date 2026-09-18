@@ -50,7 +50,7 @@ import pandas as pd
 from google.cloud import bigquery
 
 import bqconfig
-from cle.logs import get_logger  # noqa: E402
+from cle.logs import configure_logging, get_logger  # noqa: E402
 from cle.population.lexical import jaccard  # noqa: E402
 from facet_prompt_bench import long_numbers, proper_nouns, redact
 
@@ -196,6 +196,9 @@ def recall_at(a: np.ndarray, b: np.ndarray, fp: float) -> float:
 
 
 def main() -> None:
+    # A script is an application: it configures logging, importing it does not
+    # (cle/logs.py).
+    configure_logging()
     clusters = load_clusters()
     pairs = build_pairs(clusters)
     print(f"users: {len({u for u, _ in clusters})}   clusters: {len(clusters)}")

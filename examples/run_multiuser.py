@@ -40,11 +40,16 @@ sys.path.insert(0, str(ROOT))
 from cle.detect.clusters import IntentClusterer  # noqa: E402
 from cle.detect.embedders import open_embedder  # noqa: E402
 from cle.detect.episodes import DetectorConfig, Message, segment  # noqa: E402
-from cle.logs import get_logger  # noqa: E402
+from cle.logs import configure_logging, get_logger  # noqa: E402
 
 from make_multiuser import BACKGROUND, planted_intent  # noqa: E402
 
 log = get_logger("run_multiuser")
+
+#: How much of a failed build's stderr reaches the log. Enough to name the
+#: exception, short of copying a subprocess's whole output into a file that
+#: outlives the run.
+FAILURE_TAIL_LINES = 3
 
 CLI = [sys.executable, "-m", "cle.cli.main"]
 
@@ -107,6 +112,9 @@ def _derive_spec(history: Path, embedder_kind: str, out_dir: Path) -> tuple[Path
 
 
 def main() -> None:
+    # A script is an application: it configures logging, importing it does not
+    # (cle/logs.py).
+    configure_logging()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--state-root", required=True,
                         help="Scratch directory; one subdirectory per user.")
@@ -138,7 +146,13 @@ def main() -> None:
         if args.model_id in ("current", "live"):
             calls += 4  # one generateContent per probe
         if built.returncode != 0:
-            log.error("%s: build FAILED\n%s%s", user, built.stdout, built.stderr)
+            # The exit code and the LAST lines of stderr, never stdout. This is
+            # the one place another process's output would reach a log line, and
+            # a build that failed while reading a real corpus prints the text it
+            # choked on. The full output stays in the run's own terminal.
+            tail = "\n".join(built.stderr.strip().splitlines()[-FAILURE_TAIL_LINES:])
+            log.error("%s: build FAILED (exit %d); last %d line(s) of stderr:\n%s",
+                      user, built.returncode, FAILURE_TAIL_LINES, tail)
             summary[user] = {"intent": intent, "born": False}
             continue
 
