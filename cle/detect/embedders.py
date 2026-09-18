@@ -33,7 +33,12 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
-from cle.batch_guard import assert_batch_varied, assert_embeddable, assert_unit_norm
+from cle.batch_guard import (
+    assert_batch_varied,
+    assert_embeddable,
+    assert_unit_norm,
+    text_digest,
+)
 from cle.detect.clusters import HashedTokenEmbedder, Vector
 from cle.logs import get_logger
 
@@ -109,7 +114,7 @@ def vector_from_response(result, text: str) -> list[float]:
     values = embeddings[0].values if embeddings else None
     if not values:
         raise EmptyEmbeddingError(
-            f"the model returned no vector for {text[:60]!r}. The call succeeded "
+            f"the model returned no vector for {text_digest(text)}. The call succeeded "
             "and the response carried no embedding, so this is a response-shape "
             "failure, not a network error."
         )
@@ -157,7 +162,8 @@ class CachedEmbedder:
             return self._vectors[key]
         except KeyError:
             raise CacheMissError(
-                f"no committed vector for text under {self.embedder_id!r}: {text!r}. "
+                f"no committed vector for text under {self.embedder_id!r}: "
+                f"{text_digest(text)}, cache key {key}. "
                 "Regenerate examples/vectors.*.json (make_vectors.py) or use StubEmbedder."
             ) from None
 

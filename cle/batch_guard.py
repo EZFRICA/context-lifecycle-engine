@@ -20,8 +20,30 @@ Three guards, all loud, all cheap:
 
 from __future__ import annotations
 
+import hashlib
 import math
 from collections.abc import Sequence
+
+#: How much of a text's digest a message shows. Twelve hex characters: enough to
+#: match two occurrences of the same text across a log and a cache, far from
+#: enough to be a handle on the text itself.
+DIGEST_CHARS = 12
+
+
+def text_digest(text: object) -> str:
+    """Name a text in a message WITHOUT quoting it: its length and a short hash.
+
+    These messages travel. The CLI prints `build failed: {error}` on stderr, the
+    dashboard returns a subprocess's stderr to the browser, and a log file
+    outlives the run - so an exception that quotes the text it choked on carries
+    a user's prose into all three. Length and digest keep every diagnostic use
+    (which text, how long, is it the same one twice) and lose the content.
+    """
+    if not isinstance(text, str):
+        return f"<{type(text).__name__}, not a string>"
+    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()[:DIGEST_CHARS]
+    return f"<{len(text)} chars, sha256:{digest}>"
+
 
 #: Above this share of outputs carrying an error marker, the batch is refused.
 #: Not 1.0: a batch that is mostly errors is a failed batch, and waiting for
@@ -140,7 +162,7 @@ def assert_embeddable(text: str, *, where: str) -> None:
     """
     if not isinstance(text, str) or not text.strip():
         raise EmptyTextError(
-            f"{where}: refusing to embed an empty text ({text!r}). An empty opener "
+            f"{where}: refusing to embed an empty text ({text_digest(text)}). An empty opener "
             "is a defect upstream - in episode segmentation or in the corpus - and "
             "embedding it would put an arbitrary point into the clustering as if it "
             "named an intent."

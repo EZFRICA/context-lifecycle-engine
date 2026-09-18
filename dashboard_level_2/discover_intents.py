@@ -45,7 +45,7 @@ sys.path.insert(0, str(ROOT / "examples" / "bigquery"))
 sys.path.insert(0, str(ROOT))
 
 from cle.population.grouping import LEVEL2_LOOSER, Precomputed, build_hierarchy, group  # noqa: E402
-from cle.population.naming import MAX_PROMPT_MEMBERS, NAME_PROMPT, name_groups  # noqa: E402
+from cle.population.naming import NAME_PROMPT_VERSION, name_groups, naming_prompt  # noqa: E402
 from cle.population.privacy import MIN_GROUP, MIN_USERS  # noqa: E402
 
 BENCH_SPACE = "bigquery:gemini-embedding-001:768"
@@ -59,7 +59,7 @@ class BigQueryNamer:
     `cle.population.naming.name_groups`, which is the only path to a shown name.
     """
 
-    namer_id = "bigquery:gen_gemini_flash:name-prompt-v1"
+    namer_id = f"bigquery:gen_gemini_flash:{NAME_PROMPT_VERSION}"
 
     def name(self, groups: Mapping[int, Sequence[str]]) -> dict[int, str]:
         import pandas as pd
@@ -71,9 +71,8 @@ class BigQueryNamer:
         P = bqconfig.dataset()
         frame = pd.DataFrame({
             "gid": [str(g) for g in groups],
-            "prompt": [NAME_PROMPT.format(
-                members="\n".join(f"- {x}" for x in list(m)[:MAX_PROMPT_MEMBERS]))
-                for m in groups.values()],
+            # The engine's prompt, fencing included - not a second copy of it.
+            "prompt": [naming_prompt(m) for m in groups.values()],
         })
         client.load_table_from_dataframe(
             frame, f"{P}.r28_group_prompts",
