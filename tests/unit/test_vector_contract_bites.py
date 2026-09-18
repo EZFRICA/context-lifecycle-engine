@@ -140,6 +140,40 @@ def test_an_embedding_response_with_no_vector_is_refused() -> None:
             vector_from_response(_Response(empty), "a real opener")
 
 
+def test_none_of_the_three_refusals_quotes_the_text_it_choked_on() -> None:
+    """These messages travel further than the call that raised them.
+
+    The CLI prints `build failed: {error}` on stderr, the dashboard returns a
+    subprocess's stderr to the browser, and `$CLE_LOG_FILE` outlives the run. All
+    three used to carry the text itself: `CacheMissError` the whole of it,
+    `EmptyEmbeddingError` its first 60 characters, `assert_embeddable` its repr.
+    Length and digest keep every diagnostic use of the message and lose the prose.
+    """
+    from cle.detect.embedders import (
+        CacheMissError,
+        CachedEmbedder,
+        EmptyEmbeddingError,
+        vector_from_response,
+    )
+
+    secret = "renew the Dupont contract before the audit on invoice 4821"
+
+    class _Response:
+        embeddings = []
+
+    with pytest.raises(EmptyEmbeddingError) as empty:
+        vector_from_response(_Response(), secret)
+    with pytest.raises(CacheMissError) as missing:
+        CachedEmbedder({}, "stub:hashed64").embed(secret)
+    with pytest.raises(EmptyTextError) as blank:
+        assert_embeddable("   ", where="test")
+
+    for refusal in (empty, missing, blank):
+        message = str(refusal.value)
+        assert "Dupont" not in message and "4821" not in message, message
+        assert "chars, sha256:" in message, message
+
+
 def test_a_populated_embedding_response_is_read() -> None:
     """The negative: a guard that refused everything would pass the test above."""
     from cle.detect.embedders import vector_from_response
