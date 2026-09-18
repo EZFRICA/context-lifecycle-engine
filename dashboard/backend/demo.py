@@ -170,10 +170,12 @@ class ScriptRunner:
     def running(self) -> bool:
         return self._task is not None and not self._task.done()
 
-    def start(self, env: dict[str, str]) -> bool:
+    def start(self, overrides: dict[str, str]) -> bool:
+        """`overrides` are the CLE variables only; the process environment is
+        added at the spawn (`_run`)."""
         if self.running:
             return False  # single-flight lock, as for the paced demo
-        self._task = asyncio.create_task(self._run(env))
+        self._task = asyncio.create_task(self._run(overrides))
         return True
 
     def abort(self) -> None:
@@ -197,8 +199,13 @@ class ScriptRunner:
         except (ProcessLookupError, PermissionError):
             proc.kill()  # the group is already gone, or we may not signal it
 
-    async def _run(self, env: dict[str, str]) -> None:
+    async def _run(self, overrides: dict[str, str]) -> None:
         argv = ["bash", "examples/full_loop.sh"]
+        # The full environment is assembled HERE, at the spawn, and nowhere else.
+        # The script needs GEMINI_API_KEY, PATH and the rest; what it must not
+        # need is for that environment to have travelled through an HTTP
+        # handler's data to get here (dashboard/backend/actions.py).
+        env = {**os.environ, **overrides}
         tail: list[str] = []
         step = 0
         try:
