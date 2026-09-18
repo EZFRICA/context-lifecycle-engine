@@ -2,7 +2,14 @@
 
 import pytest
 
-from cle.store.backends import ImmutableRefError, InMemoryStore, StoreBackend
+from cle.store.backends import (
+    FileStore,
+    ImmutableRefError,
+    InMemoryStore,
+    InvalidAddressError,
+    SqliteStore,
+    StoreBackend,
+)
 from cle.store.objects import content_hash
 
 
@@ -47,6 +54,46 @@ def test_version_refs_are_immutable() -> None:
         store.move_ref("agents/recap/v1.0.0", second)
     # The original pointer survived the attempt.
     assert store.list_refs("agents/recap/") == [("agents/recap/v1.0.0", first)]
+
+
+#: An address that is not a hash, in the three shapes that reach a store from
+#: outside it: a path, a wildcard, and an address of the right length in the
+#: wrong alphabet.
+NOT_ADDRESSES = ("../../witness.txt", "objects/../../etc/passwd", "*", "", "G" * 64, "0" * 63)
+
+
+@pytest.mark.parametrize("address", NOT_ADDRESSES)
+def test_no_backend_accepts_an_address_that_is_not_a_hash(address, tmp_path) -> None:
+    stores = [InMemoryStore(), FileStore(tmp_path / "file"), SqliteStore(tmp_path / "db.sqlite")]
+    for store in stores:
+        with pytest.raises(InvalidAddressError):
+            store.get(address)
+        with pytest.raises(InvalidAddressError):
+            store.put(address, b"whatever")
+
+
+def test_a_traversing_address_reads_nothing_outside_the_store(tmp_path) -> None:
+    """The measured defect: `FileStore` turned an address into a path, so an
+    address of `../../witness.txt` returned that file's bytes and the refusal
+    for a normal miss (`KeyError`) made it look like nothing had happened."""
+    witness = tmp_path / "witness.txt"
+    witness.write_text("a secret file")
+    store = FileStore(tmp_path / "state" / "store")
+
+    with pytest.raises(InvalidAddressError) as refusal:
+        store.get("../../witness.txt")
+
+    assert "a secret file" not in str(refusal.value)
+    assert witness.read_text() == "a secret file"     # and put wrote nothing over it
+    with pytest.raises(InvalidAddressError):
+        store.put("../../witness.txt", b"overwritten")
+    assert witness.read_text() == "a secret file"
+
+
+def test_an_invalid_address_is_a_value_error_like_a_mislabeled_one() -> None:
+    """Callers catching `ValueError` around a `put` keep catching both refusals."""
+    with pytest.raises(ValueError):
+        InMemoryStore().get("not-a-hash")
 
 
 def test_list_refs_filters_by_prefix_and_sorts() -> None:

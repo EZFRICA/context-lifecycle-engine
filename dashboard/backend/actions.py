@@ -89,12 +89,20 @@ def demo_run_refusal(state_dir: Path) -> str | None:
 
 
 def demo_run_env(state_dir: Path) -> dict[str, Any]:
-    """The environment `full_loop.sh` needs, or a refusal explaining why not.
+    """The OVERRIDES `full_loop.sh` needs, or a refusal explaining why not.
 
-    Returns either `{"env": {...}}` or a ready-made action result with a non-zero
-    code. Separated from the running so the endpoint can refuse BEFORE starting a
-    background task, and so the refusal reads the same whether it came from the
-    button or from `/health`.
+    Returns either `{"env": {...}}` - three CLE variables and nothing else - or a
+    ready-made action result with a non-zero code. Separated from the running so
+    the endpoint can refuse BEFORE starting a background task, and so the refusal
+    reads the same whether it came from the button or from `/health`.
+
+    THE PROCESS ENVIRONMENT DOES NOT PASS THROUGH HERE. This returned `{**os.environ,
+    ...}`, so `GEMINI_API_KEY` sat inside a value an HTTP handler holds. Nothing
+    leaked - the endpoint returns this dict only on the refusal branch, where the
+    `env` key is absent - but the safety was the handler's discipline rather than
+    the data's shape, and one `return prepared` would have sent the key to the
+    browser. The subprocess still inherits the full environment, and it does so at
+    the spawn site (`ScriptRunner._run`), which is where an environment belongs.
 
     `state_dir` reaches the script as CLE_DEMO_STATE, and that is why the board
     moves while it runs. Every other action here appends `--state-dir`; this one
@@ -126,7 +134,7 @@ def demo_run_env(state_dir: Path) -> dict[str, Any]:
     # CLE_FORCE_REAL_MODEL=1 makes fingerprinter.py raise on any API failure
     # instead of silently falling back to stub hashes, so a green run cannot be
     # an offline run wearing a live label.
-    return {"env": {**os.environ, "CLE_FORCE_REAL_MODEL": "1",
+    return {"env": {"CLE_FORCE_REAL_MODEL": "1",
                     "CLE_ACTOR": "dashboard", "CLE_DEMO_STATE": str(state_dir)}}
 
 

@@ -28,7 +28,7 @@ os.environ["CLE_VECTOR_CACHE"] = str(CACHE)
 from cle.detect.clusters import IntentClusterer  # noqa: E402
 from cle.detect.embedders import open_embedder  # noqa: E402
 from cle.detect.episodes import DetectorConfig, Message, segment  # noqa: E402
-from cle.logs import get_logger  # noqa: E402
+from cle.logs import configure_logging, get_logger  # noqa: E402
 
 log = get_logger("run_state")
 
@@ -82,6 +82,9 @@ def main(argv: list[str]) -> int:
         uv run python examples/bigquery/run_state.py stackoverflow [--state-dir DIR]
         uv run python examples/bigquery/run_state.py wildchat      [--state-dir DIR]
     """
+    # A script is an application: it configures logging, importing it does not
+    # (cle/logs.py).
+    configure_logging()
     if not argv or argv[0] not in ("stackoverflow", "wildchat"):
         print(__doc__ and main.__doc__)
         return 2

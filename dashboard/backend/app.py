@@ -17,6 +17,7 @@ that button deletes and rebuilds the state it runs on, and refuses `.cle`.
 """
 
 import os
+import re
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -28,6 +29,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from cle.lifecycle.reasons import HumanDeclineReason
+from cle.logs import configure_logging
 
 from . import reads
 from .demo import DemoRunner, ScriptRunner
@@ -46,6 +48,10 @@ script_runner = ScriptRunner(bus, STATE_DIR)
 async def lifespan(app: FastAPI):
     import asyncio
 
+    # The dashboard is an application: it configures logging, importing a cle
+    # module does not (cle/logs.py). In the lifespan rather than at import, so
+    # uvicorn's own configuration is already in place and ours is added to it.
+    configure_logging()
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     tailer = asyncio.create_task(tail_log_forever(LOG_PATH, bus))
     try:
@@ -58,6 +64,10 @@ app = FastAPI(title="CLE Live Dashboard", lifespan=lifespan)
 
 #: Methods that change nothing. Every other request is a write.
 _SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+
+#: An object address, as the CLI spells it (`cle/cli/main.py`) and as the store
+#: now enforces it (`assert_object_address`).
+_HASH = re.compile(r"^[0-9a-f]{64}$")
 
 
 @app.middleware("http")
@@ -112,6 +122,13 @@ def state_images():
 
 @app.get("/state/image")
 def state_image(hash: str):
+    # Refused at the route as well as in the store. The store's guard is the one
+    # that matters (`assert_object_address`); this one keeps a malformed address
+    # from reaching an exception handler that turns it into prose, and answers
+    # 400 rather than a 200 carrying an `error` field, which is what a bad
+    # request is.
+    if not _HASH.match(hash):
+        raise HTTPException(status_code=400, detail="hash must be 64 hex characters")
     return reads.image_detail(STATE_DIR, hash)
 
 

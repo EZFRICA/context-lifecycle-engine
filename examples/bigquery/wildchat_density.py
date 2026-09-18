@@ -11,7 +11,7 @@ read. That makes the full-corpus answer cheap enough to actually get.
 import time
 import pandas as pd
 
-from cle.logs import get_logger
+from cle.logs import configure_logging, get_logger
 
 log = get_logger("wildchat_density")
 
@@ -21,6 +21,9 @@ OUT = "examples/bigquery/data/wildchat_identity.parquet"
 
 
 def main() -> None:
+    # A script is an application: it configures logging, importing it does not
+    # (cle/logs.py).
+    configure_logging()
     # Imported here: `huggingface_hub` is not a declared dependency, so the
     # module must import without it and fail only when run.
     from huggingface_hub import hf_hub_download

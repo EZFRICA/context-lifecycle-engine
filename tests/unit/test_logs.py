@@ -10,11 +10,19 @@ Three properties, each one a way a usual logging setup would fail here:
     generator failure by its exception type.
 """
 
+import io
 import logging
+import logging.handlers
+import subprocess
+import sys
+from pathlib import Path
 
 import pytest
 
+from cle import logs
 from cle.logs import LOG_FORMAT, ColoredFormatter, configure_logging, get_logger
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 @pytest.fixture
@@ -83,9 +91,23 @@ def test_the_named_file_gets_every_line_without_colour(reconfigure, tmp_path) ->
     assert "\033[" not in text
 
 
+def test_the_named_file_rotates_rather_than_growing_without_bound(reconfigure, tmp_path,
+                                                                  monkeypatch) -> None:
+    """A run left with CLE_LOG_FILE set must not be able to fill the disk."""
+    monkeypatch.setattr(logs, "LOG_FILE_MAX_BYTES", 512)
+    target = tmp_path / "cle.log"
+    reconfigure(CLE_LOG_FILE=str(target))
+    for index in range(40):
+        get_logger("cle.test").warning("line %d", index)
+    for handler in _ours():
+        handler.flush()
+    assert (tmp_path / "cle.log.1").exists()
+    assert target.stat().st_size <= 512 + 128  # the last line may cross the bound
+
+
 def test_an_unopenable_file_degrades_to_stderr_rather_than_failing(reconfigure, tmp_path,
                                                                    capsys) -> None:
-    """`get_logger` runs at import time: a bad path must not make modules unimportable."""
+    """A bad path is a misconfiguration, not a reason for a command to die."""
     reconfigure(CLE_LOG_FILE=str(tmp_path / "no" / "such" / "dir" / "cle.log"))
     assert "cannot be opened" in capsys.readouterr().err
     assert len(_ours()) == 1
@@ -98,6 +120,84 @@ def test_colour_is_added_to_the_line_and_never_to_the_record() -> None:
     assert "\033[91mERROR\033[0m" in coloured
     assert record.levelname == "ERROR"
     assert "\033[" not in logging.Formatter(LOG_FORMAT).format(record)
+
+
+def test_colour_follows_the_stream_at_the_moment_a_line_is_written(reconfigure,
+                                                                   monkeypatch) -> None:
+    """Deciding once, at configuration time, colours whatever replaced the stream after."""
+    class Terminal(io.StringIO):
+        def isatty(self) -> bool:
+            return True
+
+    reconfigure()                       # configured while stderr is pytest's capture
+    monkeypatch.setattr(sys, "stderr", Terminal())
+    get_logger("cle.test").warning("on a terminal")
+    assert "\033[93mWARNING" in sys.stderr.getvalue()
+
+    monkeypatch.setattr(sys, "stderr", io.StringIO())   # a pipe, not a terminal
+    get_logger("cle.test").warning("into a pipe")
+    assert "\033[" not in sys.stderr.getvalue()
+
+
+def test_a_formatter_set_on_the_handler_is_used_rather_than_ignored(reconfigure) -> None:
+    """Colour is chosen per line, and that choice must not swallow a caller's
+    formatter: a silent no-op is what the old `stream` setter did."""
+    reconfigure()
+    handler = _ours()[0]
+    handler.setFormatter(logging.Formatter("PLAIN %(message)s"))
+    try:
+        record = logging.LogRecord("cle.x", logging.ERROR, __file__, 1, "boom", None, None)
+        assert handler.format(record) == "PLAIN boom"
+    finally:
+        handler.setFormatter(None)
+
+
+def test_importing_the_engine_touches_nobody_elses_logging() -> None:
+    """A library configures nothing: `import cle.x` inside another program must
+    not move that program's root level, nor add a handler to its root logger.
+
+    In a subprocess because the assertion is about the state of the root logger
+    at import, and this process imported `cle` long ago.
+    """
+    script = (
+        "import logging\n"
+        "logging.getLogger().setLevel(logging.DEBUG)\n"
+        "import cle.cli.main, cle.detect.embedders, cle.population.generator\n"
+        "print(len(logging.getLogger().handlers), logging.getLevelName(logging.getLogger().level))"
+    )
+    proc = subprocess.run([sys.executable, "-c", script], cwd=ROOT,
+                          capture_output=True, text=True, timeout=120)
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout.split() == ["0", "DEBUG"]
+
+
+def test_the_cli_configures_logging_and_a_normal_command_stays_silent(tmp_path,
+                                                                      monkeypatch) -> None:
+    """Two properties in one run, because they are the same run.
+
+    The entry point is what configures - nothing else does it for the CLI - and
+    a command that works writes NOTHING to stderr, so a script reading a CLE
+    command's output sees exactly what it saw before this module existed.
+
+    The environment is cleared first, and that is not tidiness: this test read
+    the ambient one, so it passed offline and failed inside a live run that had
+    exported `CLE_LOG_FILE` - where a second handler is CORRECT and the
+    assertion was wrong. A property about the default configuration has to name
+    the default.
+    """
+    from typer.testing import CliRunner
+
+    from cle.cli.main import app
+
+    for name in ("CLE_LOG_LEVEL", "CLE_LOG_FILE"):
+        monkeypatch.delenv(name, raising=False)
+    for handler in _ours():
+        logging.getLogger().removeHandler(handler)
+    result = CliRunner().invoke(app, ["ps", "--state-dir", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    assert len(_ours()) == 1
+    assert result.stderr == ""
+    configure_logging(force=True)
 
 
 def test_reconfiguring_never_stacks_handlers(reconfigure) -> None:

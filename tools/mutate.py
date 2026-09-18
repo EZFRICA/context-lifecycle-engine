@@ -46,6 +46,7 @@ from __future__ import annotations
 import argparse
 import ast
 import hashlib
+import logging
 import re
 import signal
 import subprocess
@@ -53,13 +54,16 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from cle.logs import get_logger
-
 ROOT = Path(__file__).resolve().parent.parent
 
 #: The two diagnostics this tool emits. Its report - one verdict per site and
 #: the tally - is its output and stays on stdout.
-log = get_logger("mutate")
+#:
+#: Stdlib logging, NOT `cle.logs`: this harness mutates `cle/`, so depending on
+#: that package importing cleanly would make the tool fail for the same reason
+#: as its subject. Four lines of configuration buy independence from the thing
+#: being measured.
+log = logging.getLogger("mutate")
 
 #: Marker left in the mutant. Distinctive so a leaked one is greppable.
 MARKER = "pass  # MUTATED-BY-tools/mutate.py"
@@ -275,6 +279,11 @@ def collect(targets: list[str]) -> list[Site]:
 
 
 def main(argv: list[str]) -> int:
+    # A tool is an application: it configures logging, importing it does not.
+    # On stderr, because this tool's report is on stdout and a sweep is read
+    # from there.
+    logging.basicConfig(level=logging.INFO, stream=sys.stderr,
+                        format="%(levelname)-8s | mutate | %(message)s")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("targets", nargs="*", default=list(DEFAULT_TARGETS))
     parser.add_argument("--list", action="store_true", help="list sites, run nothing")

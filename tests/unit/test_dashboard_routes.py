@@ -133,6 +133,21 @@ def test_the_image_route_rejects_a_missing_query_arg(client) -> None:
     assert client.get("/state/image").status_code == 422
 
 
+@pytest.mark.parametrize("bad", ["../../etc/passwd", "../refs.json", "0" * 63, "G" * 64, ""])
+def test_the_image_route_refuses_an_address_that_is_not_a_hash(client, bad) -> None:
+    """This route was the reachable end of a file read outside the store.
+
+    `FileStore.get` built `objects/<hash>` without validating the hash, so
+    `?hash=../../witness.txt` read that file - the integrity protocol then
+    refused to return it, but it had been read. The store now refuses the
+    address; this checks the route refuses it first, as a 400 rather than a 200
+    carrying an error string.
+    """
+    response = client.get("/state/image", params={"hash": bad})
+    assert response.status_code == 400, response.text
+    assert "64 hex" in response.text
+
+
 def test_the_topology_diff_route_executes_on_absent_versions(client) -> None:
     # Empty state dir: versions 1 and 2 do not exist. The handler catches
     # KeyError and answers 404 - a decision it makes, not a crash.
@@ -311,6 +326,26 @@ def test_run_test_on_a_scratch_state_is_not_refused(monkeypatch: pytest.MonkeyPa
     assert prepared["env"]["CLE_FORCE_REAL_MODEL"] == "1", (
         "a live run must fail loudly rather than fall back to stub hashes"
     )
+
+
+def test_the_prepared_run_carries_no_credential_out_of_the_handler(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """What the endpoint holds is three CLE variables, not the environment.
+
+    This function used to return `{**os.environ, ...}`, so `GEMINI_API_KEY` sat
+    inside a value an HTTP handler had in hand. Nothing leaked - that dict is
+    returned to the browser only on the refusal branch, where the `env` key is
+    absent - but the safety was the handler's discipline rather than the data's
+    shape. The subprocess still inherits the full environment; it gets it at the
+    spawn (`ScriptRunner._run`).
+    """
+    from dashboard.backend import actions
+
+    monkeypatch.setenv("GEMINI_API_KEY", "test-only-not-a-real-key")
+    prepared = actions.demo_run_env(Path("/somewhere/.cle-demo"))
+
+    assert set(prepared["env"]) == {"CLE_FORCE_REAL_MODEL", "CLE_ACTOR", "CLE_DEMO_STATE"}
+    assert "test-only-not-a-real-key" not in repr(prepared)
 
 
 def test_the_live_stream_survives_the_state_directory_being_replaced() -> None:

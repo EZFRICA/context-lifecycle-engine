@@ -336,6 +336,37 @@ def test_the_cli_never_writes_to_the_repository_state_dir(gdg_spec, gdg_history,
     assert (state / "topology.yaml").exists()
 
 
+def test_an_unloadable_incumbent_is_warned_about_and_does_not_stop_the_build(
+        gdg_spec, gdg_history, state, caplog) -> None:
+    """The warning exists because the SILENCE was the defect.
+
+    An incumbent that cannot be loaded drops out of the replay competition, and
+    dropping out moves the candidate's `capture_rate` - the number the birth is
+    decided on. The build is right to continue; it must not continue quietly.
+    """
+    import logging
+
+    runner = CliRunner()
+    _run(runner, state, "build", str(gdg_spec),
+         "--replay-window", "40d", "--history", str(gdg_history), *OFFLINE_MODEL)
+    image_hash = _topology(state)["agents"]["gdg_agent"]["image"]
+    (state / "store" / "objects" / image_hash).unlink()      # a pruned store
+
+    second = gdg_spec.parent / "gdg_agent_two.yaml"
+    document = yaml.safe_load(gdg_spec.read_text())
+    document["name"] = "gdg_agent_two"
+    second.write_text(yaml.safe_dump(document, sort_keys=False))
+
+    with caplog.at_level(logging.WARNING, logger="cle.cli.main"):
+        result = _run(runner, state, "build", str(second),
+                      "--replay-window", "40d", "--history", str(gdg_history), *OFFLINE_MODEL)
+
+    assert result.exit_code == 0, result.output
+    assert "does not compete in this replay" in caplog.text
+    assert "incumbent gdg_agent" in caplog.text
+    assert "(KeyError)" in caplog.text          # the type, never the payload
+
+
 def test_the_console_entry_point_is_the_same_app() -> None:
     # CliRunner drives the Typer app in-process. This one call proves the
     # installed console script reaches it, so the tests above are not exercising

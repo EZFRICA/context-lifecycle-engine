@@ -18,7 +18,7 @@ written to fix the drift.
 
 ---
 
-## Test coverage: **533 tests** across 54 files, 1 skipped
+## Test coverage: **555 tests** across 54 files, 1 skipped
 
 Five more run only where the private WildChat corpus is present, so they are not counted here: a suite size a reader cannot reproduce is not a suite size. The skip is that corpus-gated module.
 
@@ -144,8 +144,8 @@ observe; the probe then checks that every marked test really did embed in
 
 | Bucket | Tests | Meaning |
 |---|---|---|
-| **1. Embedder-agnostic** | **410** | No embedder ran for the test. Hashing, store and backends, integrity, resolver, evidence types, the Goodhart boundary, staged failure, lifecycle, episode segmentation, signals, the level 2 facet and privacy guards, the dashboard routes, logging, the structural guards. They hold in **any** vector space. |
-| **2. Stub-as-a-tool** | **94** | An embedder ran, but the claim is space-independent: two-hash inequality, build determinism, both rates always computed, tool gating, embedder provenance, CLI acceptance, the level 2 end-to-end run. |
+| **1. Embedder-agnostic** | **430** | No embedder ran for the test. Hashing, store and backends, integrity, resolver, evidence types, the Goodhart boundary, staged failure, lifecycle, episode segmentation, signals, the level 2 facet and privacy guards, the dashboard routes, logging, the structural guards. They hold in **any** vector space. |
+| **2. Stub-as-a-tool** | **96** | An embedder ran, but the claim is space-independent: two-hash inequality, build determinism, both rates always computed, tool gating, embedder provenance, CLI acceptance, the level 2 end-to-end run. |
 | **3. Stub-as-the-subject** | **29** | Declared `stub_only`, and checked: true **only** in `stub:hashed64`, so they do **not** describe the production system. The contradiction taxonomy, the stability property tests, the adversarial and demo exact rates, the directive-band check. |
 
 Bucket 1 is the contract itself: it holds whatever embedder is configured.
@@ -161,7 +161,7 @@ bench modules, and run `sleep` under bash to test an abort; none of them embeds.
 
 | Area | Files (tests) | What they pin |
 |---|---|---|
-| Hashing & store | `test_content_hash` (6), `test_backends` (6), `test_sqlite_store` (37) | canonical JSON/sha256; Protocol conformance across backends; mobile vs immutable refs |
+| Hashing & store | `test_content_hash` (6), `test_backends` (14), `test_sqlite_store` (37) | canonical JSON/sha256; Protocol conformance across backends; mobile vs immutable refs; an address that is not 64 hex characters is refused by every backend, on `put` and on `get`, before it becomes a path |
 | Two-hash / tag targets | `test_tag_targets` (5) | source ≠ image namespaces; tags reject non-image |
 | Integrity | `test_integrity` (4), `test_resolver` (5) | corrupt read → log + refetch + raise; resolve fails fast, writes nothing |
 | Evidence types | `test_evidence_types` (6) | PreEvidence/Persistence rejected by the promotion gate at type level |
@@ -180,14 +180,14 @@ bench modules, and run `sleep` under bash to test an abort; none of them embeds.
 | Runtime & Goodhart | `test_goodhart_boundary` (5), `test_runtime` (7) | Container has no metrics read path; mounts; switch cost carries both diffs |
 | Lifecycle | `test_lifecycle` (9) | proof ladder & gate; a reason written only by the side that can conclude it, and never a decline reason on a tag move; shadow decides but never writes; topology chain/diff; revalidate holds then drifts, and a missing probe output counts as moved |
 | Closed vocabulary | `test_closed_vocabulary` (10) | which VALUES may be written to `reason`; out-of-vocabulary raises, and there is no `other` bucket to absorb the distinction |
-| CLI acceptance | `test_cli_acceptance` (10) | the documented commands run end to end on `--embedder stub` |
+| CLI acceptance | `test_cli_acceptance` (11) | the documented commands run end to end on `--embedder stub`; an incumbent that cannot be loaded is warned about by exception type and does not stop the build |
 | Embedder selection | `test_embedder_selection` (6) | which embedder the selection point returns for each flag and env var |
-| Vector contract | `test_vector_contract_bites` (12), `test_batch_guard` (9) | the three guards on the compare path fire per site, not merely exist |
+| Vector contract | `test_vector_contract_bites` (13), `test_batch_guard` (9) | the three guards on the compare path fire per site, not merely exist; none of their refusals quotes the text it choked on |
 | `CLE_VECTOR_CACHE` | `test_vector_cache_override` (4) | a cache pointed at a foreign space is refused, never silently consulted |
 | Rate-limit backoff | `test_rate_limit_backoff` (11) | 429/`RESOURCE_EXHAUSTED` retries with full jitter; every other failure raises at once |
-| Logging | `test_logs` (12) | diagnostics go to stderr, never stdout; WARNING unless `CLE_LOG_LEVEL` asks; no file unless `CLE_LOG_FILE` names one, and an unopenable one degrades to stderr; colour never reaches the record or the file; a probe is logged by position and a generator failure by type, never by text; a rate-limited retry is logged |
+| Logging | `test_logs` (17) | diagnostics go to stderr, never stdout, and a normal command writes nothing there; WARNING unless `CLE_LOG_LEVEL` asks; no file unless `CLE_LOG_FILE` names one, which rotates, and an unopenable one degrades to stderr; colour never reaches the record or the file and is decided per line; importing the package configures nothing, the entry points do; a formatter set on the handler is used rather than ignored; a probe is logged by position and a generator failure by type, never by text; a rate-limited retry is logged |
 | Live revalidation | `test_live_revalidation_guard` (2) | revalidation against a live model cannot run inside the offline suite |
-| Dashboard | `test_dashboard_routes` (34), `test_dashboard_matches_disk` (7) | every route; a write sent from another site is refused before any route runs; and the API payload matches what is actually on disk, whitelist included |
+| Dashboard | `test_dashboard_routes` (40), `test_dashboard_matches_disk` (7) | every route; a write sent from another site is refused before any route runs; an object address that is not a hash is a 400, not a read; what a run carries out of a handler is three CLE variables, never the environment; and the API payload matches what is actually on disk, whitelist included |
 | Unguarded-raise closures | `test_unguarded_raises` (10), `test_unguarded_contracts` (7), `test_refusals_bite` (13) | the raise sites the mutation sweep found unreachable, closed one at a time |
 | Mutation harness | `test_mutation_harness` (12) | the tool that judges every other guard is itself judged: its pure functions are pinned |
 | Frozen defects | `test_frozen_defects` (4) | defects measured and deliberately not fixed, pinned so they cannot change unnoticed |
@@ -195,7 +195,7 @@ bench modules, and run `sleep` under bash to test an abort; none of them embeds.
 | Source-tree properties | `test_structural_guards` (9), `test_scripts_resolve` (38), `test_bench_imports_offline` (1) | docstring citations resolve, the documented suite count is true, scripts' imports resolve by AST - no script is executed |
 
 | Level 2: the facet | `test_population_facet` (19) | what text may become a facet, the one construction module (AST), what a failed generation records |
-| Level 2: privacy | `test_population_privacy` (21) | the distinct-user floor, the name screen on BOTH the raw and the shown form, the name cap |
+| Level 2: privacy | `test_population_privacy` (22) | the distinct-user floor, the name screen on BOTH the raw and the shown form, the name cap, and the descriptions reaching the namer as fenced data |
 | Level 2: grouping | `test_population_grouping` (6) | the explicit threshold wins over level 1's table, one embedding pass, the report quotes no facet |
 | Level 2: topology | `test_population_topology` (11) | the facet as a typed field, only at birth, carried across tag moves; the reader refuses mixed spaces and duplicated instances |
 | Level 2: end to end | `test_population_cli` (8) | three users build, `cle population` groups them; names only at the floor; a rebuild regenerates nothing; a refused read creates nothing in the path it was given |
@@ -203,7 +203,7 @@ bench modules, and run `sleep` under bash to test an abort; none of them embeds.
 
 | Bucket measurement | `test_bucket_measurement` (7) | the rules `tools/buckets.py` classifies by: buckets 1 and 2 measured, bucket 3 declared and checked, SCOPE headers compared |
 
-The rows sum to **538** across 55 files, against the **533** in the heading: the
+The rows sum to **560** across 55 files, against the **555** in the heading: the
 difference is `test_real_state_regression`, whose 5 tests run only where the
 private WildChat corpus is present and are therefore excluded from the
 reproducible count. A file absent from this table is a file that does not exist.
