@@ -3,6 +3,21 @@ name = "cle"
 version = "0.1.0"
 description = "Context Lifecycle Engine - reference implementation of the Agent OS series (parts 7-8)."
 requires-python = ">=3.12"
+# Apache-2.0 rather than MIT: this is a reference implementation published
+# beside articles, so it is meant to be read and copied, and the explicit patent
+# grant is what MIT does not give a reader who vendors it into an agent
+# platform. The corpora it measures are NOT under this licence - see NOTICE.
+# SPDX expression (PEP 639), not `{ file = ... }`: the table form inlines the
+# whole licence text into the metadata's License field, which is deprecated and
+# unreadable by tooling.
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "EZFRICA" }]
+classifiers = [
+    "Programming Language :: Python :: 3.12",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
     "pydantic>=2.7",
     "typer>=0.12",
@@ -48,9 +63,38 @@ dashboard = [
 ]
 measure = [
     "google-cloud-bigquery>=3.25",
+    # `job.result().to_dataframe()` raises without it, which is what every bench
+    # here calls; undeclared, the reproduction commands died on a fresh venv.
+    "db-dtypes>=1.3",
     "pandas>=2.2",
     "pyarrow>=17.0",
     "numpy>=1.26",
+]
+#   notebook - `tools/clustering_notebook.py`, the marimo notebook over level 1
+#     clustering. Declared for the same reason as `measure`: a notebook whose
+#     dependencies are not installable is a notebook nobody opens. It needs
+#     `measure` too (pandas and numpy do the projection), which is why the
+#     README gives `--extra measure --extra notebook` together.
+#
+# NOT added here: `onnxruntime` and `tokenizers`. They belong to
+# `examples/onnx_embedding_bench.py` alone - and to the notebook only when its
+# optional ONNX space is selected - so they stay named in those files' docstrings
+# rather than installed for every reader. Same rule as `sentence_transformers`
+# above, and the reason is the same: a dependency line is a claim the engine
+# needs it.
+notebook = [
+    "marimo>=0.9",
+    "altair>=5.4",
+]
+#   onnx - `--embedder onnx`, the local EmbeddingGemma space. DECLARED, unlike
+#     the bench's own imports, because `cle/detect/embedders.py` imports these
+#     two and `cle/` declares everything it imports - that is the rule the
+#     pyrefly block below keeps strict for the engine. The 622 MB of weights are
+#     NOT a dependency: they stay outside the repository, named by
+#     $CLE_ONNX_MODEL_DIR.
+onnx = [
+    "onnxruntime>=1.19",
+    "tokenizers>=0.20",
 ]
 
 [project.scripts]
@@ -140,6 +184,16 @@ unsupported-operation = false
 # refuses; the pandas stubs type it `int`, so the checker calls the conversion
 # unnecessary.
 unnecessary-type-conversion = false
+# Scripts here deliberately import packages this project does NOT declare -
+# `huggingface_hub`, `datasets`, `sentence_transformers`, `onnxruntime`,
+# `tokenizers` - each named in its own module docstring instead, because a
+# declared dependency is a claim the engine needs it (see the dependency block
+# above). The checker is therefore right and the policy is deliberate, so the
+# kind is silenced HERE rather than per import: with the packages absent it
+# reported six of these, and a diagnostic whose answer is always "yes, on
+# purpose" trains a reader to skim the list. `cle/` and `dashboard/` stay
+# strict, and they declare everything they import.
+missing-import = false
 
 # `tests/` and `tools/` deliberately pass the wrong types: that is what a
 # negative test IS. `test_pre_evidence_not_evidence` hands a `PreEvidence` to a
