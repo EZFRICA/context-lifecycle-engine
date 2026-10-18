@@ -1,6 +1,7 @@
 ---
 name: cle-visual-identity
 description: Colors, typography, and component styling for the CLE dashboard, matching the Agent OS series visual identity. Use when writing any CSS, Tailwind config, or component markup.
+when_to_use: Writing CSS or markup for the dashboard or a board; choosing a colour for a state, an evidence type or a chart; styling a chip, a card or a disclosed gap.
 ---
 
 # CLE Visual Identity
