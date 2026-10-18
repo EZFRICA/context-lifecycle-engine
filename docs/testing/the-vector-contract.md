@@ -2,9 +2,10 @@
 
 Comparing two vectors is now a guarded operation, because it was not:
 
-- **`cosine` is a cosine, measured, not assumed.** Both shipped embedders
-  return vectors of norm exactly 1.0 (measured, n=200 texts each), so the dot
-  product is the cosine and the 0.6 / 0.775 thresholds share one scale.
+- **`cosine` is a cosine, measured, not assumed.** Both offline embedders
+  return vectors of norm 1.000000 (measured, n=247 texts each: min=max=mean=1.000000
+  across all 247 committed cache vectors and `HashedTokenEmbedder`), so the dot
+  product is the cosine and the 0.46 / 0.6 / 0.775 thresholds share one scale.
 - **`DimensionMismatchError`**: `zip` used to truncate to the shorter vector, so
   a 64-d stub centroid compared against a 768-d real embedding returned
   `-0.012148` and raised nothing. Unequal lengths now raise.

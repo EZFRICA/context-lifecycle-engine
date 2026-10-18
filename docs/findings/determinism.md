@@ -2,13 +2,15 @@
 
 
 ```
-frozen cache vs AI Studio gemini-embedding-2   : 1.000000
-norm over 200 cache vectors : min 1.000000  max 1.000000  mean 1.000000
+frozen cache vs live gemini-embedding-2 (186 message texts) : 1.000000
+norm over all 247 cache vectors : min 1.000000  max 1.000000  mean 1.000000
 ```
 
-Re embedding the same 200 texts a month later reproduces the committed cache
-exactly. That is what makes `CachedEmbedder` a legitimate stand in for the live
-substrate rather than an approximation of it.
+Re-embedding the 186 distinct fixture message texts against the live endpoint
+reproduces their committed cache vectors at cosine 1.000000 (the other 61 of the
+247 cache entries are the 57 joined follow-up directives and 4 `EXTRA_TEXTS`;
+see `examples/make_vectors.py`). That is what makes `CachedEmbedder` a
+legitimate stand-in for the live substrate rather than an approximation of it.
 
 The **generation** model is a different story: facets generated at T=0 vary
 between runs, which is why every facet figure above is measured on one frozen
@@ -42,11 +44,11 @@ regenerated (`docs/CAPABILITIES.md` §12).
 
 Pinning key: `(2026-09-02, eca74ca+wt, google:gemini-embedding-2:768, n/a)` for
 the determinism block; `(2026-09-08, f39c631+wt,
-bigquery:gemini-embedding-001:768, gemini-flash @ T=0)` for the three runs.
+bigquery:gemini-embedding-001:768, gemini-flash @ T=0)` for the five runs.
 
 ```bash
 uv run python examples/bigquery/space_identity.py          # the determinism block
-uv run python examples/bigquery/facet_crossuser_bench.py   # one run of the three; BILLS
+uv run python examples/bigquery/facet_crossuser_bench.py   # one run of the five; BILLS
 ```
 
 ---

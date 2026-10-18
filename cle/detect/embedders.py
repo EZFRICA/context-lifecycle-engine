@@ -196,10 +196,10 @@ def call_with_backoff(call: Callable[[], Any]) -> Any:
     """Retry a rate-limited call; re-raise anything else immediately.
 
     Without this the sample size of a live measurement is set by the quota
-    rather than by the operator. Measured: comparing 186 cached vectors against
-    AI Studio lost 32 of them to 429s, and an immediate second pass lost 86 - so
-    the figure that came back described whatever survived the quota, and a rerun
-    described something else.
+    rather than by the operator. Measured: comparing the 186 fixture message
+    texts in the 247-vector cache against AI Studio lost 32 of them to 429s, and
+    an immediate second pass lost 86 - so the figure that came back described
+    whatever survived the quota, and a rerun described something else.
 
     Only 429 / RESOURCE_EXHAUSTED is retried. A 400, a 403 or a malformed
     request fails identically on every attempt, and retrying those turns a clear
@@ -248,7 +248,8 @@ class RealEmbedder:
 
     They are the SAME vector space, not two models: re-embedding cached texts
     through Vertex reproduces the AI Studio vectors at cosine 1.000000
-    (measured, n=3). `embedder_id` is therefore identical on both, which is what
+    (measured across the 186 fixture message texts in the 247-vector cache).
+    `embedder_id` is therefore identical on both, which is what
     lets a topology born on one be read by the other.
 
     Note the location: `gemini-embedding-2` is served at `global` and 404s at

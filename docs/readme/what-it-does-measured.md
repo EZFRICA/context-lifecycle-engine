@@ -33,10 +33,10 @@ tail mechanism; one reading means would see ~0.55 everywhere and conclude nothin
 
 The engine embeds on `gemini-embedding-2`, through AI Studio by API key or
 through Vertex at location `global` by application-default credentials: the same
-space either way, cosine 1.000000. It is **deterministic for embedding**, so re
-embedding the same 200 texts reproduces the committed cache exactly; the
-generation model at T=0 is not, which is why every facet figure names its frozen
-generation. The corpus benches run on BigQuery and go through
+space either way, cosine 1.000000. It is **deterministic for embedding**, so
+re-embedding the 186 fixture message texts reproduces their vectors in the
+247-vector committed cache at cosine 1.000000; the generation model at T=0 is
+not, which is why every facet figure names its frozen generation. The corpus benches run on BigQuery and go through
 `gemini-embedding-001`, because when they were run BigQuery could not host
 `gemini-embedding-2`. **Cosine between the two models on the same texts is
 0.040084**, so every bench figure is conditioned on `gemini-embedding-001` and

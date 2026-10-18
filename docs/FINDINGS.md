@@ -34,7 +34,8 @@ would produce a THIRD column here, not an edit to this one.
 > model is "AI Studio only". It is not: `gemini-embedding-2` is served by the
 > Vertex API at location `global` (it 404s at `us-central1` and `europe-west1`),
 > reachable with application-default credentials, and it returns the SAME
-> vectors as AI Studio (cosine 1.000000 against the committed cache, n=3). What
+> vectors as AI Studio (cosine 1.000000 across the 186 fixture message texts in
+> the 247-vector committed cache). What
 > is unavailable is the BigQuery remote-model endpoint, which is a narrower
 > thing than "Vertex". A bench in the CLE's own space is therefore possible; it
 > just cannot be written as a BigQuery query.

@@ -1,10 +1,11 @@
 ## Rate limits on the live embedder
 
 The AI Studio surface rate-limits, and it does so at a volume any real sweep
-reaches. Measured before there was a backoff: comparing 186 cached vectors
-against AI Studio lost **32 of them to 429s**, and an immediate second pass lost
-**86**. The figure that came back described whatever survived the quota, and a
-rerun described something else - an unrepeatable measurement, not a slow one.
+reaches. Measured before there was a backoff: comparing the 186 fixture message
+texts in the 247-vector cache against AI Studio lost **32 of them to 429s**, and
+an immediate second pass lost **86**. The figure that came back described
+whatever survived the quota, and a rerun described something else - an
+unrepeatable measurement, not a slow one.
 
 `RealEmbedder` now retries a rate-limited call: **three attempts**, delay
 doubling from 1 s and capped at 8 s, with full jitter so a batch that backs off
