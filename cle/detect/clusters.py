@@ -107,6 +107,12 @@ CLUSTER_THRESHOLD_BY_EMBEDDER: dict[str, float] = {
     # the process-independent HOLDOUT (3/3 planted patterns recovered, near-
     # perfect purity), not the in-sample GDG peak - see docs/METRICS.md.
     "google:gemini-embedding-2:768": 0.775,
+    # EmbeddingGemma's cosines sit higher than gemini-embedding-2's
+    # (cross-intent median 0.71-0.73 against 0.61), so a threshold borrowed from
+    # that space would put this one in its all-singletons regime. Swept at 0.01
+    # on both fixtures; 0.46 maximises the worse of the two corpora
+    # (docs/FINDINGS.md §8, CALIBRATION_PROVENANCE).
+    "onnx:embeddinggemma-300m-fp16:query:768": 0.46,
 }
 
 

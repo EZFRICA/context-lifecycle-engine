@@ -31,16 +31,19 @@ def test_a_ruinous_false_trigger_rate_still_births_a_candidate() -> None:
     `capture_rate` gates nothing either, and that is deliberate: replay produces
     `PreEvidence`, which by invariant 5 can never gate a promotion. But a birth
     is not a promotion, and nothing anywhere refuses a candidate whose trigger
-    fires on almost everything. On the Stack Overflow corpus this rate measures
-    0.580, and the candidate is born exactly as if it had measured 0.02.
+    fires on almost everything. The candidate is born exactly as if the rate had
+    measured 0.02. (On the Stack Overflow corpus the rate itself read 0.580 until
+    2026-10-17, when replay stopped routing at a space-independent bar; it now
+    reads 0.000. That changed the NUMBER, not this defect: nothing refuses a
+    candidate on it either way.)
 
     Not corrected because the threshold is undecided: no corpus has been used to
     calibrate one, and picking a number here would be a conclusion broader than
     its measurement.
 
     WHEN THIS FAILS: a birth threshold was introduced. Good. Update
-    `docs/METRICS.md` and `docs/FINDINGS.md`, which both describe 0.580 as a
-    measured defect left standing, and delete this test.
+    `docs/METRICS.md` and `docs/FINDINGS.md`, which describe the rate as
+    computed and ungating, and delete this test.
     """
     ruinous = PreEvidence(
         capture_rate=1.0, false_trigger_rate=0.99, historical_cost=4.0, window="30d"

@@ -321,12 +321,149 @@ class RealEmbedder:
         return vectors
 
 
+#: EmbeddingGemma-300m, run locally through onnxruntime. Three coordinates make
+#: the space, not one: the model, the QUANTISATION (fp32, fp16, int8, q4 are
+#: different weights and so different geometries) and the TASK PREFIX the model
+#: was trained with. Measured on this repository's fixtures, the prefix moved F
+#: from 0.58 to 0.90 - as much as choosing another model - so it is in the id.
+ONNX_MODEL = "embeddinggemma-300m"
+ONNX_DIM = 768
+ONNX_VARIANT = "fp16"
+ONNX_TEMPLATE = "query"
+ONNX_TEMPLATES = {
+    "query": "task: search result | query: {text}",
+    "clustering": "task: clustering | query: {text}",
+    "document": "title: none | text: {text}",
+}
+#: Tokens per text and texts per forward pass. An episode opener is a sentence;
+#: the cap keeps a batch's padding from dominating a CPU run.
+ONNX_MAX_TOKENS = 256
+ONNX_BATCH = 16
+
+
+def onnx_embedder_id(variant: str = ONNX_VARIANT, template: str = ONNX_TEMPLATE) -> str:
+    return f"onnx:{ONNX_MODEL}-{variant}:{template}:{ONNX_DIM}"
+
+
+class OnnxEmbedder:
+    """A real embedding model that runs locally, on CPU, for nothing.
+
+    The third kind of "real": `RealEmbedder` bills per call and needs a key,
+    `CachedEmbedder` is free but answers only for texts somebody already paid
+    for, and this one embeds ANY text, offline, at ~25 ms per opener. For a
+    deployment whose constraint is that user text must not leave the machine,
+    that difference is the whole argument.
+
+    NOT a drop-in for `gemini-embedding-2`. It is another vector space: its
+    cosines sit higher (cross-intent median 0.71-0.73 against 0.61), its
+    calibrated threshold is 0.46 rather than 0.775, and at their respective best
+    thresholds the two spaces agree at ARI +0.646 - close scores, different
+    partitions. A topology born here is comparable only with itself, which is
+    what `embedder_id` and `EmbeddingConfigMismatchError` enforce.
+
+    The weights are NOT in this repository: `$CLE_ONNX_MODEL_DIR` must point at
+    a directory holding the exported graph for the variant, its weight sidecar
+    and the model's tokenizer file. `examples/onnx_embedding_bench.py` names the
+    download command and the exact file names.
+    """
+
+    def __init__(self, model_dir: Path | str | None = None, variant: str = ONNX_VARIANT,
+                 template: str = ONNX_TEMPLATE) -> None:
+        # Tested BEFORE building a Path: `Path("")` is `.`, which is truthy and
+        # turns a missing variable into a confusing "file not found" about the
+        # working directory.
+        named = str(model_dir) if model_dir else os.environ.get("CLE_ONNX_MODEL_DIR", "")
+        if not named.strip():
+            raise RuntimeError(
+                "OnnxEmbedder needs $CLE_ONNX_MODEL_DIR pointing at a directory holding "
+                f"onnx/model_{variant}.onnx and tokenizer.json. No default: a path that "
+                "looks configured and is not is how a run embeds in a space nobody chose. "
+                "See examples/onnx_embedding_bench.py for the download command."
+            )
+        root = Path(named)
+        if template not in ONNX_TEMPLATES:
+            raise ValueError(f"unknown ONNX task prefix {template!r}; "
+                             f"expected one of {sorted(ONNX_TEMPLATES)}")
+        graph = root / "onnx" / f"model_{variant}.onnx"
+        if not graph.exists():
+            raise FileNotFoundError(f"{graph} is missing; $CLE_ONNX_MODEL_DIR is {root}")
+        # Lazily, like the google SDK above: neither onnxruntime nor tokenizers is
+        # a declared dependency, and the engine must import without them.
+        import onnxruntime
+        from tokenizers import Tokenizer
+
+        self._session = onnxruntime.InferenceSession(
+            str(graph), providers=["CPUExecutionProvider"])
+        self._tokenizer = Tokenizer.from_file(str(root / "tokenizer.json"))
+        self._tokenizer.enable_truncation(max_length=ONNX_MAX_TOKENS)
+        self._tokenizer.enable_padding()
+        self._template = ONNX_TEMPLATES[template]
+        self._seen: dict[str, Vector] = {}
+        self.embedder_id = onnx_embedder_id(variant, template)
+
+    def embed(self, text: str) -> Vector:
+        assert_embeddable(text, where="OnnxEmbedder.embed")
+        if text not in self._seen:
+            self.embed_many([text])
+        return self._seen[text]
+
+    def embed_many(self, texts: Iterable[str]) -> list[Vector]:
+        """One forward pass per batch; repeated texts are embedded once.
+
+        The guards are HERE as well as in `embed`, not only there: a batch path
+        that skips them is exactly how a guard becomes decorative. Callers in
+        this repository use this method directly.
+        """
+        import math
+
+        import numpy as np
+
+        wanted = list(dict.fromkeys(texts))
+        for text in wanted:
+            # The only OUTBOUND guard on this path. Nothing is billed here, but
+            # an empty opener embedded locally still enters clustering as an
+            # arbitrary point pretending to name an intent.
+            assert_embeddable(text, where="OnnxEmbedder.embed_many")
+        missing = [t for t in wanted if t not in self._seen]
+        for start in range(0, len(missing), ONNX_BATCH):
+            chunk = missing[start:start + ONNX_BATCH]
+            encoded = self._tokenizer.encode_batch(
+                [self._template.format(text=t) for t in chunk])
+            ids = np.array([e.ids for e in encoded], dtype=np.int64)
+            mask = np.array([e.attention_mask for e in encoded], dtype=np.int64)
+            # `run` is typed as returning a union that includes a sparse tensor
+            # and a dict; the output we ask for is dense. Narrowed here rather
+            # than asserted in a comment, so the type is what the code says.
+            raw = np.asarray(self._session.run(
+                ["sentence_embedding"], {"input_ids": ids, "attention_mask": mask})[0])
+            for text, vector in zip(chunk, raw):
+                # Normalised HERE, explicitly, at the boundary this class owns.
+                # The model returns unit vectors today (measured: min and max
+                # 1.000000 over a batch), and asserting that rather than relying
+                # on it is the rule `assert_unit_norm` exists for - BigQuery's
+                # 0.58-norm vectors produced plausible numbers from an unrelated
+                # geometry precisely because nobody checked.
+                norm = math.sqrt(sum(float(x) * float(x) for x in vector))
+                unit = tuple(float(x) / norm for x in vector) if norm else tuple(
+                    float(x) for x in vector)
+                assert_unit_norm(unit, where=self.embedder_id)
+                self._seen[text] = unit
+        vectors = [self._seen[t] for t in wanted]
+        # A batch that returns is not a batch that worked: a wrong attention
+        # mask, a collapsed input, a model loaded half-initialised all return
+        # the right NUMBER of vectors. `RealEmbedder` carries this guard for a
+        # collapse that actually happened; a local runtime is not exempt.
+        assert_batch_varied([repr(v) for v in vectors],
+                            label=f"{self.embedder_id}.embed_many")
+        return vectors
+
+
 def default_embedder() -> CachedEmbedder:
     """The suite default: frozen vectors, offline, miss-is-error."""
     return CachedEmbedder.from_file()
 
 
-EMBEDDER_KINDS = ("stub", "cached", "real")
+EMBEDDER_KINDS = ("stub", "cached", "real", "onnx")
 
 
 def open_embedder(kind: str | None = None):
@@ -350,7 +487,12 @@ def open_embedder(kind: str | None = None):
         is a CacheMissError, never a silent recompute. This is real detection
         for the corpus the cache was built from.
       * real - live `gemini-embedding-2`. Works on ANY text and costs money
-        per call. The only kind that can embed text nobody has embedded before.
+        per call, over the network.
+      * onnx - EmbeddingGemma-300m from a local file. Works on ANY text, costs
+        nothing, and never leaves the machine. A DIFFERENT vector space from
+        the three above, with its own calibrated threshold; needs
+        `$CLE_ONNX_MODEL_DIR` and the onnxruntime/tokenizers packages, which
+        this project does not declare.
 
     `cached` and `real` share one `embedder_id`, so a topology written under one
     is comparable with the other: the vectors are the same geometry, only the
@@ -363,6 +505,11 @@ def open_embedder(kind: str | None = None):
         return CachedEmbedder.from_file()
     if kind == "real":
         return RealEmbedder()
+    if kind == "onnx":
+        return OnnxEmbedder(
+            variant=os.environ.get("CLE_ONNX_VARIANT", ONNX_VARIANT),
+            template=os.environ.get("CLE_ONNX_TEMPLATE", ONNX_TEMPLATE),
+        )
     raise ValueError(f"unknown embedder kind {kind!r}; expected one of {EMBEDDER_KINDS}")
 
 
@@ -390,6 +537,14 @@ CALIBRATION_PROVENANCE: dict[str, str] = {
         "swept 0.60-0.95 on the realistic fixtures; adopted on ONE independent "
         "confirmation - the process-independent holdout, never consulted to pick "
         "it (docs/METRICS.md, era C). The in-sample GDG peak is NOT evidence.",
+    onnx_embedder_id():
+        "swept 0.30-0.95 at 0.01 on both offline fixtures (docs/FINDINGS.md "
+        "§8). The process-independent holdout peaks at F 0.904 on a 0.37-0.42 "
+        "plateau and GDG peaks at F 0.897 at 0.50 - the inversion the corpora "
+        "keep producing - so 0.46 is the value that maximises the WORSE of the "
+        "two (0.849) and keeps purity at 96% on the holdout. Only the fp16 "
+        "variant under the `query` prefix was measured; another quantisation "
+        "or prefix is another space and has no entry here.",
 }
 
 

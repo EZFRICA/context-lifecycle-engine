@@ -89,6 +89,10 @@ def main(argv: list[str]) -> int:
         print(__doc__ and main.__doc__)
         return 2
     corpus = argv[0]
+    # The space is selectable because re-measuring in another one is now a thing
+    # this repository does; `cached` stays the default so the command published
+    # beside the figures keeps producing those figures.
+    kind = argv[argv.index("--embedder") + 1] if "--embedder" in argv else "cached"
     default = ROOT / f".cle-r36-{corpus}"
     state = Path(argv[argv.index("--state-dir") + 1]) if "--state-dir" in argv else default
     if state.resolve() == (ROOT / ".cle").resolve():
@@ -105,7 +109,7 @@ def main(argv: list[str]) -> int:
 
     from cle.detect.episodes import CoarseTimestampError
 
-    embedder = open_embedder("cached")
+    embedder = open_embedder(kind)
     msgs = load(history)
 
     # WildChat is a COHORT: `segment` refuses mixed user_ids, deliberately, since
@@ -144,6 +148,44 @@ def main(argv: list[str]) -> int:
     print(f"clusters     : {len(sizes)}")
     for floor in (3, 6, 10):
         print(f"  >= {floor:2} occurrences : {sum(1 for n in sizes.values() if n >= floor)}")
+    truth_path = S / "so_ground_truth.json"   # the sidecar prepare_states.py writes
+    if corpus == "stackoverflow" and truth_path.exists():
+        # The published headline, recomputed HERE rather than only in the
+        # regression test, because the test pins ONE space and the whole point
+        # of a second space is to read this number in it.
+        truth = json.loads(truth_path.read_text())
+        landed: dict[str, list] = {}
+        all_eps, all_assign, _ = cluster(msgs, embedder)
+        for episode, assignment in zip(all_eps, all_assign):
+            component = truth.get(episode.opener)
+            if component is not None and assignment is not None:
+                landed.setdefault(component, []).append(assignment)
+        present = {c: v for c, v in landed.items() if len(v) >= 2}
+        grouped = {c: v for c, v in present.items() if len(set(v)) == 1}
+        share = len(grouped) / len(present) if present else 0.0
+        print(f"moderator-attested intents grouped : {len(grouped)}/{len(present)} "
+              f"({share:.0%})   [~2% at random]")
+        print("  the other half of this figure is false_trigger_rate; a detector "
+              "collapsing everything scores 100% here")
+
+        # So compute that half, here, in the space that just ran. It used to be
+        # reconstructed by hand on the largest cluster, which is why `cle()` and
+        # `write_spec()` sat unused in this file - and why the figure could not
+        # be read in a second space without redoing that by hand.
+        _, _, clusterer = cluster(msgs, embedder)
+        biggest = max(sizes, key=sizes.get)
+        state.mkdir(parents=True, exist_ok=True)
+        spec = write_spec(state / "detected_agent.yaml", "detected_agent",
+                          clusterer.centroids[biggest[1]], embedder.embedder_id,
+                          sizes[biggest])
+        built = cle(state, "build", str(spec), "--replay-window", "400d",
+                    "--history", str(history), "--model-id", "stub-model-1",
+                    embedder=kind)
+        rates = [l.strip() for l in (built.stdout + built.stderr).splitlines()
+                 if "capture_rate" in l or "false_trigger_rate" in l]
+        print(f"largest cluster n={sizes[biggest]} rebuilt through `cle build`:")
+        for line in rates or ["  (the build printed no rate - see the state dir)"]:
+            print(f"  {line}")
     print(f"state dir    : {state}   (nothing was written to .cle)")
     return 0
 

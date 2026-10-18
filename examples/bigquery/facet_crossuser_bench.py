@@ -131,6 +131,29 @@ def build_pairs(clusters: dict[tuple[str, str], list[str]]) -> pd.DataFrame:
     return frame
 
 
+def committed_facets() -> dict[tuple[str, str], str]:
+    """The facets this bench generated once, read back instead of regenerated.
+
+    A facet is data, not a derivation (facet contract §c): regenerating it to
+    re-measure an embedding would change the object under test and make the
+    comparison meaningless. Empty when the table is absent, and the caller
+    generates then.
+    """
+    try:
+        rows = c.query(f"SELECT key, facet FROM `{P}.r26_cluster_facets`",
+                       location="EU").result()
+    except Exception as error:                      # table gone, first run, no access
+        log.warning("no committed facets (%s); they will be generated",
+                    type(error).__name__)
+        return {}
+    out = {}
+    for row in rows:
+        user, intent = row["key"].split("|", 1)
+        if row["facet"]:
+            out[(user, intent)] = row["facet"].strip()
+    return out
+
+
 def generate_facets(clusters: dict[tuple[str, str], list[str]]) -> dict[tuple[str, str], str]:
     """One facet per cluster, batched. Clio's layer 1, applied per user."""
     keys = sorted(clusters)
@@ -165,7 +188,15 @@ def generate_facets(clusters: dict[tuple[str, str], list[str]]) -> dict[tuple[st
     return out
 
 
-def embed(texts: list[str]) -> dict[str, np.ndarray]:
+def embed(texts: list[str], model: str = "emb_gemini_embedding_001") -> dict[str, np.ndarray]:
+    """Embed through a remote model in the dataset.
+
+    `model` is a parameter because BigQuery can host `gemini-embedding-2` since
+    2026-10-05 - the space the engine itself runs on, cosine 1.000000 against
+    its cache (docs/findings/space-identity-bigquery.md). The default stays the
+    model every published figure in docs/findings/ was measured in: a figure
+    belongs to its space, so re-running produces a new column, never an edit.
+    """
     frame = pd.DataFrame({"content": texts})
     c.load_table_from_dataframe(
         frame, f"{P}.r26_texts",
@@ -176,7 +207,7 @@ def embed(texts: list[str]) -> dict[str, np.ndarray]:
     CREATE OR REPLACE TABLE `{P}.r26_emb` AS
     SELECT content, ml_generate_embedding_result AS v
     FROM ML.GENERATE_EMBEDDING(
-      MODEL `{P}.emb_gemini_embedding_001`,
+      MODEL `{P}.{model}`,
       (SELECT content FROM `{P}.r26_texts`),
       STRUCT(768 AS output_dimensionality, TRUE AS flatten_json_output))
     """, location="EU").result()
@@ -206,7 +237,21 @@ def main() -> None:
           f"{int((pairs.corpus == 'A').sum())}   different (B): "
           f"{int((pairs.corpus == 'B').sum())}")
 
-    facets = generate_facets(clusters)
+    model = "emb_gemini_embedding_001"
+    if "--model" in sys.argv:
+        position = sys.argv.index("--model") + 1
+        if position >= len(sys.argv):
+            raise SystemExit("--model needs a remote model name, e.g. "
+                             "--model emb_gemini_embedding_2")
+        model = sys.argv[position]
+    facets = committed_facets()
+    missing_facets = [k for k in clusters if k not in facets]
+    if missing_facets:
+        log.warning("%d cluster(s) have no committed facet; generating (this bills)",
+                    len(missing_facets))
+        facets = generate_facets(clusters)
+    else:
+        print(f"facets: {len(facets)} read back, none regenerated")
     missing = [k for k in clusters if k not in facets]
     if missing:
         log.warning("%d clusters got no facet; dropped from the facet rows", len(missing))
@@ -215,7 +260,8 @@ def main() -> None:
     red = {k: redact(v) for k, v in facets.items()}
 
     texts = sorted(set(joined.values()) | set(facets.values()) | set(red.values()))
-    vec = embed(texts)
+    print(f'space : bigquery:{model}')
+    vec = embed(texts, model)
     cos = lambda x, y: float(np.dot(vec[x], vec[y]))
 
     ka = list(zip(pairs.ua, pairs.ia))
