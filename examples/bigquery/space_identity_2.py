@@ -29,6 +29,12 @@ def main() -> int:
     write nothing, which `tests/property/test_bench_imports_offline.py` enforces
     for every bench in this directory."""
 
+    model = "emb_gemini_embedding_2"
+    if "--model" in sys.argv:
+        position = sys.argv.index("--model") + 1
+        if position >= len(sys.argv):
+            raise SystemExit("--model needs a remote model name")
+        model = sys.argv[position]
     cached = CachedEmbedder.from_file()
     rows = [json.loads(l) for l in pathlib.Path("examples/prompt_history_gdg.jsonl").read_text().splitlines() if l.strip()]
     msgs = [Message(**{k: r.get(k) for k in ("text","ts","thread_id","user_id","requires_tool","tool_result")}) for r in rows]
@@ -51,10 +57,11 @@ def main() -> int:
     CREATE OR REPLACE TABLE `{P}.r41_identity_emb` AS
     SELECT content, ml_generate_embedding_result AS v
     FROM ML.GENERATE_EMBEDDING(
-      MODEL `{P}.emb_gemini_embedding_2`,
+      MODEL `{P}.{model}`,
       (SELECT content FROM `{P}.r41_identity_texts`),
       STRUCT(768 AS output_dimensionality, TRUE AS flatten_json_output))
     """, location="EU"); job.result()
+    print(f"  modèle: {model}")
     print(f"  embeddings BigQuery produits (octets facturés: {job.total_bytes_billed:,})")
 
     sims, norms = [], []

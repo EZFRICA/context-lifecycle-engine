@@ -25,11 +25,25 @@ Two consequences, and only two:
   `gemini-embedding-001` and stay labelled that way; re-running produces a new
   column beside them, never an edit (`cle-measurement-discipline`).
 
-Also worth recording: `ML.GENERATE_EMBEDDING` on this endpoint returns **unit
-vectors**. On `gemini-embedding-001` it returned norms of 0.57 to 0.60, which is
-what `assert_unit_norm` exists to refuse, and what made a BigQuery vector
-unusable in `cosine` without an explicit normalisation at the boundary.
+## The norms, measured side by side
+
+Both models, the same 20 texts, the same surface, one run each:
+
+| remote model | raw norms from `ML.GENERATE_EMBEDDING` | cosine against the engine's cache |
+|---|---|---|
+| `emb_gemini_embedding_2` | **1.000000 to 1.000001** | median **1.000000**, 20/20 identical to 1e-6 |
+| `emb_gemini_embedding_001` | **0.582974 to 0.599283** | median **0.040290**, 0/20 |
+
+The second row is why `assert_unit_norm` exists. `cosine` here is a raw dot
+product, so a 0.583-norm vector compared **with itself** returns **0.3399**, not
+1.0 - a perfect match read as a weak one, under every threshold in the system.
+The guard refuses such a vector at the boundary rather than letting it produce
+plausible numbers from an unusable geometry.
+
+The 0.040290 median also corroborates the published 0.040084: these are two
+different models, which is what the disclosed gap always said.
 
 ```bash
 uv run python examples/bigquery/space_identity_2.py
+uv run python examples/bigquery/space_identity_2.py --model emb_gemini_embedding_001
 ```
