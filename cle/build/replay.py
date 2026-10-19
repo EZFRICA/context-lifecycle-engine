@@ -36,7 +36,13 @@ from typing import Sequence
 
 from pydantic import BaseModel
 
-from cle.detect.clusters import Embedder, IntentClusterer, cosine, returned_to_cluster
+from cle.detect.clusters import (
+    Embedder,
+    IntentClusterer,
+    cluster_threshold_for,
+    cosine,
+    returned_to_cluster,
+)
 from cle.detect.episodes import DetectorConfig, Episode, Message, classify_closure, segment
 from cle.oplog import OpLog
 from cle.store.commits import PreEvidence, TriggerSpec
@@ -178,6 +184,23 @@ def _replay(
     # Routing: the candidate fires when it clears the similarity bar AND
     # beats every existing trigger - ties go to the incumbent, so a
     # candidate can never silently annex already-routed traffic.
+    #
+    # THE BAR IS THE SPACE'S, resolved exactly as `IntentClusterer` resolves it.
+    # It used to be `config.cluster_similarity_threshold` raw - a 0.6 applied in
+    # every space while the clustering half of the same build used the
+    # calibrated value. The two halves of one figure were then read at two
+    # different bars: on the Stack Overflow corpus the candidate grouped at
+    # 0.775 and routed at 0.6, which is BELOW that space's cross-intent median
+    # (0.61), so 76 of 131 out-of-cluster episodes fired and the build published
+    # `false_trigger_rate 0.580` as a defect of the detector. At its own 0.775
+    # the same trigger fires on 0 of 131. The defect was in this line.
+    #
+    # It survived because it is invisible where the suite runs: `stub:hashed64`
+    # is calibrated at 0.6, the same number, so every fixture figure is
+    # unchanged by this fix. Only a space calibrated somewhere else reveals it.
+    routing_bar = cluster_threshold_for(
+        getattr(embedder, "embedder_id", None), config.cluster_similarity_threshold
+    )
     def candidate_fires(episode: Episode) -> bool:
         # Capability gating (approved design): an episode that REQUIRED a
         # tool is only captured if the candidate mounts it. Such episodes
@@ -191,7 +214,7 @@ def _replay(
         )
         opener_embedding = embedder.embed(episode.opener)
         candidate_similarity = cosine(opener_embedding, trigger.centroid)
-        if candidate_similarity < config.cluster_similarity_threshold:
+        if candidate_similarity < routing_bar:
             return False
         # Site 3 of 3: each incumbent centroid carries its own provenance.
         for incumbent in existing_triggers:

@@ -4,10 +4,11 @@ SCOPE - bucket 1 (embedder-agnostic): no vector space is under test, only which
 failures are worth a second attempt.
 
 CLE need. Without a backoff, the sample size of a live measurement is set by the
-quota rather than by the operator. Measured: comparing 186 cached vectors against
-AI Studio lost 32 to 429s, and an immediate second pass lost 86 - so the figure
-that came back described whatever survived the quota, and a rerun described
-something else. That is not a slow measurement, it is an unrepeatable one.
+quota rather than by the operator. Measured: comparing the 186 fixture message
+texts in the 247-vector cache against AI Studio lost 32 to 429s, and an
+immediate second pass lost 86 - so the figure that came back described whatever
+survived the quota, and a rerun described something else. That is not a slow
+measurement, it is an unrepeatable one.
 
 `RealEmbedder` itself is never imported here: importing it is a dependency on the
 network and a key, and that ban is asserted by

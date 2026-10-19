@@ -78,10 +78,37 @@ def test_real_reaches_the_live_embedder(monkeypatch: pytest.MonkeyPatch) -> None
     assert built == [True], "open_embedder('real') did not construct the live embedder"
 
 
+#: Kinds the suite cannot CONSTRUCT, each for a reason that is not a defect:
+#: `real` needs a key and the network, `onnx` needs a 622 MB model file the
+#: repository does not ship. They are checked by their refusal instead.
+NEEDS_AN_EXTERNAL_RESOURCE = {"real": "network", "onnx": "model file"}
+
+
 def test_every_kind_is_reachable_and_the_list_is_not_stale() -> None:
     # A kind named in EMBEDDER_KINDS that the factory rejects would be a name
     # designating nothing - the pattern this codebase keeps reproducing.
     for kind in EMBEDDER_KINDS:
-        if kind == "real":
-            continue  # covered above without touching the network
+        if kind in NEEDS_AN_EXTERNAL_RESOURCE:
+            continue
         assert open_embedder(kind) is not None
+
+
+def test_a_kind_needing_a_resource_refuses_by_naming_it(monkeypatch) -> None:
+    """The name still has to designate something: the refusal says what is
+    missing and how to supply it, rather than failing later and elsewhere."""
+    monkeypatch.delenv("CLE_ONNX_MODEL_DIR", raising=False)
+    with pytest.raises(RuntimeError) as refusal:
+        open_embedder("onnx")
+    assert "CLE_ONNX_MODEL_DIR" in str(refusal.value)
+    assert "onnx_embedding_bench" in str(refusal.value)
+
+
+def test_the_local_space_is_calibrated_before_it_can_be_selected() -> None:
+    """A space with no swept threshold must not reach a lifecycle decision, so
+    a kind in the factory carries both table entries or it is not shippable."""
+    from cle.detect.clusters import CLUSTER_THRESHOLD_BY_EMBEDDER
+    from cle.detect.embedders import CALIBRATION_PROVENANCE, onnx_embedder_id
+
+    space = onnx_embedder_id()
+    assert CLUSTER_THRESHOLD_BY_EMBEDDER.get(space) == 0.46
+    assert "holdout" in CALIBRATION_PROVENANCE[space]

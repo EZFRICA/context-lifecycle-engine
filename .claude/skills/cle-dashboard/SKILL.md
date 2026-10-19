@@ -1,6 +1,7 @@
 ---
 name: cle-dashboard
 description: Data contracts, API surface, and page composition for the CLE live dashboard. Use when designing or implementing the FastAPI backend, the SSE stream, or any Alpine.js component that renders oplog events, images, containers, or topology.
+when_to_use: Adding or changing a FastAPI route, an SSE event, a read helper or an Alpine component; asking what the dashboard may write, what it renders, or what its trust boundary is.
 ---
 
 # CLE Dashboard Contract
@@ -52,6 +53,17 @@ will grow; the dashboard must not crash on new event types.
 - No CORS. A write whose `Origin` is not the dashboard itself is refused with
   403 before any route runs (`refuse_cross_origin_writes`): a bodiless POST
   from another site's page would otherwise need nobody's permission.
+- `?hash=` is validated at the route (400 unless 64 hex) AND in the store. The
+  guard is cheap and the failure it prevents was real: an unvalidated address
+  became a path and read a file outside the store.
+- What reaches a subprocess is CLE variables only (`CLE_FORCE_REAL_MODEL`,
+  `CLE_ACTOR`, `CLE_DEMO_STATE`). The process environment - which holds
+  `GEMINI_API_KEY` - is assembled at the spawn, never inside a value a handler
+  returns.
+- **Trust boundary: the machine, not the operator.** No authentication, and two
+  routes destroy state. Loopback binding, the origin guard and the `.cle`
+  refusal are what defend them; any local process can still press `clean`. Say
+  so in `dashboard/README.md` rather than implying otherwise in the UI.
 
 ## Rendering rules (contract, not style)
 - Evidence types are visually distinct EVERYWHERE: pre_evidence (blue),

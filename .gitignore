@@ -1,5 +1,8 @@
 .venv/
 __pycache__/
+# marimo writes a session cache next to a notebook it exports or edits;
+# it holds the last run's outputs, so it is a build artifact, not source.
+__marimo__/
 *.pyc
 # CLE_LOG_FILE output, wherever it is pointed inside the tree.
 *.log
@@ -79,6 +82,9 @@ examples/prompt_history_manifest.json
 # reader reproduces the result instead of reading how it was reached.
 # PRESERVED.md is a transit file for content awaiting a decision.
 temp_run_*.md
+# Past run transcripts, moved out of the .md namespace: they are
+# append-only journals of a campaign, not documents.
+archive/
 temp_commits*.sh
 PRESERVED.md
 
@@ -105,3 +111,10 @@ blog/
 # How the system got here: history and legacy. Every tracked document describes
 # the code as it stands; this is the one file allowed to narrate the past.
 EVOLUTION.md
+
+# These documents are gitignored; so are the section files they were split
+# into when the 100-line rule came in - a split must not publish what the
+# whole file was ignored for.
+evolution/
+preserved/
+docs/validation/

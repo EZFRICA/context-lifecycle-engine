@@ -83,9 +83,10 @@ class DimensionMismatchError(ValueError):
 
 
 def cosine(a: Vector, b: Vector) -> float:
-    # The name asserts a cosine, and it is one: both shipped embedders return
-    # vectors of norm exactly 1.0 (measured, n=200 each), so the dot product IS
-    # the cosine and the 0.6 / 0.775 thresholds share one scale.
+    # The name asserts a cosine, and it is one: both offline embedders return
+    # vectors of norm 1.000000 (measured, n=247 texts each: min=max=mean=1.000000
+    # across all 247 committed cache vectors and HashedTokenEmbedder), so the dot
+    # product IS the cosine and the 0.46 / 0.6 / 0.775 thresholds share one scale.
     # A zero vector never matches anything.
     if len(a) != len(b):
         raise DimensionMismatchError(
@@ -107,6 +108,12 @@ CLUSTER_THRESHOLD_BY_EMBEDDER: dict[str, float] = {
     # the process-independent HOLDOUT (3/3 planted patterns recovered, near-
     # perfect purity), not the in-sample GDG peak - see docs/METRICS.md.
     "google:gemini-embedding-2:768": 0.775,
+    # EmbeddingGemma's cosines sit higher than gemini-embedding-2's
+    # (cross-intent median 0.71-0.73 against 0.61), so a threshold borrowed from
+    # that space would put this one in its all-singletons regime. Swept at 0.01
+    # on both fixtures; 0.46 maximises the worse of the two corpora
+    # (docs/FINDINGS.md §8, CALIBRATION_PROVENANCE).
+    "onnx:embeddinggemma-300m-fp16:query:768": 0.46,
 }
 
 
