@@ -46,7 +46,7 @@
 
 | Bucket measurement | `test_bucket_measurement` (7) | the rules `tools/buckets.py` classifies by: buckets 1 and 2 measured, bucket 3 declared and checked, SCOPE headers compared |
 
-The rows sum to **578** across 57 files, against the **573** in the heading: the
+The rows sum to **579** across 57 files, against the **574** in the heading: the
 difference is `test_real_state_regression`, whose 5 tests run only where the
 private WildChat corpus is present and are therefore excluded from the
 reproducible count. A file absent from this table is a file that does not exist.

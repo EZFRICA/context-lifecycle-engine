@@ -62,6 +62,7 @@ produced it; re-measuring adds a file, it never edits one.
 - [§7 The embedding model is deterministic; the generation model is not](findings/determinism.md) - Re-embedding reproduces the cache exactly; a facet generated at T=0 does not.
 - [§8 A free local space at level 1](findings/local-space-onnx.md) - EmbeddingGemma-300m through ONNX: F 0.904 against 0.924, and a different partition.
 - [§9 BigQuery and the engine finally share one space](findings/space-identity-bigquery.md) - cosine 1.000000 on the same texts: the disclosed gap that conditions every bench figure is closeable.
+- [§10 Prompt-injection resistance belongs to the model, the guard belongs to us](findings/injection-is-a-model-property.md) - a newer substrate ignores an injection the current one answered; the fence is what makes the outcome the same on both.
 - [The comparison this file does NOT make](findings/comparison-not-made.md) - Why no table here ranks one architecture over another.
 - [What none of this proves](findings/what-none-proves.md) - The limits that survive every figure above.
 
