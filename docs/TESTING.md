@@ -19,7 +19,7 @@ written to fix the drift.
 ---
 
 
-## Test coverage: **573 tests** across 56 files, 1 skipped
+## Test coverage: **574 tests** across 56 files, 1 skipped
 
 Five more run only where the private WildChat corpus is present, so they are not counted here: a suite size a reader cannot reproduce is not a suite size. The skip is that corpus-gated module.
 
@@ -55,7 +55,7 @@ observe; the probe then checks that every marked test really did embed in
 
 | Bucket | Tests | Meaning |
 |---|---|---|
-| **1. Embedder-agnostic** | **448** | No embedder ran for the test. Hashing, store and backends, integrity, resolver, evidence types, the Goodhart boundary, staged failure, lifecycle, episode segmentation, signals, the level 2 facet and privacy guards, the dashboard routes, logging, the structural guards. They hold in **any** vector space. |
+| **1. Embedder-agnostic** | **449** | No embedder ran for the test. Hashing, store and backends, integrity, resolver, evidence types, the Goodhart boundary, staged failure, lifecycle, episode segmentation, signals, the level 2 facet and privacy guards, the dashboard routes, logging, the structural guards. They hold in **any** vector space. |
 | **2. Stub-as-a-tool** | **96** | An embedder ran, but the claim is space-independent: two-hash inequality, build determinism, both rates always computed, tool gating, embedder provenance, CLI acceptance, the level 2 end-to-end run. |
 | **3. Stub-as-the-subject** | **29** | Declared `stub_only`, and checked: true **only** in `stub:hashed64`, so they do **not** describe the production system. The contradiction taxonomy, the stability property tests, the adversarial and demo exact rates, the directive-band check. |
 

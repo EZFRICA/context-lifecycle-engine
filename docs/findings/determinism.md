@@ -12,6 +12,24 @@ reproduces their committed cache vectors at cosine 1.000000 (the other 61 of the
 see `examples/make_vectors.py`). That is what makes `CachedEmbedder` a
 legitimate stand-in for the live substrate rather than an approximation of it.
 
+## Against a substrate it had never seen, 2026-10-20
+
+`(2026-10-20, 2a997be+wt, n/a, gemini-3.5-flash-lite built then revalidated
+under gemini-4-argon)`
+
+```
+DRIFT: 5/5 probes moved
+weekly_recap: pinned -> trial (auto-demoted)
+```
+
+The premise of the whole ladder is that a served model changes underneath a
+running system, so a proof has to expire. Measured here against a pre-release
+model the repository had never run: every frozen probe moved, the re-validator
+fired, and a PINNED agent was demoted to trial without a human in the loop.
+What the figure does NOT say is that the new substrate is worse - a better model
+moves a fingerprint exactly as a degraded one does (BLUEPRINT §10), which is why
+the demotion is a disclosure, not a verdict.
+
 The **generation** model is a different story: facets generated at T=0 vary
 between runs, which is why every facet figure above is measured on one frozen
 generation and says so.

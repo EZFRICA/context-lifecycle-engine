@@ -182,14 +182,19 @@ def _(
 
     rows = []
     for _t in SWEEP_GRID:
-        assigned = group(list(covered), space_obj, _t)
-        purity, completeness = purity_completeness(assigned, held_intents)
-        f = 2 * purity * completeness / (purity + completeness) if purity + completeness else 0.0
-        rows.append({"threshold": _t, "clusters": len(set(assigned)),
-                     "purity": purity, "completeness": completeness, "F": f})
+        # Cell-local (leading underscore): these are the loop's working values,
+        # not results. Returning them leaked the LAST threshold's assignment as
+        # a notebook global that nothing read, and one the checker rightly
+        # flagged as possibly unbound.
+        _assigned = group(list(covered), space_obj, _t)
+        _purity, _completeness = purity_completeness(_assigned, held_intents)
+        _f = (2 * _purity * _completeness / (_purity + _completeness)
+              if _purity + _completeness else 0.0)
+        rows.append({"threshold": _t, "clusters": len(set(_assigned)),
+                     "purity": _purity, "completeness": _completeness, "F": _f})
     sweep_frame = pd.DataFrame(rows)
     calibrated = CLUSTER_THRESHOLD_BY_EMBEDDER.get(space_id)
-    return SWEEP_GRID, assigned, calibrated, held_intents, purity, rows, space_obj, sweep_frame
+    return SWEEP_GRID, calibrated, held_intents, rows, space_obj, sweep_frame
 
 
 @app.cell
